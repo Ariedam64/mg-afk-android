@@ -3,6 +3,8 @@ package com.mgafk.app.ui
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import coil.imageLoader
+import coil.request.ImageRequest
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
@@ -32,6 +34,7 @@ data class UiState(
     val alerts: AlertConfig = AlertConfig(),
     val connecting: Boolean = false,
     val apiReady: Boolean = false,
+    val loadingStep: String = "",
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -57,10 +60,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 activeSessionId = activeId,
                 alerts = alerts,
             )
-            // Preload ALL API data in parallel at startup
+            // Preload ALL API data + sprites at startup
             launch {
+                _state.update { it.copy(loadingStep = "Loading game data…") }
                 MgApi.preloadAll()
-                _state.update { it.copy(apiReady = true) }
+                _state.update { it.copy(loadingStep = "Preloading sprites…") }
+                preloadSprites()
+                _state.update { it.copy(apiReady = true, loadingStep = "") }
             }
         }
     }
@@ -179,7 +185,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 busy = false,
                 status = SessionStatus.IDLE,
                 players = 0,
-                uptime = "00:00:00",
+                connectedAt = 0,
             )
         }
         stopAfkServiceIfIdle()
@@ -208,6 +214,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         alertNotifier.testAlert(mode)
     }
 
+    // ---- Preloading ----
+
+    private suspend fun preloadSprites() {
+        val app = getApplication<Application>()
+        val loader = app.imageLoader
+        val categories = listOf(
+            "pets" to MgApi.getPets(),
+            "plants" to MgApi.getPlants(),
+            "items" to MgApi.getItems(),
+            "eggs" to MgApi.getEggs(),
+            "decors" to MgApi.getDecors(),
+            "weathers" to MgApi.getWeathers(),
+        )
+        categories.forEach { (name, entries) ->
+            _state.update { it.copy(loadingStep = "Loading $name sprites… (${entries.size})") }
+            entries.values.forEach { entry ->
+                val url = entry.sprite ?: return@forEach
+                loader.enqueue(ImageRequest.Builder(app).data(url).build())
+            }
+        }
+    }
+
     // ---- Internal ----
 
     private fun handleClientEvent(sessionId: String, event: ClientEvent) {
@@ -221,15 +249,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         error = event.message,
                         playerId = event.playerId.ifBlank { it.playerId },
                         room = event.room.ifBlank { it.room },
+                        connectedAt = if (event.status == SessionStatus.CONNECTED) System.currentTimeMillis() else 0,
                     )
                 }
             }
             is ClientEvent.PlayersChanged -> {
                 updateSession(sessionId) { it.copy(players = event.count) }
             }
-            is ClientEvent.UptimeChanged -> {
-                updateSession(sessionId) { it.copy(uptime = event.text) }
-            }
+            is ClientEvent.UptimeChanged -> { /* computed locally in UI */ }
             is ClientEvent.AbilityLogged -> {
                 updateSession(sessionId) {
                     val isDuplicate = it.logs.any { existing ->
@@ -299,7 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         collectorJobs.clear()
         clients.values.forEach { it.dispose() }
         clients.clear()
-        alertNotifier.stopAlarm()
+        alertNotifier.cleanup()
         // Stop service if running
         if (serviceRunning) {
             val app = getApplication<Application>()

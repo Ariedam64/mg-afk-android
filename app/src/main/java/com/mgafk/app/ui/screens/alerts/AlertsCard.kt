@@ -27,6 +27,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -271,14 +272,15 @@ private fun ShopAlertsCard(
         Spacer(modifier = Modifier.height(12.dp))
 
         SHOP_CATEGORIES.forEachIndexed { index, (label, category) ->
-            val data = when (category) {
-                "seed" -> MgApi.getPlants()
-                "tool" -> MgApi.getItems()
-                "egg" -> MgApi.getEggs()
-                "decor" -> MgApi.getDecors()
-                else -> emptyMap()
+            val items = remember(category, MgApi.isReady) {
+                when (category) {
+                    "seed" -> MgApi.getPlants()
+                    "tool" -> MgApi.getItems()
+                    "egg" -> MgApi.getEggs()
+                    "decor" -> MgApi.getDecors()
+                    else -> emptyMap()
+                }.values.toList()
             }
-            val items = data.values.toList()
             val activeCount = items.count { entry ->
                 alerts.items["shop:$category:${entry.id}"]?.enabled == true
             }
@@ -339,7 +341,7 @@ private fun WeatherAlertsCard(
     currentMode: AlertMode,
     onModeChange: (AlertMode) -> Unit,
 ) {
-    val weatherSprites = MgApi.getWeathers().mapValues { it.value.sprite }
+    val weatherSprites = remember(MgApi.isReady) { MgApi.getWeathers().mapValues { it.value.sprite } }
     val activeCount = WEATHER_ITEMS.count { (_, display) ->
         alerts.items["weather:$display"]?.enabled == true
     }

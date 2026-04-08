@@ -1,6 +1,8 @@
 package com.mgafk.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -35,24 +37,26 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,6 +86,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ── Navigation sections ──
@@ -111,60 +116,141 @@ fun MainScreen(
     var currentSection by rememberSaveable { mutableStateOf(NavSection.DASHBOARD.name) }
     val selected = NavSection.valueOf(currentSection)
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = true,
-        drawerContent = {
-            DrawerContent(
-                selected = selected,
-                connected = session.connected,
-                onSelect = { section ->
-                    currentSection = section.name
-                    scope.launch { drawerState.close() }
-                },
-            )
-        },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BgDark),
-        ) {
-            // ── Top bar ──
-            TopBar(
-                sectionLabel = selected.label,
-                onMenuClick = { scope.launch { drawerState.open() } },
-            )
+    // Compose sections one by one after API loads, behind the loading overlay
+    var readySections by remember { mutableStateOf(emptySet<NavSection>()) }
+    var allReady by remember { mutableStateOf(false) }
+    var loadingStep by remember { mutableStateOf("") }
 
-            // ── Loading indicator ──
-            AnimatedVisibility(visible = !state.apiReady, enter = fadeIn(), exit = fadeOut()) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth().height(2.dp),
-                    color = Accent,
-                    trackColor = SurfaceDark,
-                )
+    // Track ViewModel loading steps
+    LaunchedEffect(state.loadingStep) {
+        if (state.loadingStep.isNotBlank()) loadingStep = state.loadingStep
+    }
+
+    // After API ready, compose sections one by one behind the overlay
+    LaunchedEffect(state.apiReady) {
+        if (state.apiReady) {
+            NavSection.entries.forEach { section ->
+                loadingStep = "Preparing ${section.label}…"
+                readySections = readySections + section
+                delay(150) // yield frames so spinner keeps animating
             }
+            loadingStep = ""
+            allReady = true
+        }
+    }
 
-            HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
-
-            // ── Section content ──
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = allReady,
+            drawerContent = {
+                DrawerContent(
+                    selected = selected,
+                    connected = session.connected,
+                    playerName = session.playerName,
+                    onSelect = { section ->
+                        currentSection = section.name
+                        scope.launch { drawerState.snapTo(DrawerValue.Closed) }
+                    },
+                )
+            },
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .background(BgDark),
             ) {
-                key(state.apiReady) {
-                    SectionContent(
-                        section = selected,
-                        session = session,
-                        state = state,
-                        viewModel = viewModel,
-                        onLoginRequest = onLoginRequest,
-                    )
+                // ── Top bar ──
+                TopBar(
+                    sectionLabel = selected.label,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                )
+
+                HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
+
+                // ── Sections: always laid out at full size, slid off-screen when hidden ──
+                Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                    NavSection.entries.forEach { section ->
+                        if (section in readySections) {
+                            val isVisible = section == selected
+                            val slide by animateFloatAsState(
+                                targetValue = if (isVisible) 0f else 1f,
+                                animationSpec = tween(300),
+                                label = "slide_${section.name}",
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { translationX = slide * size.width }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    SectionContent(
+                                        section = section,
+                                        session = session,
+                                        state = state,
+                                        viewModel = viewModel,
+                                        onLoginRequest = onLoginRequest,
+                                    )
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
+                            }
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        // ── Loading overlay — visible until ALL sections are composed ──
+        AnimatedVisibility(
+            visible = !allReady,
+            enter = fadeIn(),
+            exit = fadeOut(animationSpec = tween(400)),
+        ) {
+            LoadingOverlay(step = loadingStep)
+        }
+    }
+}
+
+// ── Loading overlay ──
+
+@Composable
+private fun LoadingOverlay(step: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgDark),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Text(
+                text = "MG AFK",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Accent,
+                letterSpacing = (-0.5).sp,
+            )
+
+            CircularProgressIndicator(
+                modifier = Modifier.size(32.dp),
+                color = Accent,
+                strokeWidth = 3.dp,
+            )
+
+            if (step.isNotBlank()) {
+                Text(
+                    text = step,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                )
             }
         }
     }
@@ -176,6 +262,7 @@ fun MainScreen(
 private fun DrawerContent(
     selected: NavSection,
     connected: Boolean,
+    playerName: String,
     onSelect: (NavSection) -> Unit,
 ) {
     ModalDrawerSheet(
@@ -198,28 +285,55 @@ private fun DrawerContent(
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Navigation items
-        NavSection.entries.forEach { section ->
-            val enabled = !section.requiresConnection || connected
-            val isSelected = section == selected
-            DrawerItem(
-                icon = section.icon,
-                label = section.label,
-                selected = isSelected,
-                enabled = enabled,
-                onClick = { if (enabled) onSelect(section) },
-            )
-        }
+        // Dashboard (standalone)
+        DrawerItem(
+            icon = NavSection.DASHBOARD.icon,
+            label = NavSection.DASHBOARD.label,
+            selected = selected == NavSection.DASHBOARD,
+            enabled = true,
+            onClick = { onSelect(NavSection.DASHBOARD) },
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Active session sub-category
+        val sessionLabel = if (connected && playerName.isNotBlank()) playerName else "Session"
+        Text(
+            text = sessionLabel,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (connected) Accent.copy(alpha = 0.7f) else TextMuted.copy(alpha = 0.5f),
+            letterSpacing = 0.5.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        )
+
+        // Session-dependent items (Pets, Shops)
+        NavSection.entries
+            .filter { it.requiresConnection }
+            .forEach { section ->
+                val isSelected = section == selected
+                DrawerItem(
+                    icon = section.icon,
+                    label = section.label,
+                    selected = isSelected,
+                    enabled = connected,
+                    onClick = { if (connected) onSelect(section) },
+                )
+            }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Footer
-        Text(
-            text = "Swipe or tap to navigate",
-            fontSize = 10.sp,
-            color = TextMuted,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        // Alerts — pinned at bottom, separated
+        HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
+        Spacer(modifier = Modifier.height(4.dp))
+        DrawerItem(
+            icon = NavSection.ALERTS.icon,
+            label = NavSection.ALERTS.label,
+            selected = selected == NavSection.ALERTS,
+            enabled = true,
+            onClick = { onSelect(NavSection.ALERTS) },
         )
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -332,10 +446,10 @@ private fun SectionContent(
         }
         NavSection.PETS -> {
             PetHungerCard(pets = session.pets)
-            AbilityLogsCard(logs = session.logs, onClear = { viewModel.clearLogs(session.id) })
+            AbilityLogsCard(logs = session.logs, apiReady = state.apiReady, onClear = { viewModel.clearLogs(session.id) })
         }
         NavSection.SHOPS -> {
-            ShopsCards(shops = session.shops)
+            ShopsCards(shops = session.shops, apiReady = state.apiReady)
         }
         NavSection.ALERTS -> {
             AlertsCards(

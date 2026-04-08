@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.components
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.SurfaceCard
@@ -40,13 +39,8 @@ import com.mgafk.app.ui.theme.TextMuted
 /**
  * Styled card container with optional title, trailing content, and collapsible support.
  *
- * When collapsed, the content stays composed (not removed from the tree) but is clipped
- * to zero height. This makes expand/collapse instant for heavy content (100+ items).
- *
- * @param collapsible If true, the card can be collapsed/expanded by tapping the header.
- * @param initiallyExpanded Initial state when collapsible is true (used for uncontrolled mode).
- * @param expanded Controlled expanded state. When non-null, overrides internal state.
- * @param onExpandedChange Called when the user toggles collapsed state (controlled mode).
+ * When collapsed, content is always measured at full height (so FlowRow etc. pre-compute
+ * their layout), but clipped to zero height. This makes expand/collapse instant.
  */
 @Composable
 fun AppCard(
@@ -118,15 +112,19 @@ fun AppCard(
             }
 
             if (collapsible) {
-                // Content stays composed but is clipped to 0 height when collapsed.
-                // This avoids recomposing 100+ items on every expand.
+                // Content always measured at full height (FlowRow layout pre-computed).
+                // When collapsed: reported height = 0, clipped, not visible.
+                // When expanded: instant reveal — no re-layout needed.
                 Column(
                     modifier = Modifier
                         .clipToBounds()
-                        .then(
-                            if (!isExpanded) Modifier.heightIn(max = 0.dp)
-                            else Modifier
-                        )
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val h = if (isExpanded) placeable.height else 0
+                            layout(placeable.width, h) {
+                                placeable.place(0, 0)
+                            }
+                        }
                         .alpha(contentAlpha),
                 ) {
                     if (title != null) Spacer(modifier = Modifier.height(12.dp))

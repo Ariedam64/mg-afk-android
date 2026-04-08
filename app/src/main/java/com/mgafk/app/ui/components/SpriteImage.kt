@@ -2,6 +2,7 @@ package com.mgafk.app.ui.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -39,11 +40,16 @@ fun SpriteImage(
 ) {
     if (url.isNullOrBlank()) return
 
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
+    val context = LocalContext.current
+    val model = remember(url) {
+        ImageRequest.Builder(context)
             .data(url)
             .crossfade(true)
-            .build(),
+            .build()
+    }
+
+    AsyncImage(
+        model = model,
         contentDescription = contentDescription,
         modifier = modifier.size(size),
     )

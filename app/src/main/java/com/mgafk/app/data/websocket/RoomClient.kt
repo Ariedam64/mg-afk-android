@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -70,8 +69,8 @@ class RoomClient {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val httpClient = OkHttpClient.Builder()
-        .pingInterval(0, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
         .connectTimeout(15, TimeUnit.SECONDS)
         .build()
 
@@ -100,8 +99,8 @@ class RoomClient {
     private var connectedAt = 0L
     private var manualClose = false
     private var playerCount = 0
-    private var lastLiveKey = ""
-    private var lastShopsKey = ""
+    private var lastLivePayload: ClientEvent.LiveStatusChanged? = null
+    private var lastShopsPayload: ClientEvent.ShopsChanged? = null
     private var lastAbilityTimestamp = 0L
 
     // Retry state
@@ -112,9 +111,6 @@ class RoomClient {
     private var initialConnectFastRetry = false
     var reconnectConfig = ReconnectConfig()
         private set
-
-    // Timer jobs
-    private var tickerJob: Job? = null
 
     // Last connect options for retry
     private var lastConnectOpts: ConnectOptions? = null
@@ -167,8 +163,8 @@ class RoomClient {
         this.connectedAt = 0
         this.welcomed = false
         this.manualClose = false
-        this.lastLiveKey = ""
-        this.lastShopsKey = ""
+        this.lastLivePayload = null
+        this.lastShopsPayload = null
         gameState.reset()
 
         lastConnectOpts = ConnectOptions(
@@ -223,7 +219,6 @@ class RoomClient {
     }
 
     fun disconnect() {
-        clearTimers()
         state = "disconnected"
         connectedAt = 0
         welcomed = false
@@ -322,7 +317,6 @@ class RoomClient {
             initialConnectFastRetry = false
             cancelRetryJob()
             emitStatus(SessionStatus.CONNECTED, room = room, playerId = playerId)
-            startTicker()
         }
     }
 
@@ -391,7 +385,6 @@ class RoomClient {
 
     private fun handleClose(code: Int, reason: String) {
         Log.w(TAG, "onClose code=$code reason=$reason manualClose=$manualClose")
-        clearTimers()
         state = "disconnected"
         connectedAt = 0
         welcomed = false
@@ -418,7 +411,6 @@ class RoomClient {
 
     private fun failAuth(message: String) {
         Log.e(TAG, "failAuth: $message")
-        clearTimers()
         cancelRetryJob()
         state = "error"
         connectedAt = 0
@@ -536,38 +528,18 @@ class RoomClient {
             weather = Constants.formatWeather(gameState.getWeather()),
             pets = me?.getActivePetInfos() ?: emptyList(),
         )
-        val key = payload.toString()
-        if (key == lastLiveKey) return
-        lastLiveKey = key
+        if (payload == lastLivePayload) return
+        lastLivePayload = payload
         emit(payload)
     }
 
     private fun emitShops() {
         val shops = gameState.getAllShops()
         if (shops.isEmpty()) return
-        val key = shops.toString()
-        if (key == lastShopsKey) return
-        lastShopsKey = key
-        emit(ClientEvent.ShopsChanged(shops))
-    }
-
-    // ---- Timers ----
-
-    private fun startTicker() {
-        tickerJob?.cancel()
-        tickerJob = scope.launch {
-            while (isActive) {
-                delay(1000)
-                if (connectedAt > 0) {
-                    val ms = System.currentTimeMillis() - connectedAt
-                    emit(ClientEvent.UptimeChanged(Constants.fmtDuration(ms)))
-                }
-            }
-        }
-    }
-
-    private fun clearTimers() {
-        tickerJob?.cancel(); tickerJob = null
+        val payload = ClientEvent.ShopsChanged(shops)
+        if (payload == lastShopsPayload) return
+        lastShopsPayload = payload
+        emit(payload)
     }
 
     private fun send(text: String) {

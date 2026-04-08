@@ -18,7 +18,7 @@ data class Session(
     val error: String = "",
     val reconnectCountdown: String = "",
     val players: Int = 0,
-    val uptime: String = "00:00:00",
+    val connectedAt: Long = 0,
     val playerId: String = "",
     val playerName: String = "",
     val roomId: String = "",

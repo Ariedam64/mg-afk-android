@@ -75,7 +75,7 @@ private val SHOP_SECTIONS = listOf(
 
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
 @Composable
-fun ShopsCards(shops: List<ShopSnapshot>) {
+fun ShopsCards(shops: List<ShopSnapshot>, apiReady: Boolean = false) {
     if (shops.isEmpty()) {
         AppCard(title = "Shops") {
             Text("No shop data yet.", fontSize = 12.sp, color = TextMuted)
@@ -85,13 +85,13 @@ fun ShopsCards(shops: List<ShopSnapshot>) {
 
     SHOP_SECTIONS.forEach { (label, key) ->
         val shop = shops.find { it.type == key }
-        ShopCategoryCard(label = label, shop = shop)
+        ShopCategoryCard(label = label, shop = shop, apiReady = apiReady)
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ShopCategoryCard(label: String, shop: ShopSnapshot?) {
+private fun ShopCategoryCard(label: String, shop: ShopSnapshot?, apiReady: Boolean) {
     val items = shop?.itemNames ?: emptyList()
     val restockSec = shop?.secondsUntilRestock ?: 0
 
@@ -112,6 +112,7 @@ private fun ShopCategoryCard(label: String, shop: ShopSnapshot?) {
                     ShopItemTile(
                         itemName = itemName,
                         stock = shop?.itemStocks?.get(itemName) ?: 0,
+                        apiReady = apiReady,
                     )
                 }
             }
@@ -120,8 +121,8 @@ private fun ShopCategoryCard(label: String, shop: ShopSnapshot?) {
 }
 
 @Composable
-private fun ShopItemTile(itemName: String, stock: Int) {
-    val entry = MgApi.findItem(itemName)
+private fun ShopItemTile(itemName: String, stock: Int, apiReady: Boolean) {
+    val entry = remember(itemName, apiReady) { MgApi.findItem(itemName) }
     val displayName = entry?.name ?: itemName
     val spriteUrl = entry?.sprite
     val rarity = entry?.rarity

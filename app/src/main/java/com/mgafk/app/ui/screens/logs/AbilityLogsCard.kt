@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -45,6 +45,7 @@ import java.util.Locale
 @Composable
 fun AbilityLogsCard(
     logs: List<AbilityLog>,
+    apiReady: Boolean = false,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -113,13 +114,11 @@ fun AbilityLogsCard(
             if (filteredLogs.isEmpty()) {
                 Text("No matching logs.", fontSize = 12.sp, color = TextMuted)
             } else {
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 400.dp)
-                        .verticalScroll(rememberScrollState()),
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp),
                 ) {
-                    filteredLogs.forEach { log ->
-                        LogRow(log, dateFormat)
+                    items(filteredLogs, key = { it.timestamp }) { log ->
+                        LogRow(log, dateFormat, apiReady)
                     }
                 }
             }
@@ -128,8 +127,8 @@ fun AbilityLogsCard(
 }
 
 @Composable
-private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat) {
-    val abilityName = MgApi.abilityDisplayName(log.action)
+private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Boolean) {
+    val abilityName = remember(log.action, apiReady) { MgApi.abilityDisplayName(log.action) }
 
     Row(
         modifier = Modifier

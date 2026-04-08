@@ -24,6 +24,8 @@ import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.websocket.Constants
+import java.lang.ref.WeakReference
+import java.util.concurrent.Executors
 
 /**
  * Sends notifications or triggers loud alarms with a full-screen activity.
@@ -116,6 +118,12 @@ class AlertNotifier(private val context: Context) {
         stopGlobalAlarm()
     }
 
+    fun cleanup() {
+        handler.removeCallbacksAndMessages(null)
+        pendingAlarmItems.clear()
+        stopGlobalAlarm()
+    }
+
     /** Fire a fake alert for testing. Bypasses all dedup logic. */
     fun testAlert(mode: AlertMode) {
         val plants = MgApi.getPlants().values.take(3)
@@ -162,8 +170,8 @@ class AlertNotifier(private val context: Context) {
         val id = notificationId++
         val spriteUrl = items.firstOrNull()?.spriteUrl
 
-        // Load sprite in background, then post notification with it
-        Thread {
+        // Load sprite in background thread pool, then post notification
+        ioExecutor.execute {
             val bitmap = loadBitmap(spriteUrl)
 
             val style = NotificationCompat.InboxStyle()
@@ -184,14 +192,20 @@ class AlertNotifier(private val context: Context) {
             }
 
             manager.notify(id, builder.build())
-        }.start()
+            bitmap?.recycle()
+        }
     }
 
     private fun loadBitmap(url: String?): Bitmap? {
         if (url.isNullOrBlank()) return null
         return try {
-            java.net.URL(url).openStream().use { stream ->
-                BitmapFactory.decodeStream(stream)
+            val stream = java.net.URL(url).openStream()
+            stream.use {
+                val options = BitmapFactory.Options().apply {
+                    inSampleSize = 2 // Half resolution — enough for notification icon
+                    inPreferredConfig = Bitmap.Config.RGB_565 // 2 bytes/pixel instead of 4
+                }
+                BitmapFactory.decodeStream(it, null, options)
             }
         } catch (_: Exception) {
             null
@@ -203,14 +217,13 @@ class AlertNotifier(private val context: Context) {
     private fun launchAlarm(title: String, items: List<DisplayItem>) {
         stopGlobalAlarm()
 
-        // Play alarm sound
         playAlarmSound()
         vibrate()
 
         val names = items.map { it.label }.toTypedArray()
         val sprites = items.map { it.spriteUrl.orEmpty() }.toTypedArray()
 
-        // Launch AlarmActivity directly (works both locked and unlocked)
+        // Launch AlarmActivity directly
         val activityIntent = Intent(context, AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(AlarmActivity.EXTRA_TITLE, title)
@@ -219,7 +232,7 @@ class AlertNotifier(private val context: Context) {
         }
         context.startActivity(activityIntent)
 
-        // Also post notification as fallback (if activity doesn't show, e.g. DND restrictions)
+        // Also post notification as fallback
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(AlarmActivity.EXTRA_TITLE, title)
@@ -230,8 +243,6 @@ class AlertNotifier(private val context: Context) {
             context, 1, fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-
-        // Stop intent for notification button
         val stopIntent = Intent(context, AlarmStopReceiver::class.java).apply {
             action = AlarmStopReceiver.ACTION_STOP_ALARM
         }
@@ -290,7 +301,7 @@ class AlertNotifier(private val context: Context) {
             }
             synchronized(lock) {
                 activePlayer = player
-                activeContext = context
+                activeContextRef = WeakReference(context)
             }
         } catch (_: Exception) { }
     }
@@ -315,7 +326,8 @@ class AlertNotifier(private val context: Context) {
         private const val ALARM_NOTIFICATION_ID = 9999
         private val lock = Any()
         private var activePlayer: MediaPlayer? = null
-        private var activeContext: Context? = null
+        private var activeContextRef: WeakReference<Context>? = null
+        private val ioExecutor = Executors.newSingleThreadExecutor()
 
         fun stopGlobalAlarm() {
             synchronized(lock) {
@@ -324,7 +336,8 @@ class AlertNotifier(private val context: Context) {
                 }
                 activePlayer = null
 
-                activeContext?.let { ctx ->
+                val ctx = activeContextRef?.get()
+                if (ctx != null) {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             ctx.getSystemService(VibratorManager::class.java)
@@ -338,7 +351,7 @@ class AlertNotifier(private val context: Context) {
                     ctx.getSystemService(NotificationManager::class.java)
                         ?.cancel(ALARM_NOTIFICATION_ID)
                 }
-                activeContext = null
+                activeContextRef = null
             }
         }
     }
