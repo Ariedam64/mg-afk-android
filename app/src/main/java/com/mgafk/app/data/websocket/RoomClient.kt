@@ -5,6 +5,7 @@ import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.websocket.state.GameState
+import com.mgafk.app.data.websocket.state.GardenTile
 import com.mgafk.app.data.websocket.state.PetInfo
 import com.mgafk.app.data.websocket.state.ShopModel
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +59,9 @@ sealed class ClientEvent {
     ) : ClientEvent()
 
     data class ShopsChanged(val shops: List<ShopModel>) : ClientEvent()
+    data class GardenChanged(val plants: List<GardenTile>) : ClientEvent()
+    data class EggsChanged(val eggs: List<GardenTile>) : ClientEvent()
+    data class InventoryChanged(val items: JsonArray, val storages: JsonArray) : ClientEvent()
     data class DebugLog(val level: String, val message: String, val detail: String = "") : ClientEvent()
 }
 
@@ -101,6 +105,9 @@ class RoomClient {
     private var playerCount = 0
     private var lastLivePayload: ClientEvent.LiveStatusChanged? = null
     private var lastShopsPayload: ClientEvent.ShopsChanged? = null
+    private var lastGardenPayload: ClientEvent.GardenChanged? = null
+    private var lastEggsPayload: ClientEvent.EggsChanged? = null
+    private var lastInventorySize: Int = -1
     private var lastAbilityTimestamp = 0L
 
     // Retry state
@@ -165,6 +172,9 @@ class RoomClient {
         this.manualClose = false
         this.lastLivePayload = null
         this.lastShopsPayload = null
+        this.lastGardenPayload = null
+        this.lastEggsPayload = null
+        this.lastInventorySize = -1
         gameState.reset()
 
         lastConnectOpts = ConnectOptions(
@@ -306,6 +316,9 @@ class RoomClient {
         emitPlayerCount()
         emitLiveStatus()
         emitShops()
+        emitGarden()
+        emitEggs()
+        emitInventory()
 
         if (!welcomed) {
             welcomed = true
@@ -339,6 +352,9 @@ class RoomClient {
         emitPlayerCount()
         emitLiveStatus()
         emitShops()
+        emitGarden()
+        emitEggs()
+        emitInventory()
     }
 
     private fun emitNewAbilityLogs() {
@@ -539,6 +555,34 @@ class RoomClient {
         val payload = ClientEvent.ShopsChanged(shops)
         if (payload == lastShopsPayload) return
         lastShopsPayload = payload
+        emit(payload)
+    }
+
+    private fun emitGarden() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val plants = me.getGardenPlants()
+        val payload = ClientEvent.GardenChanged(plants)
+        if (payload == lastGardenPayload) return
+        lastGardenPayload = payload
+        emit(payload)
+    }
+
+    private fun emitInventory() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val items = me.inventory
+        val storages = me.storages
+        val total = items.size + storages.size
+        if (total == lastInventorySize) return
+        lastInventorySize = total
+        emit(ClientEvent.InventoryChanged(items, storages))
+    }
+
+    private fun emitEggs() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val eggs = me.getGardenEggs()
+        val payload = ClientEvent.EggsChanged(eggs)
+        if (payload == lastEggsPayload) return
+        lastEggsPayload = payload
         emit(payload)
     }
 

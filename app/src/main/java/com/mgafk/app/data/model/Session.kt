@@ -26,6 +26,13 @@ data class Session(
     val pets: List<PetSnapshot> = emptyList(),
     val logs: List<AbilityLog> = emptyList(),
     val shops: List<ShopSnapshot> = emptyList(),
+    val garden: List<GardenPlantSnapshot> = emptyList(),
+    val gardenEggs: List<GardenEggSnapshot> = emptyList(),
+    val inventory: InventorySnapshot = InventorySnapshot(),
+    val seedSilo: List<InventorySeedItem> = emptyList(),
+    val decorShed: List<InventoryDecorItem> = emptyList(),
+    val petHutch: List<InventoryPetItem> = emptyList(),
+    val feedingTrough: List<InventoryEggItem> = emptyList(),
 )
 
 @Serializable
@@ -67,6 +74,77 @@ data class AbilityLog(
     val petSpecies: String = "",
     val petMutations: List<String> = emptyList(),
     val slotIndex: Int = 0,
+)
+
+/** Inventory snapshot */
+@Serializable
+data class InventorySnapshot(
+    val seeds: List<InventorySeedItem> = emptyList(),
+    val eggs: List<InventoryEggItem> = emptyList(),
+    val produce: List<InventoryProduceItem> = emptyList(),
+    val pets: List<InventoryPetItem> = emptyList(),
+    val tools: List<InventoryToolItem> = emptyList(),
+    val decors: List<InventoryDecorItem> = emptyList(),
+)
+
+@Serializable
+data class InventorySeedItem(
+    val species: String = "",
+    val quantity: Int = 0,
+)
+
+@Serializable
+data class InventoryEggItem(
+    val eggId: String = "",
+    val quantity: Int = 0,
+)
+
+@Serializable
+data class InventoryProduceItem(
+    val species: String = "",
+    val targetScale: Double = 0.0,
+    val mutations: List<String> = emptyList(),
+)
+
+@Serializable
+data class InventoryPetItem(
+    val id: String = "",
+    val petSpecies: String = "",
+    val name: String? = null,
+    val xp: Double = 0.0,
+    val targetScale: Double = 0.0,
+    val mutations: List<String> = emptyList(),
+    val abilities: List<String> = emptyList(),
+)
+
+@Serializable
+data class InventoryToolItem(
+    val toolId: String = "",
+    val quantity: Int = 0,
+)
+
+@Serializable
+data class InventoryDecorItem(
+    val decorId: String = "",
+    val quantity: Int = 0,
+)
+
+/** Serializable snapshot of a garden egg for Session persistence */
+@Serializable
+data class GardenEggSnapshot(
+    val tileId: Int = 0,
+    val eggId: String = "",
+    val plantedAt: Long = 0,
+    val maturedAt: Long = 0,
+)
+
+/** Serializable snapshot of a garden plant for Session persistence */
+@Serializable
+data class GardenPlantSnapshot(
+    val tileId: Int = 0,
+    val species: String = "",
+    val targetScale: Double = 0.0,
+    val mutations: List<String> = emptyList(),
 )
 
 /** Serializable snapshot of a shop for Session persistence */

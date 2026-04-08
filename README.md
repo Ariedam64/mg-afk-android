@@ -40,10 +40,18 @@ MG AFK supports multiple sessions. Use the tabs bar to add a new account (+)
 and switch between sessions. Each tab keeps its own login, room code, and
 reconnect settings.
 
+## Background & lock screen
+
+The app runs in the background even when the phone is locked. The WebSocket
+connection stays alive so you never miss an update. Alerts and notifications
+are delivered regardless of whether the screen is on or the app is in the
+foreground.
+
 ## Alerts
 
 MG AFK can notify you about shop restocks, weather changes, and low pet
-hunger. Toggle individual items in the Alerts section.
+hunger. Toggle individual items in the Alerts section. Alerts work in the
+background and when the phone is locked.
 
 ## Build
 
@@ -60,6 +68,11 @@ the command line:
 ```
 
 The debug APK will be in `app/build/outputs/apk/debug/`.
+
+## Credits
+
+- WebSocket message parsing and actions are based on [MG-Websocket-Helper](https://github.com/Ariedam64/MG-Websocket-Helper).
+- Sprites and game data are fetched from the unofficial game API: [Magic-Garden-API](https://github.com/Ariedam64/Magic-Garden-API).
 
 ## Tech stack
 

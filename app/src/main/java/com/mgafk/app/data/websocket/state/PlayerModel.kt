@@ -94,6 +94,7 @@ data class PlayerModel(
     fun getBoardwalkTiles(): JsonObject? = garden?.get("boardwalkTileObjects") as? JsonObject
 
     fun getGardenPlants(): List<GardenTile> = filterGardenTiles("plant")
+    fun getGardenEggs(): List<GardenTile> = filterGardenTiles("egg")
     fun getGardenDecor(): List<GardenTile> = filterGardenTiles("decor")
 
     private fun filterGardenTiles(objectType: String): List<GardenTile> {

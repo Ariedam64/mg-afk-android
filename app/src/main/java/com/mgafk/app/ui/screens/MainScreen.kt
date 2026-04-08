@@ -30,6 +30,8 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Grass
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
@@ -71,6 +73,13 @@ import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.screens.alerts.AlertsCards
 import com.mgafk.app.ui.screens.connection.ConnectionCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
+import com.mgafk.app.ui.screens.garden.EggsCard
+import com.mgafk.app.ui.screens.garden.GardenCard
+import com.mgafk.app.ui.screens.storage.DecorShedCard
+import com.mgafk.app.ui.screens.storage.FeedingTroughCard
+import com.mgafk.app.ui.screens.storage.InventoryCard
+import com.mgafk.app.ui.screens.storage.PetHutchCard
+import com.mgafk.app.ui.screens.storage.SeedSiloCard
 import com.mgafk.app.ui.screens.pets.PetHungerCard
 import com.mgafk.app.ui.screens.shops.ShopsCards
 import com.mgafk.app.ui.screens.status.LiveStatusCard
@@ -98,6 +107,8 @@ enum class NavSection(
 ) {
     DASHBOARD("Dashboard", Icons.Outlined.Dashboard),
     PETS("Pets", Icons.Outlined.Pets, requiresConnection = true),
+    STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true),
+    GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
     SHOPS("Shops", Icons.Outlined.ShoppingCart, requiresConnection = true),
     ALERTS("Alerts", Icons.Outlined.Notifications),
 }
@@ -148,6 +159,7 @@ fun MainScreen(
                     selected = selected,
                     connected = session.connected,
                     playerName = session.playerName,
+                    updateAvailable = state.updateAvailable,
                     onSelect = { section ->
                         currentSection = section.name
                         scope.launch { drawerState.snapTo(DrawerValue.Closed) }
@@ -263,8 +275,10 @@ private fun DrawerContent(
     selected: NavSection,
     connected: Boolean,
     playerName: String,
+    updateAvailable: com.mgafk.app.data.repository.AppRelease?,
     onSelect: (NavSection) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     ModalDrawerSheet(
         drawerContainerColor = SurfaceDark,
         modifier = Modifier.width(260.dp),
@@ -279,7 +293,33 @@ private fun DrawerContent(
                 letterSpacing = (-0.5).sp,
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text("v1.0.0", fontSize = 11.sp, color = TextMuted)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "v${com.mgafk.app.BuildConfig.VERSION_NAME}",
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                )
+                if (updateAvailable != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Update ${updateAvailable.tagName}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StatusConnected,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(StatusConnected.copy(alpha = 0.12f))
+                            .clickable {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(updateAvailable.downloadUrl),
+                                )
+                                context.startActivity(intent)
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
         }
 
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
@@ -444,12 +484,23 @@ private fun SectionContent(
                 onRemove = { viewModel.removeSession(session.id) },
             )
         }
+        NavSection.GARDEN -> {
+            GardenCard(plants = session.garden, apiReady = state.apiReady)
+            EggsCard(eggs = session.gardenEggs, apiReady = state.apiReady)
+        }
         NavSection.PETS -> {
             PetHungerCard(pets = session.pets)
             AbilityLogsCard(logs = session.logs, apiReady = state.apiReady, onClear = { viewModel.clearLogs(session.id) })
         }
         NavSection.SHOPS -> {
             ShopsCards(shops = session.shops, apiReady = state.apiReady)
+        }
+        NavSection.STORAGE -> {
+            InventoryCard(inventory = session.inventory, apiReady = state.apiReady)
+            SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady)
+            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady)
+            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady)
+            FeedingTroughCard(eggs = session.feedingTrough, apiReady = state.apiReady)
         }
         NavSection.ALERTS -> {
             AlertsCards(

@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -43,6 +44,10 @@ object MgApi {
         val name: String,
         val sprite: String?,
         val rarity: String? = null,
+        val cropSprite: String? = null,
+        val maxScale: Double? = null,
+        val hoursToMature: Double? = null,
+        val color: String? = null,
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
@@ -155,6 +160,7 @@ object MgApi {
                 // Plants have nested structure: { seed: { sprite, ... }, plant: { ... }, crop: { ... } }
                 val seedObj = obj?.get("seed") as? JsonObject
                 val plantObj = obj?.get("plant") as? JsonObject
+                val cropObj = obj?.get("crop") as? JsonObject
                 result[id] = GameEntry(
                     id = id,
                     name = seedObj?.get("name")?.jsonPrimitive?.contentOrNull
@@ -162,6 +168,8 @@ object MgApi {
                         ?: id,
                     sprite = seedObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     rarity = seedObj?.get("rarity")?.jsonPrimitive?.contentOrNull,
+                    cropSprite = cropObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
+                    maxScale = cropObj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
                 )
             } else {
                 result[id] = GameEntry(
@@ -169,6 +177,9 @@ object MgApi {
                     name = obj?.get("name")?.jsonPrimitive?.contentOrNull ?: id,
                     sprite = obj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     rarity = obj?.get("rarity")?.jsonPrimitive?.contentOrNull,
+                    maxScale = obj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
+                    hoursToMature = obj?.get("hoursToMature")?.jsonPrimitive?.doubleOrNull,
+                    color = obj?.get("color")?.jsonPrimitive?.contentOrNull,
                 )
             }
         }

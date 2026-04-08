@@ -9,6 +9,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
+import com.mgafk.app.data.model.GardenEggSnapshot
+import com.mgafk.app.data.model.GardenPlantSnapshot
+import com.mgafk.app.data.model.InventoryEggItem
+import com.mgafk.app.data.model.InventoryPetItem
+import com.mgafk.app.data.model.InventoryProduceItem
+import com.mgafk.app.data.model.InventorySeedItem
+import com.mgafk.app.data.model.InventorySnapshot
+import com.mgafk.app.data.model.InventoryToolItem
+import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.Session
@@ -16,11 +25,19 @@ import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
+import com.mgafk.app.data.repository.AppRelease
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.service.AlertNotifier
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +52,7 @@ data class UiState(
     val connecting: Boolean = false,
     val apiReady: Boolean = false,
     val loadingStep: String = "",
+    val updateAvailable: AppRelease? = null,
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -67,6 +85,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(loadingStep = "Preloading sprites…") }
                 preloadSprites()
                 _state.update { it.copy(apiReady = true, loadingStep = "") }
+            }
+            // Check for app updates in background
+            launch {
+                val release = VersionFetcher.fetchLatestRelease() ?: return@launch
+                val current = com.mgafk.app.BuildConfig.VERSION_NAME
+                if (VersionFetcher.isNewer(current, release.tagName)) {
+                    _state.update { it.copy(updateAvailable = release) }
+                }
             }
         }
     }
@@ -291,6 +317,151 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val alerts = _state.value.alerts
                 alertNotifier.checkWeather(event.weather, previousWeather, alerts)
                 alertNotifier.checkPetHunger(newPets, alerts)
+            }
+            is ClientEvent.GardenChanged -> {
+                val newGarden = event.plants.map { tile ->
+                    val data = tile.data
+                    val species = data["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val slots = data["slots"] as? JsonArray
+                    // Use max targetScale across all slots
+                    var maxTargetScale = 0.0
+                    val allMutations = mutableSetOf<String>()
+                    slots?.forEach { slotEl ->
+                        val slot = slotEl as? JsonObject ?: return@forEach
+                        val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                        if (scale > maxTargetScale) maxTargetScale = scale
+                        (slot["mutations"] as? JsonArray)?.forEach { m ->
+                            val name = m.jsonPrimitive.contentOrNull
+                            if (!name.isNullOrBlank()) allMutations.add(name)
+                        }
+                    }
+                    GardenPlantSnapshot(
+                        tileId = tile.tileId,
+                        species = species,
+                        targetScale = maxTargetScale,
+                        mutations = allMutations.toList(),
+                    )
+                }
+                updateSession(sessionId) { it.copy(garden = newGarden) }
+            }
+            is ClientEvent.InventoryChanged -> {
+                val seeds = mutableListOf<InventorySeedItem>()
+                val eggs = mutableListOf<InventoryEggItem>()
+                val produce = mutableListOf<InventoryProduceItem>()
+                val pets = mutableListOf<InventoryPetItem>()
+                val tools = mutableListOf<InventoryToolItem>()
+                val decors = mutableListOf<InventoryDecorItem>()
+
+                for (el in event.items) {
+                    val obj = el as? JsonObject ?: continue
+                    when (obj["itemType"]?.jsonPrimitive?.contentOrNull) {
+                        "Seed" -> seeds.add(InventorySeedItem(
+                            species = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                        ))
+                        "Egg" -> eggs.add(InventoryEggItem(
+                            eggId = obj["eggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                        ))
+                        "Plant" -> {
+                            val slots = obj["slots"] as? JsonArray
+                            slots?.forEach { slotEl ->
+                                val slot = slotEl as? JsonObject ?: return@forEach
+                                val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                val muts = (slot["mutations"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                    ?.filter { it.isNotBlank() } ?: emptyList()
+                                produce.add(InventoryProduceItem(
+                                    species = slot["species"]?.jsonPrimitive?.contentOrNull
+                                        ?: obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                    targetScale = scale,
+                                    mutations = muts,
+                                ))
+                            }
+                        }
+                        "Pet" -> pets.add(InventoryPetItem(
+                            id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            petSpecies = obj["petSpecies"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            name = obj["name"]?.jsonPrimitive?.contentOrNull,
+                            xp = obj["xp"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            targetScale = obj["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            mutations = (obj["mutations"] as? JsonArray)
+                                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                ?.filter { it.isNotBlank() } ?: emptyList(),
+                            abilities = (obj["abilities"] as? JsonArray)
+                                ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                        ))
+                        "Tool" -> tools.add(InventoryToolItem(
+                            toolId = obj["toolId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                        ))
+                        "Decor" -> decors.add(InventoryDecorItem(
+                            decorId = obj["decorId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                        ))
+                    }
+                }
+                // Parse storages separately
+                val siloSeeds = mutableListOf<InventorySeedItem>()
+                val shedDecors = mutableListOf<InventoryDecorItem>()
+                val hutchPets = mutableListOf<InventoryPetItem>()
+                val troughEggs = mutableListOf<InventoryEggItem>()
+
+                for (storageEl in event.storages) {
+                    val storage = storageEl as? JsonObject ?: continue
+                    val storageId = storage["decorId"]?.jsonPrimitive?.contentOrNull ?: continue
+                    val storageItems = storage["items"] as? JsonArray ?: continue
+                    for (el in storageItems) {
+                        val obj = el as? JsonObject ?: continue
+                        when (storageId) {
+                            "SeedSilo" -> siloSeeds.add(InventorySeedItem(
+                                species = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                            ))
+                            "DecorShed" -> shedDecors.add(InventoryDecorItem(
+                                decorId = obj["decorId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                            ))
+                            "PetHutch" -> hutchPets.add(InventoryPetItem(
+                                id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                petSpecies = obj["petSpecies"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                name = obj["name"]?.jsonPrimitive?.contentOrNull,
+                                xp = obj["xp"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                                targetScale = obj["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                                mutations = (obj["mutations"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                    ?.filter { it.isNotBlank() } ?: emptyList(),
+                                abilities = (obj["abilities"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                            ))
+                            "FeedingTrough" -> troughEggs.add(InventoryEggItem(
+                                eggId = obj["eggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                            ))
+                        }
+                    }
+                }
+                updateSession(sessionId) {
+                    it.copy(
+                        inventory = InventorySnapshot(seeds, eggs, produce, pets, tools, decors),
+                        seedSilo = siloSeeds,
+                        decorShed = shedDecors,
+                        petHutch = hutchPets,
+                        feedingTrough = troughEggs,
+                    )
+                }
+            }
+            is ClientEvent.EggsChanged -> {
+                val newEggs = event.eggs.map { tile ->
+                    val data = tile.data
+                    GardenEggSnapshot(
+                        tileId = tile.tileId,
+                        eggId = data["eggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        plantedAt = data["plantedAt"]?.jsonPrimitive?.longOrNull ?: 0L,
+                        maturedAt = data["maturedAt"]?.jsonPrimitive?.longOrNull ?: 0L,
+                    )
+                }
+                updateSession(sessionId) { it.copy(gardenEggs = newEggs) }
             }
             is ClientEvent.ShopsChanged -> {
                 val previousShops = _state.value.sessions.find { it.id == sessionId }?.shops.orEmpty()
