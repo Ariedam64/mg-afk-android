@@ -161,7 +161,7 @@ object MgApi {
                         ?: plantObj?.get("name")?.jsonPrimitive?.contentOrNull
                         ?: id,
                     sprite = seedObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
-                    rarity = plantObj?.get("rarity")?.jsonPrimitive?.contentOrNull,
+                    rarity = seedObj?.get("rarity")?.jsonPrimitive?.contentOrNull,
                 )
             } else {
                 result[id] = GameEntry(

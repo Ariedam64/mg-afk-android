@@ -23,9 +23,9 @@ data class Session(
     val playerName: String = "",
     val roomId: String = "",
     val weather: String = "",
-    val pets: List<Pet> = emptyList(),
+    val pets: List<PetSnapshot> = emptyList(),
     val logs: List<AbilityLog> = emptyList(),
-    val shops: ShopState = ShopState(),
+    val shops: List<ShopSnapshot> = emptyList(),
 )
 
 @Serializable
@@ -48,8 +48,9 @@ data class ReconnectDelays(
     val otherMs: Long = 1500,
 )
 
+/** Serializable snapshot of a pet for Session persistence */
 @Serializable
-data class Pet(
+data class PetSnapshot(
     val id: String = "",
     val name: String = "",
     val species: String = "",
@@ -68,25 +69,11 @@ data class AbilityLog(
     val slotIndex: Int = 0,
 )
 
+/** Serializable snapshot of a shop for Session persistence */
 @Serializable
-data class ShopState(
-    val seed: List<ShopItem> = emptyList(),
-    val tool: List<ShopItem> = emptyList(),
-    val egg: List<ShopItem> = emptyList(),
-    val decor: List<ShopItem> = emptyList(),
-    val restock: RestockTimers = RestockTimers(),
-)
-
-@Serializable
-data class ShopItem(
-    val name: String = "",
-    val stock: Int = 0,
-)
-
-@Serializable
-data class RestockTimers(
-    val seed: Int = 300,
-    val tool: Int = 600,
-    val egg: Int = 900,
-    val decor: Int = 3600,
+data class ShopSnapshot(
+    val type: String = "",
+    val itemNames: List<String> = emptyList(),
+    val itemStocks: Map<String, Int> = emptyMap(),
+    val secondsUntilRestock: Int = 0,
 )

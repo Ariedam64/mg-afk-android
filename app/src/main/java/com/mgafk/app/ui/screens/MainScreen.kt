@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,17 +38,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -56,14 +59,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertItem
+import com.mgafk.app.data.model.AlertMode
+import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.MainViewModel
-import com.mgafk.app.ui.screens.alerts.AlertsCard
+import com.mgafk.app.ui.screens.alerts.AlertsCards
 import com.mgafk.app.ui.screens.connection.ConnectionCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
 import com.mgafk.app.ui.screens.pets.PetHungerCard
-import com.mgafk.app.ui.screens.shops.ShopsCard
+import com.mgafk.app.ui.screens.shops.ShopsCards
 import com.mgafk.app.ui.screens.status.LiveStatusCard
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.BgDark
@@ -76,6 +81,7 @@ import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
+import com.mgafk.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 // ── Navigation sections ──
@@ -138,14 +144,6 @@ fun MainScreen(
                     trackColor = SurfaceDark,
                 )
             }
-
-            // ── Session tabs ──
-            SessionTabs(
-                sessions = state.sessions,
-                activeId = state.activeSessionId,
-                onSelect = { viewModel.selectSession(it) },
-                onAdd = { viewModel.addSession() },
-            )
 
             HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
 
@@ -307,6 +305,14 @@ private fun SectionContent(
 ) {
     when (section) {
         NavSection.DASHBOARD -> {
+            // ── Session selector (chips) ──
+            SessionChips(
+                sessions = state.sessions,
+                activeId = state.activeSessionId,
+                onSelect = { viewModel.selectSession(it) },
+                onAdd = { viewModel.addSession() },
+            )
+
             ConnectionCard(
                 session = session,
                 onCookieChange = { viewModel.updateSession(session.id) { s -> s.copy(cookie = it) } },
@@ -317,17 +323,24 @@ private fun SectionContent(
                 onLogout = { viewModel.clearToken(session.id) },
             )
             LiveStatusCard(session = session)
+
+            // ── Remove session ──
+            RemoveSessionButton(
+                sessionName = session.name,
+                onRemove = { viewModel.removeSession(session.id) },
+            )
         }
         NavSection.PETS -> {
             PetHungerCard(pets = session.pets)
-            AbilityLogsCard(logs = session.logs)
+            AbilityLogsCard(logs = session.logs, onClear = { viewModel.clearLogs(session.id) })
         }
         NavSection.SHOPS -> {
-            ShopsCard(shops = session.shops)
+            ShopsCards(shops = session.shops)
         }
         NavSection.ALERTS -> {
-            AlertsCard(
+            AlertsCards(
                 alerts = state.alerts,
+                apiReady = state.apiReady,
                 onToggle = { key, enabled ->
                     viewModel.updateAlerts { config ->
                         val items = config.items.toMutableMap()
@@ -335,89 +348,152 @@ private fun SectionContent(
                         config.copy(items = items)
                     }
                 },
+                onSectionModeChange = { section, mode ->
+                    viewModel.updateAlerts { config ->
+                        config.copy(sectionModes = config.sectionModes + (section.key to mode))
+                    }
+                },
+                onTestAlert = { mode -> viewModel.testAlert(mode) },
+                onCollapseChange = { key, collapsed ->
+                    viewModel.updateAlerts { config ->
+                        config.copy(collapsed = config.collapsed + (key to collapsed))
+                    }
+                },
             )
         }
     }
 }
 
-// ── Session tabs ──
+// ── Session chips ──
 
 @Composable
-private fun SessionTabs(
+private fun SessionChips(
     sessions: List<Session>,
     activeId: String,
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
 ) {
-    val selectedIndex = sessions.indexOfFirst { it.id == activeId }.coerceAtLeast(0)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceDark)
-            .padding(vertical = 2.dp),
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ScrollableTabRow(
-            selectedTabIndex = selectedIndex,
-            modifier = Modifier.weight(1f),
-            edgePadding = 12.dp,
-            containerColor = SurfaceDark,
-            divider = {},
-            indicator = { tabPositions ->
-                if (selectedIndex < tabPositions.size) {
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                        color = Accent,
-                        height = 2.dp,
+        sessions.forEach { s ->
+            val isActive = s.id == activeId
+            val statusColor = when (s.status) {
+                SessionStatus.CONNECTED -> StatusConnected
+                SessionStatus.CONNECTING -> StatusConnecting
+                SessionStatus.ERROR -> StatusError
+                SessionStatus.IDLE -> StatusIdle
+            }
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .then(
+                        if (isActive) Modifier.background(Accent.copy(alpha = 0.15f))
+                            .border(1.dp, Accent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                        else Modifier.background(SurfaceCard)
+                            .border(1.dp, SurfaceBorder, RoundedCornerShape(20.dp))
                     )
-                }
-            },
-        ) {
-            sessions.forEachIndexed { index, s ->
-                val statusColor = when (s.status) {
-                    SessionStatus.CONNECTED -> StatusConnected
-                    SessionStatus.CONNECTING -> StatusConnecting
-                    SessionStatus.ERROR -> StatusError
-                    SessionStatus.IDLE -> StatusIdle
-                }
-                Tab(
-                    selected = selectedIndex == index,
-                    onClick = { onSelect(s.id) },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(statusColor)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = s.name,
-                                fontSize = 12.sp,
-                                fontWeight = if (selectedIndex == index) FontWeight.SemiBold else FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (selectedIndex == index) TextPrimary else TextMuted,
-                            )
-                        }
-                    },
+                    .clickable { onSelect(s.id) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(statusColor),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = s.name,
+                    fontSize = 12.sp,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (isActive) TextPrimary else TextMuted,
                 )
             }
         }
 
-        // Add session
+        // Add session chip
         Box(
             modifier = Modifier
-                .padding(end = 12.dp)
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(32.dp)
+                .clip(CircleShape)
                 .background(SurfaceBorder.copy(alpha = 0.5f))
                 .clickable { onAdd() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("+", fontSize = 16.sp, color = Accent, fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = "Add session",
+                tint = Accent,
+                modifier = Modifier.size(16.dp),
+            )
         }
+    }
+}
+
+// ── Remove session button ──
+
+@Composable
+private fun RemoveSessionButton(
+    sessionName: String,
+    onRemove: () -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, StatusError.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+            .clickable { showDialog = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.DeleteOutline,
+            contentDescription = "Remove session",
+            tint = StatusError.copy(alpha = 0.7f),
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Remove $sessionName",
+            fontSize = 13.sp,
+            color = StatusError.copy(alpha = 0.7f),
+            fontWeight = FontWeight.Medium,
+        )
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            containerColor = SurfaceDark,
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary,
+            title = { Text("Remove session") },
+            text = { Text("Remove \"$sessionName\"? This will disconnect and delete all its data.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDialog = false
+                    onRemove()
+                }) {
+                    Text("Remove", color = StatusError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+        )
     }
 }

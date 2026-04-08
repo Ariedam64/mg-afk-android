@@ -1,23 +1,28 @@
 package com.mgafk.app.ui
 
 import android.app.Application
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.AlertConfig
-import com.mgafk.app.data.model.Pet
+import com.mgafk.app.data.model.AlertMode
+import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
-import com.mgafk.app.data.model.ShopState
+import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
+import com.mgafk.app.service.AfkService
+import com.mgafk.app.service.AlertNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -34,7 +39,10 @@ data class UiState(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = SessionRepository(application)
+    private val alertNotifier = AlertNotifier(application)
     private val clients = mutableMapOf<String, RoomClient>()
+    private val collectorJobs = mutableMapOf<String, Job>()
+    private var serviceRunning = false
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -68,6 +76,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeSession(id: String) {
+        collectorJobs.remove(id)?.cancel()
         val client = clients.remove(id)
         client?.dispose()
         _state.update { s ->
@@ -93,10 +102,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Connection ----
 
+    private fun startAfkService() {
+        if (serviceRunning) return
+        val app = getApplication<Application>()
+        val intent = Intent(app, AfkService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            app.startForegroundService(intent)
+        } else {
+            app.startService(intent)
+        }
+        serviceRunning = true
+    }
+
+    private fun stopAfkServiceIfIdle() {
+        val anyConnected = _state.value.sessions.any { it.connected }
+        if (!anyConnected && serviceRunning) {
+            val app = getApplication<Application>()
+            app.stopService(Intent(app, AfkService::class.java))
+            serviceRunning = false
+        }
+    }
+
     fun connect(sessionId: String) {
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
         if (session.cookie.isBlank()) return
 
+        startAfkService()
         updateSession(sessionId) { it.copy(busy = true, status = SessionStatus.CONNECTING) }
 
         viewModelScope.launch {
@@ -107,8 +138,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 val client = clients.getOrPut(sessionId) { RoomClient() }
 
-                // Listen for events
-                launch {
+                // Cancel previous collector before starting a new one
+                collectorJobs[sessionId]?.cancel()
+                collectorJobs[sessionId] = launch {
                     client.events.collect { event ->
                         handleClientEvent(sessionId, event)
                     }
@@ -139,6 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun disconnect(sessionId: String) {
+        collectorJobs.remove(sessionId)?.cancel()
         clients[sessionId]?.disconnect()
         updateSession(sessionId) {
             it.copy(
@@ -149,6 +182,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 uptime = "00:00:00",
             )
         }
+        stopAfkServiceIfIdle()
     }
 
     fun setToken(sessionId: String, token: String) {
@@ -159,11 +193,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateSession(sessionId) { it.copy(cookie = "") }
     }
 
+    fun clearLogs(sessionId: String) {
+        updateSession(sessionId) { it.copy(logs = emptyList()) }
+    }
+
     // ---- Alerts ----
 
     fun updateAlerts(transform: (AlertConfig) -> AlertConfig) {
         _state.update { it.copy(alerts = transform(it.alerts)) }
         viewModelScope.launch { repo.saveAlerts(_state.value.alerts) }
+    }
+
+    fun testAlert(mode: AlertMode) {
+        alertNotifier.testAlert(mode)
     }
 
     // ---- Internal ----
@@ -190,21 +232,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             is ClientEvent.AbilityLogged -> {
                 updateSession(sessionId) {
-                    it.copy(logs = (listOf(event.log) + it.logs).take(200))
+                    val isDuplicate = it.logs.any { existing ->
+                        existing.timestamp == event.log.timestamp && existing.action == event.log.action
+                    }
+                    if (isDuplicate) it
+                    else it.copy(logs = (listOf(event.log) + it.logs).take(200))
                 }
             }
             is ClientEvent.LiveStatusChanged -> {
+                val previousSession = _state.value.sessions.find { it.id == sessionId }
+                val previousWeather = previousSession?.weather.orEmpty()
+                val newPets = event.pets.map { pet ->
+                    PetSnapshot(
+                        id = pet.id,
+                        name = pet.name,
+                        species = pet.species,
+                        hunger = pet.hunger,
+                        index = pet.index,
+                        mutations = pet.mutations,
+                    )
+                }
                 updateSession(sessionId) {
                     it.copy(
                         playerName = event.playerName,
                         roomId = event.roomId,
                         weather = event.weather,
-                        pets = event.pets,
+                        pets = newPets,
                     )
                 }
+                // Fire alert checks (alarm items auto-batch within 300ms)
+                val alerts = _state.value.alerts
+                alertNotifier.checkWeather(event.weather, previousWeather, alerts)
+                alertNotifier.checkPetHunger(newPets, alerts)
             }
             is ClientEvent.ShopsChanged -> {
-                updateSession(sessionId) { it.copy(shops = event.shops) }
+                val previousShops = _state.value.sessions.find { it.id == sessionId }?.shops.orEmpty()
+                val newShops = event.shops.map { shop ->
+                    ShopSnapshot(
+                        type = shop.type,
+                        itemNames = shop.getItemNames(),
+                        itemStocks = shop.getItemStocks(),
+                        secondsUntilRestock = shop.secondsUntilRestock,
+                    )
+                }
+                updateSession(sessionId) { it.copy(shops = newShops) }
+                // Only check alerts when actual items changed, not just the restock timer
+                val oldItems = previousShops.associate { it.type to it.itemNames }
+                val newItems = newShops.associate { it.type to it.itemNames }
+                if (oldItems != newItems) {
+                    alertNotifier.checkShopItems(newShops, _state.value.alerts)
+                }
             }
             is ClientEvent.DebugLog -> { /* Could be stored for dev tools */ }
         }
@@ -218,7 +295,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        collectorJobs.values.forEach { it.cancel() }
+        collectorJobs.clear()
         clients.values.forEach { it.dispose() }
         clients.clear()
+        alertNotifier.stopAlarm()
+        // Stop service if running
+        if (serviceRunning) {
+            val app = getApplication<Application>()
+            app.stopService(Intent(app, AfkService::class.java))
+            serviceRunning = false
+        }
     }
 }

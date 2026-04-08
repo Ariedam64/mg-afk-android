@@ -46,4 +46,27 @@ object Constants {
     )
 
     const val PET_HUNGER_THRESHOLD = 5
+
+    fun formatWeather(value: String?): String {
+        if (value.isNullOrBlank()) return "Clear Skies"
+        return WEATHER_MAP[value.trim().lowercase()] ?: value.trim()
+    }
+
+    fun isAbilityName(action: String?): Boolean {
+        if (action.isNullOrBlank()) return false
+        val abilities = com.mgafk.app.data.repository.MgApi.getAbilities()
+        if (abilities.isEmpty()) {
+            // API pas encore chargée — fallback blocklist
+            return action.trim().lowercase() !in BLOCKED_ABILITIES
+        }
+        return abilities.containsKey(action.trim())
+    }
+
+    fun fmtDuration(ms: Long): String {
+        val totalSec = ms / 1000
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
+        val s = totalSec % 60
+        return "%02d:%02d:%02d".format(h, m, s)
+    }
 }

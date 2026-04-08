@@ -1,27 +1,32 @@
 package com.mgafk.app.ui.screens.alerts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
+import com.mgafk.app.data.model.AlertMode
+import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
@@ -37,6 +44,28 @@ import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
+import com.mgafk.app.ui.theme.TextPrimary
+import com.mgafk.app.ui.theme.TextSecondary
+
+// Game-authentic rarity colors
+private val RarityCommon = Color(0xFFE7E7E7)
+private val RarityUncommon = Color(0xFF67BD4D)
+private val RarityRare = Color(0xFF0071C6)
+private val RarityLegendary = Color(0xFFFFC734)
+private val RarityMythical = Color(0xFF9944A7)
+private val RarityDivine = Color(0xFFFF7835)
+private val RarityCelestial = Color(0xFFFF00FF)
+
+private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
+    "common" -> RarityCommon
+    "uncommon" -> RarityUncommon
+    "rare" -> RarityRare
+    "legendary" -> RarityLegendary
+    "mythical", "mythic" -> RarityMythical
+    "divine" -> RarityDivine
+    "celestial" -> RarityCelestial
+    else -> TextMuted
+}
 
 private val WEATHER_ITEMS = listOf(
     "Sunny" to "Clear Skies",
@@ -49,8 +78,6 @@ private val WEATHER_ITEMS = listOf(
 
 private const val HUNGER_KEY = "hunger<5"
 
-private val ALERT_TABS = listOf("Shops", "Weather", "Pets")
-
 private val SHOP_CATEGORIES = listOf(
     "Seeds" to "seed",
     "Tools" to "tool",
@@ -58,245 +85,449 @@ private val SHOP_CATEGORIES = listOf(
     "Decors" to "decor",
 )
 
-
+/** Emits 3 separate collapsible cards with per-section mode + Debug. */
 @Composable
-fun AlertsCard(
+fun AlertsCards(
     alerts: AlertConfig,
+    apiReady: Boolean,
     onToggle: (key: String, enabled: Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    onSectionModeChange: (AlertSection, AlertMode) -> Unit,
+    onTestAlert: (AlertMode) -> Unit,
+    onCollapseChange: (key: String, collapsed: Boolean) -> Unit,
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    AppCard(modifier = modifier, title = "Alerts") {
-        ScrollableTabRow(
-            selectedTabIndex = selectedTab,
-            edgePadding = 0.dp,
-            containerColor = SurfaceDark,
-            indicator = { tabPositions ->
-                if (selectedTab < tabPositions.size) {
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = Accent,
-                    )
-                }
-            },
-            modifier = Modifier.clip(RoundedCornerShape(10.dp)),
-        ) {
-            ALERT_TABS.forEachIndexed { index, label ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Text(
-                            label,
-                            fontSize = 12.sp,
-                            fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                    },
+    if (!apiReady) {
+        AppCard {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Accent,
+                    strokeWidth = 2.dp,
                 )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Loading game data…", fontSize = 13.sp, color = TextMuted)
             }
         }
+    } else {
+        ShopAlertsCard(alerts, onToggle, alerts.isExpanded("shop_alerts"), onCollapseChange, alerts.modeFor(AlertSection.SHOP)) { onSectionModeChange(AlertSection.SHOP, it) }
+        WeatherAlertsCard(alerts, onToggle, alerts.isExpanded("weather_alerts"), onCollapseChange, alerts.modeFor(AlertSection.WEATHER)) { onSectionModeChange(AlertSection.WEATHER, it) }
+        PetAlertsCard(alerts, onToggle, alerts.isExpanded("pet_alerts"), onCollapseChange, alerts.modeFor(AlertSection.PET)) { onSectionModeChange(AlertSection.PET, it) }
+    }
 
-        Spacer(modifier = Modifier.height(12.dp))
+    DebugAlertsCard(onTestAlert = onTestAlert, expanded = alerts.isExpanded("debug", defaultExpanded = false), onCollapseChange = onCollapseChange)
+}
 
-        when (selectedTab) {
-            0 -> ShopAlertsTab(alerts, onToggle)
-            1 -> WeatherAlertsTab(alerts, onToggle)
-            2 -> PetAlertsTab(alerts, onToggle)
+private fun AlertConfig.isExpanded(key: String, defaultExpanded: Boolean = true): Boolean =
+    if (key in collapsed) collapsed[key] != true else defaultExpanded
+
+// ── Debug ──
+
+@Composable
+private fun DebugAlertsCard(
+    onTestAlert: (AlertMode) -> Unit,
+    expanded: Boolean,
+    onCollapseChange: (String, Boolean) -> Unit,
+) {
+    AppCard(
+        title = "Debug",
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = { onCollapseChange("debug", !it) },
+    ) {
+        Text(
+            "Simulate alerts without waiting for game events.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Accent.copy(alpha = 0.10f))
+                    .border(1.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .clickable { onTestAlert(AlertMode.NOTIFICATION) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Test Notification",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Accent,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFF87171).copy(alpha = 0.10f))
+                    .border(1.dp, Color(0xFFF87171).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .clickable { onTestAlert(AlertMode.ALARM) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Test Alarm",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFF87171),
+                )
+            }
         }
     }
 }
 
-// ---- Shop Alerts ----
+// ── Compact mode picker (reused inside each card) ──
 
 @Composable
-private fun ShopAlertsTab(alerts: AlertConfig, onToggle: (String, Boolean) -> Unit) {
-    var shopTab by remember { mutableIntStateOf(0) }
+private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Mode:", fontSize = 11.sp, color = TextMuted)
+        AlertMode.entries.forEach { mode ->
+            val selected = mode == currentMode
+            val label = when (mode) {
+                AlertMode.NOTIFICATION -> "Notification"
+                AlertMode.ALARM -> "Alarm"
+            }
+            val color = if (mode == AlertMode.ALARM) Color(0xFFF87171) else Accent
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (selected) color.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
+                    .then(
+                        if (selected) Modifier.border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    )
+                    .clickable { onModeChange(mode) }
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 11.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (selected) color else TextMuted,
+                )
+            }
+        }
+    }
+}
 
-    ScrollableTabRow(
-        selectedTabIndex = shopTab,
-        edgePadding = 0.dp,
-        containerColor = SurfaceBorder.copy(alpha = 0.3f),
-        indicator = { tabPositions ->
-            if (shopTab < tabPositions.size) {
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[shopTab]),
-                    color = Accent.copy(alpha = 0.6f),
+// ── Shop Alerts ──
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ShopAlertsCard(
+    alerts: AlertConfig,
+    onToggle: (String, Boolean) -> Unit,
+    expanded: Boolean,
+    onCollapseChange: (String, Boolean) -> Unit,
+    currentMode: AlertMode,
+    onModeChange: (AlertMode) -> Unit,
+) {
+    val totalActive = alerts.items.count { (key, item) -> key.startsWith("shop:") && item.enabled }
+
+    AppCard(
+        title = "Shop Alerts",
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = { onCollapseChange("shop_alerts", !it) },
+        trailing = {
+            if (totalActive > 0) {
+                Text(
+                    text = "$totalActive active",
+                    fontSize = 11.sp,
+                    color = Accent,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(end = 6.dp),
                 )
             }
         },
-        modifier = Modifier.clip(RoundedCornerShape(8.dp)),
     ) {
-        SHOP_CATEGORIES.forEachIndexed { index, (label, _) ->
-            Tab(
-                selected = shopTab == index,
-                onClick = { shopTab = index },
-                text = { Text(label, fontSize = 11.sp) },
-            )
-        }
-    }
+        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
 
-    Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-    val (_, category) = SHOP_CATEGORIES[shopTab]
-    ShopCategoryItems(category, alerts, onToggle)
-}
+        Text(
+            "Tap items to get notified when they appear in shop.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
 
-@Composable
-private fun ShopCategoryItems(
-    category: String,
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-) {
-    data class AlertEntry(val id: String, val name: String, val rarity: String?, val sprite: String?)
+        Spacer(modifier = Modifier.height(12.dp))
 
-    // Recompute when category or apiReady changes
-    val data = when (category) {
-        "seed" -> MgApi.getPlants()
-        "tool" -> MgApi.getItems()
-        "egg" -> MgApi.getEggs()
-        "decor" -> MgApi.getDecors()
-        else -> emptyMap()
-    }
-    val items = data.values.map { AlertEntry(it.id, it.name, it.rarity, it.sprite) }
-
-    if (items.isEmpty() && !MgApi.isReady) {
-        Text("Loading items...", fontSize = 12.sp, color = TextMuted)
-    } else if (items.isEmpty()) {
-        Text("No items found.", fontSize = 12.sp, color = TextMuted)
-    } else {
-        Column {
-            items.forEach { entry ->
-                val key = "shop:$category:${entry.id}"
-                val enabled = alerts.items[key]?.enabled ?: false
-                AlertItemRow(
-                    spriteUrl = entry.sprite,
-                    label = entry.name,
-                    rarity = entry.rarity,
-                    enabled = enabled,
-                    onToggle = { onToggle(key, it) },
-                )
+        SHOP_CATEGORIES.forEachIndexed { index, (label, category) ->
+            val data = when (category) {
+                "seed" -> MgApi.getPlants()
+                "tool" -> MgApi.getItems()
+                "egg" -> MgApi.getEggs()
+                "decor" -> MgApi.getDecors()
+                else -> emptyMap()
             }
-        }
-    }
-}
+            val items = data.values.toList()
+            val activeCount = items.count { entry ->
+                alerts.items["shop:$category:${entry.id}"]?.enabled == true
+            }
 
-// ---- Weather Alerts ----
-
-@Composable
-private fun WeatherAlertsTab(alerts: AlertConfig, onToggle: (String, Boolean) -> Unit) {
-    val weatherSprites = MgApi.getWeathers().mapValues { it.value.sprite }
-
-    Column {
-        WEATHER_ITEMS.forEach { (apiKey, displayName) ->
-            val key = "weather:$displayName"
-            val enabled = alerts.items[key]?.enabled ?: false
-            val spriteUrl = weatherSprites[apiKey]
-
+            // Category header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SurfaceBorder.copy(alpha = 0.2f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (spriteUrl != null) {
-                    SpriteImage(url = spriteUrl, size = 20.dp, contentDescription = displayName)
-                    Spacer(modifier = Modifier.width(8.dp))
+                Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                if (activeCount > 0) {
+                    Text("$activeCount", fontSize = 11.sp, color = Accent)
                 }
-                Text(displayName, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = { onToggle(key, it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (items.isEmpty() && !MgApi.isReady) {
+                Text("Loading...", fontSize = 11.sp, color = TextMuted)
+            } else if (items.isEmpty()) {
+                Text("No items.", fontSize = 11.sp, color = TextMuted)
+            } else {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items.forEach { entry ->
+                        val key = "shop:$category:${entry.id}"
+                        val enabled = alerts.items[key]?.enabled == true
+                        AlertItemTile(
+                            spriteUrl = entry.sprite,
+                            name = entry.name,
+                            rarity = entry.rarity,
+                            enabled = enabled,
+                            onClick = { onToggle(key, !enabled) },
+                        )
+                    }
+                }
+            }
+
+            if (index < SHOP_CATEGORIES.lastIndex) {
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
     }
 }
 
-// ---- Pet Alerts ----
+// ── Weather Alerts ──
 
 @Composable
-private fun PetAlertsTab(alerts: AlertConfig, onToggle: (String, Boolean) -> Unit) {
-    val enabled = alerts.items[HUNGER_KEY]?.enabled ?: false
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceBorder.copy(alpha = 0.2f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("Hunger < 5%", fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        Switch(
-            checked = enabled,
-            onCheckedChange = { onToggle(HUNGER_KEY, it) },
-            colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-        )
-    }
-
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(
-        "Get notified when any pet drops below 5% hunger.",
-        fontSize = 11.sp,
-        color = TextMuted,
-    )
-}
-
-// ---- Rarity colors ----
-
-private val RARITY_COLORS = mapOf(
-    "Common" to Color(0xFF9CA3AF),
-    "Uncommon" to Color(0xFF4ADE80),
-    "Rare" to Color(0xFF60A5FA),
-    "Legendary" to Color(0xFFC084FC),
-    "Mythic" to Color(0xFFF472B6),
-    "Divine" to Color(0xFFFBBF24),
-    "Celestial" to Color(0xFF38BDF8),
-)
-
-// ---- Reusable item row ----
-
-@Composable
-private fun AlertItemRow(
-    spriteUrl: String?,
-    label: String,
-    rarity: String? = null,
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit,
+private fun WeatherAlertsCard(
+    alerts: AlertConfig,
+    onToggle: (String, Boolean) -> Unit,
+    expanded: Boolean,
+    onCollapseChange: (String, Boolean) -> Unit,
+    currentMode: AlertMode,
+    onModeChange: (AlertMode) -> Unit,
 ) {
-    val rarityColor = rarity?.let { RARITY_COLORS[it] }
+    val weatherSprites = MgApi.getWeathers().mapValues { it.value.sprite }
+    val activeCount = WEATHER_ITEMS.count { (_, display) ->
+        alerts.items["weather:$display"]?.enabled == true
+    }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceBorder.copy(alpha = 0.2f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SpriteImage(url = spriteUrl, size = 20.dp, contentDescription = label)
-        Spacer(modifier = Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 13.sp)
-            if (rarity != null && rarityColor != null) {
+    AppCard(
+        title = "Weather Alerts",
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = { onCollapseChange("weather_alerts", !it) },
+        trailing = {
+            if (activeCount > 0) {
                 Text(
-                    text = rarity,
-                    fontSize = 10.sp,
+                    text = "$activeCount active",
+                    fontSize = 11.sp,
+                    color = Accent,
                     fontWeight = FontWeight.Medium,
-                    color = rarityColor,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            }
+        },
+    ) {
+        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "Get notified on weather changes.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            WEATHER_ITEMS.forEach { (apiKey, displayName) ->
+                val key = "weather:$displayName"
+                val enabled = alerts.items[key]?.enabled == true
+                val spriteUrl = weatherSprites[apiKey]
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceBorder.copy(alpha = 0.2f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (spriteUrl != null) {
+                        SpriteImage(url = spriteUrl, size = 20.dp, contentDescription = displayName)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(displayName, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { onToggle(key, it) },
+                        colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Pet Alerts ──
+
+@Composable
+private fun PetAlertsCard(
+    alerts: AlertConfig,
+    onToggle: (String, Boolean) -> Unit,
+    expanded: Boolean,
+    onCollapseChange: (String, Boolean) -> Unit,
+    currentMode: AlertMode,
+    onModeChange: (AlertMode) -> Unit,
+) {
+    val enabled = alerts.items[HUNGER_KEY]?.enabled == true
+
+    AppCard(
+        title = "Pet Alerts",
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = { onCollapseChange("pet_alerts", !it) },
+        trailing = {
+            if (enabled) {
+                Text(
+                    text = "1 active",
+                    fontSize = 11.sp,
+                    color = Accent,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            }
+        },
+    ) {
+        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Hunger < 5%",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = enabled,
+                onCheckedChange = { onToggle(HUNGER_KEY, it) },
+                colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            "Get notified when any pet drops below 5% hunger.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
+    }
+}
+
+// ── Alert item tile (tappable grid item) ──
+
+@Composable
+private fun AlertItemTile(
+    spriteUrl: String?,
+    name: String,
+    rarity: String?,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (enabled) Accent else rarityColor(rarity).copy(alpha = 0.5f)
+    val bgColor = if (enabled) Accent.copy(alpha = 0.1f) else SurfaceDark
+
+    Box(modifier = Modifier.size(76.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+                .background(bgColor)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            SpriteImage(url = spriteUrl, size = 32.dp, contentDescription = name)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = name,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (enabled) TextPrimary else TextSecondary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 11.sp,
+            )
+        }
+
+        // Checkmark badge
+        if (enabled) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-4).dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Active",
+                    tint = SurfaceDark,
+                    modifier = Modifier.size(12.dp),
                 )
             }
         }
-        Switch(
-            checked = enabled,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-        )
     }
 }

@@ -51,6 +51,7 @@ fun ConnectionCard(
         modifier = modifier,
         title = "Connection",
         trailing = { StatusChip(status = session.status) },
+        collapsible = true,
     ) {
         // Token input
         OutlinedTextField(

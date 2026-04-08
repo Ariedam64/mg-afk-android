@@ -1,10 +1,12 @@
 package com.mgafk.app.data.websocket
 
+import android.util.Log
 import com.mgafk.app.data.model.AbilityLog
-import com.mgafk.app.data.model.Pet
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.SessionStatus
-import com.mgafk.app.data.model.ShopState
+import com.mgafk.app.data.websocket.state.GameState
+import com.mgafk.app.data.websocket.state.PetInfo
+import com.mgafk.app.data.websocket.state.ShopModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,20 +14,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -34,9 +30,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
@@ -62,14 +55,18 @@ sealed class ClientEvent {
         val playerName: String,
         val roomId: String,
         val weather: String,
-        val pets: List<Pet>,
+        val pets: List<PetInfo>,
     ) : ClientEvent()
 
-    data class ShopsChanged(val shops: ShopState) : ClientEvent()
+    data class ShopsChanged(val shops: List<ShopModel>) : ClientEvent()
     data class DebugLog(val level: String, val message: String, val detail: String = "") : ClientEvent()
 }
 
 class RoomClient {
+    companion object {
+        private const val TAG = "RoomClient"
+    }
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val httpClient = OkHttpClient.Builder()
@@ -92,17 +89,20 @@ class RoomClient {
     private var cookie = ""
     private var userAgent = Constants.DEFAULT_UA
 
-    // Game state
-    private var roomState: JsonElement? = null
-    private var gameState: JsonElement? = null
-    private var playerIndex = -1
-    private var userSlotIndex: Int? = null
+    // Game state — managed by GameState
+    val gameState = GameState()
+
+    // Actions — available after connection
+    val actions = GameActions { text -> send(text) }
+
+    // Tracking for dedup
     private var welcomed = false
     private var connectedAt = 0L
     private var manualClose = false
     private var playerCount = 0
     private var lastLiveKey = ""
     private var lastShopsKey = ""
+    private var lastAbilityTimestamp = 0L
 
     // Retry state
     private var retryCount = 0
@@ -113,9 +113,7 @@ class RoomClient {
     var reconnectConfig = ReconnectConfig()
         private set
 
-    // Keepalive jobs
-    private var textPingJob: Job? = null
-    private var appPingJob: Job? = null
+    // Timer jobs
     private var tickerJob: Job? = null
 
     // Last connect options for retry
@@ -165,16 +163,13 @@ class RoomClient {
         this.cookie = nextCookie
         this.userAgent = userAgent
         this.playerId = IdGenerator.generatePlayerId()
-        this.roomState = null
-        this.gameState = null
         this.playerCount = 0
         this.connectedAt = 0
         this.welcomed = false
         this.manualClose = false
-        this.playerIndex = -1
-        this.userSlotIndex = null
         this.lastLiveKey = ""
         this.lastShopsKey = ""
+        gameState.reset()
 
         lastConnectOpts = ConnectOptions(
             version = this.version,
@@ -185,6 +180,7 @@ class RoomClient {
         )
 
         val url = UrlBuilder.buildUrl(this.host, this.version, this.room, this.playerId)
+        Log.d(TAG, "connect() url=$url isRetry=$isRetry retryCount=$retryCount")
 
         state = "connecting"
         emitStatus(SessionStatus.CONNECTING)
@@ -231,13 +227,13 @@ class RoomClient {
         state = "disconnected"
         connectedAt = 0
         welcomed = false
-        roomState = null
         playerCount = 0
         manualClose = true
         cancelRetryJob()
         retryCount = 0
         retryCode = null
         initialConnectFastRetry = false
+        gameState.reset()
         emitStatus(SessionStatus.IDLE, code = 1000)
 
         val ws = webSocket
@@ -254,22 +250,9 @@ class RoomClient {
     // ---- Internal handlers ----
 
     private fun handleOpen() {
-        send("""{"scopePath":["Room"],"type":"VoteForGame","gameName":"${Constants.GAME_NAME}"}""")
-        send("""{"scopePath":["Room"],"type":"SetSelectedGame","gameName":"${Constants.GAME_NAME}"}""")
-
-        textPingJob = scope.launch {
-            while (isActive) {
-                delay(Constants.TEXT_PING_MS)
-                send("ping")
-            }
-        }
-
-        appPingJob = scope.launch {
-            while (isActive) {
-                delay(Constants.APP_PING_MS)
-                send("""{"scopePath":["Room","${Constants.GAME_NAME}"],"type":"Ping","id":${System.currentTimeMillis()}}""")
-            }
-        }
+        Log.d(TAG, "onOpen — sending handshake")
+        actions.voteForGame()
+        actions.setSelectedGame()
     }
 
     private fun handleMessage(raw: String) {
@@ -285,32 +268,46 @@ class RoomClient {
         }
 
         val type = msg["type"]?.jsonPrimitive?.contentOrNull
+        Log.d(TAG, "onMessage type=$type")
 
-        if (type == "Welcome") {
-            handleWelcome(msg)
-            return
-        }
-
-        if (type == "PartialState") {
-            handlePartialState(msg)
+        try {
+            when (type) {
+                "Welcome" -> handleWelcome(msg)
+                "PartialState" -> handlePartialState(msg)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing $type: ${e.message}", e)
         }
     }
 
     private fun handleWelcome(msg: JsonObject) {
-        val fullState = msg["fullState"]?.jsonObject ?: return
-        val roomData = fullState["data"]
-        val gameData = fullState["child"]?.jsonObject?.get("data")
-
-        // Check auth
-        val players = StateParser.extractPlayers(roomData)
-        val me = players.find { it.id == playerId }
-        if (me != null && me.databaseUserId == null) {
+        Log.d(TAG, "handleWelcome — playerId=$playerId")
+        // Check auth before accepting state
+        val fullState = msg["fullState"]?.jsonObject ?: run {
+            Log.w(TAG, "Welcome missing fullState!")
+            return
+        }
+        val roomData = fullState["data"] as? JsonObject
+        val players = roomData?.get("players") as? JsonArray
+        val me = players?.firstOrNull { el ->
+            (el as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull == playerId
+        } as? JsonObject
+        if (me != null && me["databaseUserId"]?.jsonPrimitive?.contentOrNull == null) {
+            Log.e(TAG, "Auth failed — player found but no databaseUserId")
             failAuth("Invalid mc_jwt cookie.")
             return
         }
+        Log.d(TAG, "Auth OK — me=${me != null} players=${players?.size ?: 0}")
 
-        roomState = roomData
-        gameState = gameData
+        // Delegate full state handling to GameState
+        gameState.handleMessage(msg)
+
+        // Set lastAbilityTimestamp to the latest existing log so we don't re-emit old ones
+        val myPlayer = gameState.getPlayer(playerId)
+        val latestLog = (myPlayer?.activityLogs?.lastOrNull() as? JsonObject)
+            ?.get("timestamp")?.jsonPrimitive?.longOrNull
+        if (latestLog != null) lastAbilityTimestamp = latestLog
+
         emitPlayerCount()
         emitLiveStatus()
         emitShops()
@@ -330,154 +327,70 @@ class RoomClient {
     }
 
     private fun handlePartialState(msg: JsonObject) {
-        val patches = msg["patches"] as? JsonArray ?: return
-        var liveDirty = false
-        var shopsDirty = false
+        val patches = msg["patches"] as? JsonArray
 
-        for (patchEl in patches) {
-            val patch = patchEl as? JsonObject ?: continue
-            val path = patch["path"]?.jsonPrimitive?.contentOrNull ?: continue
-            val value = patch["value"]
-            val op = patch["op"]?.jsonPrimitive?.contentOrNull
+        // Check if any patch touches our player's activityLogs
+        val userSlotIndex = gameState.findUserSlotIndex(playerId)
+        val touchesLogs = userSlotIndex != null && patches?.any { el ->
+            val path = (el as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
+            path != null && path.startsWith("/child/data/userSlots/$userSlotIndex/data/activityLogs")
+        } == true
 
-            // Room state patches
-            if (roomState != null && (
-                path.matches(Regex("^/data/players/\\d+(/.*)?$")) ||
-                path.matches(Regex("^/data/(roomId|roomSessionId|hostPlayerId)(/.*)?$"))
-            )) {
-                roomState = JsonPatch.applyPatch(roomState!!, path, value, op)
-                liveDirty = true
-                continue
-            }
+        // Delegate patch application to GameState
+        gameState.handleMessage(msg)
 
-            // Game state patches
-            if (gameState != null) {
-                val gamePath = path.removePrefix("/child")
-
-                if (path == "/child/data/weather") {
-                    gameState = JsonPatch.applyPatch(gameState!!, gamePath, value, op)
-                    liveDirty = true
-                    continue
-                }
-
-                if (path.matches(Regex("^/child/data/userSlots/.*$"))) {
-                    gameState = JsonPatch.applyPatch(gameState!!, gamePath, value, op)
-                    liveDirty = true
-                    continue
-                }
-
-                if (path.startsWith("/child/data/shops")) {
-                    gameState = JsonPatch.applyPatch(gameState!!, gamePath, value, op)
-                    shopsDirty = true
-                    continue
-                }
-            }
-        }
-
-        // Re-find slot index
-        if (roomState != null && gameState != null) {
-            val players = StateParser.extractPlayers(roomState)
-            val idx = players.indexOfFirst { it.id == playerId }
-            if (idx >= 0) playerIndex = idx
-            val si = StateParser.findUserSlotIndex(roomState, gameState, playerId, playerIndex)
-            if (si != null) userSlotIndex = si
-        }
+        // If activityLogs were touched, check for new abilities
+        if (touchesLogs) emitNewAbilityLogs()
 
         emitPlayerCount()
-        if (liveDirty) emitLiveStatus()
-        if (shopsDirty) emitShops()
-
-        // Extract ability logs from patches
-        extractAbilityLogFromPatches(patches)
+        emitLiveStatus()
+        emitShops()
     }
 
-    private fun extractAbilityLogFromPatches(patches: JsonArray) {
-        val logRegex = Regex(
-            "/child/data/userSlots/(\\d+)/data/activityLogs/(\\d+)/(action|timestamp)"
-        )
-        val petNameRegex = Regex(
-            "/child/data/userSlots/(\\d+)/data/activityLogs/(\\d+)/parameters/pet/name"
-        )
-        val petSpeciesRegex = Regex(
-            "/child/data/userSlots/(\\d+)/data/activityLogs/(\\d+)/parameters/pet/petSpecies"
-        )
+    private fun emitNewAbilityLogs() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val logs = me.activityLogs
 
-        data class LogEntry(
-            var action: String? = null,
-            var timestamp: Long? = null,
-            var petName: String? = null,
-            var petSpecies: String? = null,
-            var slotIndex: Int? = null,
-            var seen: Int = 0,
-        )
+        // Collect new entries (oldest first so prepend in ViewModel keeps correct order)
+        val newEntries = mutableListOf<AbilityLog>()
 
-        val logs = mutableMapOf<Int, LogEntry>()
-        var seen = 0
+        for (i in 0 until logs.size) {
+            val entry = logs[i] as? JsonObject ?: continue
+            val timestamp = entry["timestamp"]?.jsonPrimitive?.longOrNull ?: continue
+            if (timestamp <= lastAbilityTimestamp) continue
 
-        for (patchEl in patches) {
-            val patch = patchEl as? JsonObject ?: continue
-            val path = patch["path"]?.jsonPrimitive?.contentOrNull ?: continue
-            val value = patch["value"]
+            val action = entry["action"]?.jsonPrimitive?.contentOrNull
+            if (!Constants.isAbilityName(action)) continue
 
-            logRegex.find(path)?.let { match ->
-                val slotIdx = match.groupValues[1].toInt()
-                val logIdx = match.groupValues[2].toInt()
-                val field = match.groupValues[3]
-                if (userSlotIndex != null && slotIdx != userSlotIndex) return@let
-                val entry = logs.getOrPut(logIdx) { LogEntry() }
-                entry.slotIndex = slotIdx
-                entry.seen = ++seen
-                when (field) {
-                    "action" -> entry.action = value?.jsonPrimitive?.contentOrNull
-                    "timestamp" -> entry.timestamp = value?.jsonPrimitive?.longOrNull
-                }
-                return@let
-            }
+            val pet = entry["parameters"]?.let { it as? JsonObject }
+                ?.get("pet")?.let { it as? JsonObject }
 
-            petNameRegex.find(path)?.let { match ->
-                val slotIdx = match.groupValues[1].toInt()
-                val logIdx = match.groupValues[2].toInt()
-                if (userSlotIndex != null && slotIdx != userSlotIndex) return@let
-                val entry = logs.getOrPut(logIdx) { LogEntry() }
-                entry.petName = value?.jsonPrimitive?.contentOrNull
-                entry.slotIndex = slotIdx
-                entry.seen = ++seen
-            }
-
-            petSpeciesRegex.find(path)?.let { match ->
-                val slotIdx = match.groupValues[1].toInt()
-                val logIdx = match.groupValues[2].toInt()
-                if (userSlotIndex != null && slotIdx != userSlotIndex) return@let
-                val entry = logs.getOrPut(logIdx) { LogEntry() }
-                entry.petSpecies = value?.jsonPrimitive?.contentOrNull
-                entry.slotIndex = slotIdx
-                entry.seen = ++seen
-            }
-        }
-
-        // Find best log entry (highest timestamp, then highest index)
-        val best = logs.entries
-            .filter { StateParser.isAbilityName(it.value.action) }
-            .maxWithOrNull(compareBy({ it.value.timestamp ?: 0L }, { it.value.seen }))
-
-        if (best != null) {
-            val entry = best.value
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.FRANCE)
-            _events.tryEmit(
-                ClientEvent.AbilityLogged(
-                    AbilityLog(
-                        timestamp = System.currentTimeMillis(),
-                        action = entry.action.orEmpty(),
-                        petName = entry.petName.orEmpty(),
-                        petSpecies = entry.petSpecies.orEmpty(),
-                        slotIndex = entry.slotIndex ?: userSlotIndex ?: 0,
-                    )
+            newEntries.add(
+                AbilityLog(
+                    timestamp = timestamp,
+                    action = action.orEmpty(),
+                    petName = pet?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    petSpecies = pet?.get("petSpecies")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    slotIndex = me.slotIndex ?: 0,
                 )
             )
+        }
+
+        // Emit oldest first → ViewModel prepends each → most recent ends up on top
+        for (log in newEntries) {
+            _events.tryEmit(ClientEvent.AbilityLogged(log))
+        }
+
+        // Update last seen timestamp
+        val latestTimestamp = (logs.lastOrNull() as? JsonObject)
+            ?.get("timestamp")?.jsonPrimitive?.longOrNull
+        if (latestTimestamp != null && latestTimestamp > lastAbilityTimestamp) {
+            lastAbilityTimestamp = latestTimestamp
         }
     }
 
     private fun handleClose(code: Int, reason: String) {
+        Log.w(TAG, "onClose code=$code reason=$reason manualClose=$manualClose")
         clearTimers()
         state = "disconnected"
         connectedAt = 0
@@ -498,23 +411,23 @@ class RoomClient {
 
     private fun handleError(throwable: Throwable) {
         val msg = throwable.message ?: throwable.toString()
+        Log.e(TAG, "onError: $msg", throwable)
         emit(ClientEvent.DebugLog("error", "ws error", msg))
-        // OkHttp calls onFailure instead of onClosed on error — treat as close
         handleClose(1006, msg)
     }
 
     private fun failAuth(message: String) {
+        Log.e(TAG, "failAuth: $message")
         clearTimers()
         cancelRetryJob()
         state = "error"
         connectedAt = 0
         welcomed = false
-        roomState = null
-        gameState = null
         playerCount = 0
         retryCount = 0
         retryCode = null
         initialConnectFastRetry = false
+        gameState.reset()
         emitStatus(SessionStatus.ERROR, message = message, code = 4800)
         val ws = webSocket
         webSocket = null
@@ -590,7 +503,7 @@ class RoomClient {
         retryJob = null
     }
 
-    // ---- Emitters ----
+    // ---- Emitters (convert GameState models → ClientEvents) ----
 
     private fun emit(event: ClientEvent) {
         _events.tryEmit(event)
@@ -607,8 +520,7 @@ class RoomClient {
     }
 
     private fun emitPlayerCount() {
-        val players = StateParser.extractPlayers(roomState)
-        val count = players.count { it.isConnected }
+        val count = gameState.getConnectedPlayers().size
         if (count != playerCount) {
             playerCount = count
             emit(ClientEvent.PlayersChanged(count))
@@ -616,23 +528,13 @@ class RoomClient {
     }
 
     private fun emitLiveStatus() {
-        val players = StateParser.extractPlayers(roomState)
-        val idx = players.indexOfFirst { it.id == playerId }
-        if (idx >= 0) playerIndex = idx
-        val si = StateParser.findUserSlotIndex(roomState, gameState, playerId, playerIndex)
-        if (si != null) userSlotIndex = si
-
-        val me = players.find { it.id == playerId }
-        val weather = (gameState as? JsonObject)?.get("weather")?.jsonPrimitive?.contentOrNull
-        val pets = StateParser.extractPets(gameState, userSlotIndex)
-        val roomId = (roomState as? JsonObject)?.get("roomId")?.jsonPrimitive?.contentOrNull.orEmpty()
-
+        val me = gameState.getPlayer(playerId)
         val payload = ClientEvent.LiveStatusChanged(
             playerId = playerId,
             playerName = me?.name.orEmpty(),
-            roomId = roomId,
-            weather = StateParser.formatWeather(weather),
-            pets = pets,
+            roomId = gameState.getRoom()?.roomId.orEmpty(),
+            weather = Constants.formatWeather(gameState.getWeather()),
+            pets = me?.getActivePetInfos() ?: emptyList(),
         )
         val key = payload.toString()
         if (key == lastLiveKey) return
@@ -641,7 +543,8 @@ class RoomClient {
     }
 
     private fun emitShops() {
-        val shops = StateParser.extractShops(gameState)
+        val shops = gameState.getAllShops()
+        if (shops.isEmpty()) return
         val key = shops.toString()
         if (key == lastShopsKey) return
         lastShopsKey = key
@@ -657,7 +560,7 @@ class RoomClient {
                 delay(1000)
                 if (connectedAt > 0) {
                     val ms = System.currentTimeMillis() - connectedAt
-                    emit(ClientEvent.UptimeChanged(StateParser.fmtDuration(ms)))
+                    emit(ClientEvent.UptimeChanged(Constants.fmtDuration(ms)))
                 }
             }
         }
@@ -665,8 +568,6 @@ class RoomClient {
 
     private fun clearTimers() {
         tickerJob?.cancel(); tickerJob = null
-        textPingJob?.cancel(); textPingJob = null
-        appPingJob?.cancel(); appPingJob = null
     }
 
     private fun send(text: String) {

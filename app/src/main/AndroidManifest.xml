@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:name=".MgAfkApp"
@@ -41,10 +43,27 @@
             android:exported="false"
             android:theme="@style/Theme.MgAfk" />
 
+        <activity
+            android:name=".service.AlarmActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.MgAfk"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".service.AfkService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+
+        <receiver
+            android:name=".service.AlarmStopReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mgafk.app.STOP_ALARM" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
