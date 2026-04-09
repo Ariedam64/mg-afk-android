@@ -87,7 +87,7 @@ class AfkService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(smartAlarmReceiver, alarmFilter, RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(smartAlarmReceiver, alarmFilter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(smartAlarmReceiver, alarmFilter)
         }
     }
 
