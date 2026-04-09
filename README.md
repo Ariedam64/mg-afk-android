@@ -1,9 +1,10 @@
 # MG AFK Android
 
-MG AFK Android is a lightweight, read-only mobile app that lets you stay
-connected to Magic Garden without launching the game. It keeps a session open
-to display pet ability logs, shop inventory, weather and more while minimizing
-battery usage. No in-game actions are performed.
+MG AFK Android is a lightweight mobile app that lets you stay connected to
+Magic Garden without launching the game. It keeps a session open to display pet
+ability logs, shop inventory, weather and more while minimizing battery usage.
+You can also interact directly from the app: buy items from shops, chat with
+other players in the room, manage your feeding trough, and feed your pets.
 
 ## How it works
 
@@ -26,10 +27,13 @@ Swipe from the left edge or tap the hamburger menu to open the navigation
 drawer. Sections:
 
 | Section | Content |
-|-----------|---------------------------------------------|
+|-----------|-------------------------------------------------------|
 | Dashboard | Connection setup + live status |
-| Pets | Pet hunger bars + ability logs |
-| Shops | Current seed / tool / egg / decor inventory |
+| Room | Chat with players in the room |
+| Pets | Pet hunger bars, feed pets, ability logs |
+| Shops | Buy seeds / tools / eggs / decors directly |
+| Garden | Garden plants and eggs overview |
+| Storage | Inventory, feeding trough (add/remove items) |
 | Alerts | Notification config (shops, weather, pets) |
 
 Sections that require an active connection are greyed out when offline.
