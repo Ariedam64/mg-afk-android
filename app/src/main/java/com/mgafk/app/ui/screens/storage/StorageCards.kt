@@ -27,10 +27,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.Dialog
+import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.InventoryEggItem
 import com.mgafk.app.data.model.InventoryPetItem
+import com.mgafk.app.data.model.InventoryPlantItem
+import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
+import com.mgafk.app.data.repository.PriceCalculator
+import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
@@ -125,15 +143,40 @@ fun DecorShedCard(decors: List<InventoryDecorItem>, apiReady: Boolean) {
 // ── Feeding Trough ──
 
 @Composable
-fun FeedingTroughCard(eggs: List<InventoryEggItem>, apiReady: Boolean) {
-    val sorted = remember(eggs, apiReady) { eggs.sortedBy { raritySort(it.eggId) } }
+fun FeedingTroughCard(crops: List<InventoryCropsItem>, apiReady: Boolean) {
+    val sorted = remember(crops, apiReady) { crops.sortedBy { raritySort(it.species) } }
     AppCard(title = "Feeding Trough", collapsible = true, trailing = {
-        Text("${eggs.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${crops.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i -> QtyTile(sorted[i].eggId, sorted[i].quantity, apiReady) }
+            GridOf(sorted.size) { i -> CropTile(sorted[i], apiReady) }
+        }
+    }
+}
+
+@Composable
+private fun CropTile(item: InventoryCropsItem, apiReady: Boolean) {
+    val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
+    val name = entry?.name?.removeSuffix(" Seed") ?: item.species
+    val color = rarityColor(entry?.rarity)
+
+    Column(
+        modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .background(SurfaceDark).padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
+        if (item.mutations.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                item.mutations.take(3).forEach { SpriteImage(url = mutUrl(it), size = 12.dp, contentDescription = it) }
+            }
         }
     }
 }

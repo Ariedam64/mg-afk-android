@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
@@ -72,6 +73,8 @@ import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.screens.alerts.AlertsCards
 import com.mgafk.app.ui.screens.connection.ConnectionCard
+import com.mgafk.app.ui.screens.room.ChatCard
+import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
 import com.mgafk.app.ui.screens.garden.EggsCard
 import com.mgafk.app.ui.screens.garden.GardenCard
@@ -106,6 +109,7 @@ enum class NavSection(
     val requiresConnection: Boolean = false,
 ) {
     DASHBOARD("Dashboard", Icons.Outlined.Dashboard),
+    ROOM("Room", Icons.Outlined.MeetingRoom, requiresConnection = true),
     PETS("Pets", Icons.Outlined.Pets, requiresConnection = true),
     STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true),
     GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
@@ -484,6 +488,20 @@ private fun SectionContent(
                 onRemove = { viewModel.removeSession(session.id) },
             )
         }
+        NavSection.ROOM -> {
+            PlayersCard(
+                players = session.playersList,
+                gameVersion = session.gameVersion,
+                gameHost = session.gameUrl,
+            )
+            ChatCard(
+                messages = session.chatMessages,
+                players = session.playersList,
+                gameVersion = session.gameVersion,
+                gameHost = session.gameUrl,
+                onSend = { message -> viewModel.sendChat(session.id, message) },
+            )
+        }
         NavSection.GARDEN -> {
             GardenCard(plants = session.garden, apiReady = state.apiReady)
             EggsCard(eggs = session.gardenEggs, apiReady = state.apiReady)
@@ -493,14 +511,22 @@ private fun SectionContent(
             AbilityLogsCard(logs = session.logs, apiReady = state.apiReady, onClear = { viewModel.clearLogs(session.id) })
         }
         NavSection.SHOPS -> {
-            ShopsCards(shops = session.shops, apiReady = state.apiReady)
+            ShopsCards(
+                shops = session.shops,
+                apiReady = state.apiReady,
+                purchaseError = state.purchaseError,
+                showTip = state.showShopTip,
+                onDismissTip = { viewModel.dismissShopTip() },
+                onBuy = { shopType, itemName -> viewModel.purchaseShopItem(session.id, shopType, itemName) },
+                onBuyAll = { shopType, itemName -> viewModel.purchaseAllShopItem(session.id, shopType, itemName) },
+            )
         }
         NavSection.STORAGE -> {
             InventoryCard(inventory = session.inventory, apiReady = state.apiReady)
             SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady)
             DecorShedCard(decors = session.decorShed, apiReady = state.apiReady)
             PetHutchCard(pets = session.petHutch, apiReady = state.apiReady)
-            FeedingTroughCard(eggs = session.feedingTrough, apiReady = state.apiReady)
+            FeedingTroughCard(crops = session.feedingTrough, apiReady = state.apiReady)
         }
         NavSection.ALERTS -> {
             AlertsCards(

@@ -2,6 +2,8 @@ package com.mgafk.app.data.websocket
 
 import android.util.Log
 import com.mgafk.app.data.model.AbilityLog
+import com.mgafk.app.data.model.ChatMessage
+import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.websocket.state.GameState
@@ -58,10 +60,12 @@ sealed class ClientEvent {
         val pets: List<PetInfo>,
     ) : ClientEvent()
 
-    data class ShopsChanged(val shops: List<ShopModel>) : ClientEvent()
+    data class ShopsChanged(val shops: List<ShopModel>, val shopPurchases: JsonObject? = null) : ClientEvent()
     data class GardenChanged(val plants: List<GardenTile>) : ClientEvent()
     data class EggsChanged(val eggs: List<GardenTile>) : ClientEvent()
     data class InventoryChanged(val items: JsonArray, val storages: JsonArray) : ClientEvent()
+    data class ChatChanged(val messages: List<ChatMessage>) : ClientEvent()
+    data class PlayersListChanged(val players: List<PlayerSnapshot>) : ClientEvent()
     data class DebugLog(val level: String, val message: String, val detail: String = "") : ClientEvent()
 }
 
@@ -109,6 +113,8 @@ class RoomClient {
     private var lastEggsPayload: ClientEvent.EggsChanged? = null
     private var lastInventorySize: Int = -1
     private var lastAbilityTimestamp = 0L
+    private var lastChatSize = -1
+    private var lastPlayersPayload: ClientEvent.PlayersListChanged? = null
 
     // Retry state
     private var retryCount = 0
@@ -319,6 +325,8 @@ class RoomClient {
         emitGarden()
         emitEggs()
         emitInventory()
+        emitChat()
+        emitPlayersList()
 
         if (!welcomed) {
             welcomed = true
@@ -355,6 +363,8 @@ class RoomClient {
         emitGarden()
         emitEggs()
         emitInventory()
+        emitChat()
+        emitPlayersList()
     }
 
     private fun emitNewAbilityLogs() {
@@ -552,7 +562,8 @@ class RoomClient {
     private fun emitShops() {
         val shops = gameState.getAllShops()
         if (shops.isEmpty()) return
-        val payload = ClientEvent.ShopsChanged(shops)
+        val me = gameState.getPlayer(playerId)
+        val payload = ClientEvent.ShopsChanged(shops, me?.shopPurchases)
         if (payload == lastShopsPayload) return
         lastShopsPayload = payload
         emit(payload)
@@ -583,6 +594,63 @@ class RoomClient {
         val payload = ClientEvent.EggsChanged(eggs)
         if (payload == lastEggsPayload) return
         lastEggsPayload = payload
+        emit(payload)
+    }
+
+    private fun emitChat() {
+        val room = gameState.getRoom() ?: return
+        val chatObj = room.chat ?: return
+        val messagesArr = chatObj["messages"] as? JsonArray ?: return
+        if (messagesArr.size == lastChatSize) return
+        lastChatSize = messagesArr.size
+
+        // Build player name lookup from room players
+        val playerNames = mutableMapOf<String, String>()
+        val roomData = gameState.roomState as? JsonObject
+        val players = roomData?.get("players") as? JsonArray
+        players?.forEach { el ->
+            val obj = el as? JsonObject ?: return@forEach
+            val pid = obj["id"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+            val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+            playerNames[pid] = name
+        }
+
+        val messages = messagesArr.mapNotNull { el ->
+            val obj = el as? JsonObject ?: return@mapNotNull null
+            val pid = obj["playerId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            ChatMessage(
+                timestamp = obj["timestamp"]?.jsonPrimitive?.longOrNull ?: 0L,
+                playerId = pid,
+                playerName = playerNames[pid].orEmpty(),
+                message = obj["message"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            )
+        }
+        emit(ClientEvent.ChatChanged(messages))
+    }
+
+    private fun emitPlayersList() {
+        val allPlayers = gameState.getAllPlayers()
+        if (allPlayers.isEmpty()) return
+
+        val snapshots = allPlayers.map { player ->
+            val cosmetic = player.cosmetic
+            val avatar = cosmetic?.get("avatar") as? JsonArray
+            val color = cosmetic?.get("color")?.jsonPrimitive?.contentOrNull.orEmpty()
+            PlayerSnapshot(
+                id = player.id,
+                name = player.name,
+                isConnected = player.isConnected,
+                coins = player.coins,
+                color = color,
+                avatarBottom = avatar?.getOrNull(0)?.jsonPrimitive?.contentOrNull.orEmpty(),
+                avatarMid = avatar?.getOrNull(1)?.jsonPrimitive?.contentOrNull.orEmpty(),
+                avatarTop = avatar?.getOrNull(2)?.jsonPrimitive?.contentOrNull.orEmpty(),
+                avatarExpression = avatar?.getOrNull(3)?.jsonPrimitive?.contentOrNull.orEmpty(),
+            )
+        }
+        val payload = ClientEvent.PlayersListChanged(snapshots)
+        if (payload == lastPlayersPayload) return
+        lastPlayersPayload = payload
         emit(payload)
     }
 

@@ -117,7 +117,7 @@ fun AbilityLogsCard(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp),
                 ) {
-                    items(filteredLogs, key = { it.timestamp }) { log ->
+                    items(filteredLogs, key = { it.id }) { log ->
                         LogRow(log, dateFormat, apiReady)
                     }
                 }

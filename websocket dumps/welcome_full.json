@@ -1,0 +1,525 @@
+{
+  "type": "Welcome",
+  "fullState": {
+    "scope": "Room",
+    "data": {
+      "dateRoomCreated": 1775679957424,
+      "dateGameBegan": 1775679957424,
+      "players": [
+        {
+          "id": "p_BwVRqYPT54FvCrkw",
+          "name": "Romann",
+          "isConnected": true,
+          "discordAvatarUrl": "https://cdn.discordapp.com/avatars/128202956574162945/12b1054032398bb965e4a2d271fc9774.png?size=256",
+          "discordUserId": "128202956574162945",
+          "cosmetic": {
+            "color": "Red",
+            "avatar": [
+              "Top_DonutHalo.png",
+              "Top_DonutHalo.png",
+              "Top_DonutHalo.png",
+              "Expression_Alarmed.png"
+            ]
+          },
+          "emoteData": {
+            "emoteType": -1
+          },
+          "secondsRemainingUntilChatEnabled": 0,
+          "databaseUserId": "128202956574162945",
+          "guildId": null
+        }
+      ],
+      "bots": [],
+      "timer": {
+        "name": null,
+        "totalSeconds": 0,
+        "secondsRemaining": 0,
+        "progress": 0,
+        "rate": 1,
+        "isRunning": false,
+        "isPaused": false
+      },
+      "isGameStarting": false,
+      "animationInProgress": false,
+      "hostPlayerId": "p_BwVRqYPT54FvCrkw",
+      "roomSessionId": "rs_7EUGDAtDV8qk",
+      "chat": {
+        "messages": [],
+        "playerCosmeticInfos": {
+          "p_BwVRqYPT54FvCrkw": {
+            "userStyle": {
+              "id": 1760720,
+              "userId": "128202956574162945",
+              "name": "Romann",
+              "avatarTop": "Top_DonutHalo.png",
+              "avatarMid": "Top_DonutHalo.png",
+              "avatarBottom": "Top_DonutHalo.png",
+              "avatarExpression": "Expression_Alarmed.png",
+              "color": "Red"
+            },
+            "discordAvatarUrl": "https://cdn.discordapp.com/avatars/128202956574162945/12b1054032398bb965e4a2d271fc9774.png?size=256",
+            "lastUpdatedAt": 1775679958007
+          }
+        }
+      },
+      "selectedGame": "Quinoa",
+      "gameVotes": {},
+      "roomId": "TMVPLKGSVO"
+    },
+    "child": {
+      "scope": "Quinoa",
+      "data": {
+        "currentTime": 1775679957424,
+        "shops": {
+          "seed": {
+            "inventory": [
+              {
+                "itemType": "Seed",
+                "species": "Carrot",
+                "initialStock": 18
+              },
+              {
+                "itemType": "Seed",
+                "species": "Cabbage",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Seed",
+                "species": "Strawberry",
+                "initialStock": 4
+              },
+              {
+                "itemType": "Seed",
+                "species": "Aloe",
+                "initialStock": 7
+              },
+              {
+                "itemType": "Seed",
+                "species": "Beet",
+                "initialStock": 5
+              },
+              {
+                "itemType": "Seed",
+                "species": "FavaBean",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Blueberry",
+                "initialStock": 4
+              },
+              {
+                "itemType": "Seed",
+                "species": "Apple",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "OrangeTulip",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Tomato",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Seed",
+                "species": "Daffodil",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Seed",
+                "species": "Corn",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Watermelon",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Pumpkin",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Echeveria",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Pear",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Seed",
+                "species": "Gentian",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Coconut",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Banana",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Lily",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Seed",
+                "species": "Camellia",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Peach",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "BurrosTail",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Mushroom",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Cactus",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Bamboo",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "VioletCort",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Chrysanthemum",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Grape",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Pepper",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Lemon",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "PassionFruit",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "DragonFruit",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Cacao",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Lychee",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Sunflower",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "Starweaver",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "DawnCelestial",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Seed",
+                "species": "MoonCelestial",
+                "initialStock": 0
+              }
+            ],
+            "secondsUntilRestock": 243
+          },
+          "tool": {
+            "inventory": [
+              {
+                "itemType": "Tool",
+                "toolId": "WateringCan",
+                "initialStock": 4
+              },
+              {
+                "itemType": "Tool",
+                "toolId": "PlanterPot",
+                "initialStock": 5
+              },
+              {
+                "itemType": "Tool",
+                "toolId": "CropCleanser",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Tool",
+                "toolId": "Shovel",
+                "initialStock": 0
+              }
+            ],
+            "secondsUntilRestock": 243
+          },
+          "egg": {
+            "inventory": [
+              {
+                "itemType": "Egg",
+                "eggId": "CommonEgg",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Egg",
+                "eggId": "UncommonEgg",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Egg",
+                "eggId": "RareEgg",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Egg",
+                "eggId": "LegendaryEgg",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Egg",
+                "eggId": "SnowEgg",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Egg",
+                "eggId": "MythicalEgg",
+                "initialStock": 0
+              }
+            ],
+            "secondsUntilRestock": 243
+          },
+          "decor": {
+            "inventory": [
+              {
+                "itemType": "Decor",
+                "decorId": "SmallRock",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MediumRock",
+                "initialStock": 3
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "LargeRock",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "HayBale",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StringLights",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodBench",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodArch",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodPergola",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodBridge",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodLampPost",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodOwl",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodBirdhouse",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "WoodWindmill",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneBench",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneArch",
+                "initialStock": 2
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneBridge",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneLampPost",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneGnome",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StoneBirdbath",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleBench",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleArch",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleBridge",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleLampPost",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleBlobling",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MarbleFountain",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MiniFairyCottage",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "StrawScarecrow",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MiniFairyForge",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MiniFairyKeep",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "MiniWizardTower",
+                "initialStock": 0
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "FeedingTrough",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "DecorShed",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "PetHutch",
+                "initialStock": 1
+              },
+              {
+                "itemType": "Decor",
+                "decorId": "SeedSilo",
+                "initialStock": 1
+              }
+            ],
+            "secondsUntilRestock": 2043
+          }
+        },
+        "weather": null,
+        "userSlots": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "spectators": [],
+        "steppedTiles": {}
+      },
+      "child": null
+    }
+  }
+}

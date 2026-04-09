@@ -46,6 +46,7 @@ object MgApi {
         val rarity: String? = null,
         val cropSprite: String? = null,
         val maxScale: Double? = null,
+        val baseSellPrice: Double? = null,
         val hoursToMature: Double? = null,
         val color: String? = null,
     ) {
@@ -170,6 +171,7 @@ object MgApi {
                     rarity = seedObj?.get("rarity")?.jsonPrimitive?.contentOrNull,
                     cropSprite = cropObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     maxScale = cropObj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
+                    baseSellPrice = cropObj?.get("baseSellPrice")?.jsonPrimitive?.doubleOrNull,
                 )
             } else {
                 result[id] = GameEntry(

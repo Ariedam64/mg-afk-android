@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mgafk.app.data.model.AlertConfig
@@ -22,6 +23,7 @@ class SessionRepository(private val context: Context) {
         private val KEY_SESSIONS = stringPreferencesKey("mgafk.sessions")
         private val KEY_ACTIVE = stringPreferencesKey("mgafk.activeSession")
         private val KEY_ALERTS = stringPreferencesKey("mgafk.alerts")
+        private val KEY_SHOP_TIP = booleanPreferencesKey("mgafk.shopTipDismissed")
     }
 
     suspend fun loadSessions(): List<Session> {
@@ -64,6 +66,16 @@ class SessionRepository(private val context: Context) {
     suspend fun saveAlerts(config: AlertConfig) {
         context.dataStore.edit { prefs ->
             prefs[KEY_ALERTS] = json.encodeToString(config)
+        }
+    }
+
+    suspend fun isShopTipDismissed(): Boolean {
+        return context.dataStore.data.map { it[KEY_SHOP_TIP] ?: false }.first()
+    }
+
+    suspend fun dismissShopTip() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOP_TIP] = true
         }
     }
 }

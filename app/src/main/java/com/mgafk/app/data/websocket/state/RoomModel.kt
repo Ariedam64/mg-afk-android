@@ -1,6 +1,5 @@
 package com.mgafk.app.data.websocket.state
 
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -19,7 +18,7 @@ data class RoomModel(
     val dateGameBegan: String?,
     val isGameStarting: Boolean,
     val timer: JsonObject? = null,
-    val chat: JsonArray? = null,
+    val chat: JsonObject? = null,
     val gameVotes: JsonObject? = null,
 ) {
     companion object {
@@ -33,7 +32,7 @@ data class RoomModel(
                 dateGameBegan = data["dateGameBegan"]?.jsonPrimitive?.contentOrNull,
                 isGameStarting = data["isGameStarting"]?.jsonPrimitive?.booleanOrNull ?: false,
                 timer = data["timer"] as? JsonObject,
-                chat = data["chat"] as? JsonArray,
+                chat = data["chat"] as? JsonObject,
                 gameVotes = data["gameVotes"] as? JsonObject,
             )
         }

@@ -9,14 +9,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
+import com.mgafk.app.data.model.ChatMessage
+import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.data.model.GardenEggSnapshot
 import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.model.InventoryEggItem
 import com.mgafk.app.data.model.InventoryPetItem
+import com.mgafk.app.data.model.InventoryPlantItem
+import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.model.InventorySnapshot
 import com.mgafk.app.data.model.InventoryToolItem
+import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
@@ -37,11 +42,13 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -53,6 +60,8 @@ data class UiState(
     val apiReady: Boolean = false,
     val loadingStep: String = "",
     val updateAvailable: AppRelease? = null,
+    val purchaseError: String = "",
+    val showShopTip: Boolean = false,
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -73,10 +82,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val sessions = repo.loadSessions().ifEmpty { listOf(Session()) }
             val activeId = repo.loadActiveSessionId() ?: sessions.first().id
             val alerts = repo.loadAlerts()
+            val shopTipDismissed = repo.isShopTipDismissed()
             _state.value = UiState(
                 sessions = sessions,
                 activeSessionId = activeId,
                 alerts = alerts,
+                showShopTip = !shopTipDismissed,
             )
             // Preload ALL API data + sprites at startup
             launch {
@@ -168,6 +179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     host = session.gameUrl.removePrefix("https://").removePrefix("http://").ifBlank { "magicgarden.gg" }
                 )
 
+                updateSession(sessionId) { it.copy(gameVersion = version) }
                 val client = clients.getOrPut(sessionId) { RoomClient() }
 
                 // Cancel previous collector before starting a new one
@@ -227,6 +239,112 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearLogs(sessionId: String) {
         updateSession(sessionId) { it.copy(logs = emptyList()) }
+    }
+
+    // Optimistic purchase: decrement stock locally, send to server, rollback if no confirmation
+    private val pendingPurchaseJobs = mutableMapOf<String, Job>()
+
+    fun dismissShopTip() {
+        _state.update { it.copy(showShopTip = false) }
+        viewModelScope.launch { repo.dismissShopTip() }
+    }
+
+    fun purchaseShopItem(sessionId: String, shopType: String, itemName: String) {
+        val actions = clients[sessionId]?.actions ?: return
+
+        // Check current stock before optimistic update
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val shop = session.shops.find { it.type == shopType } ?: return
+        val currentStock = shop.itemStocks[itemName] ?: 0
+        if (currentStock <= 0) return
+
+        // Optimistic: decrement stock locally
+        val previousShops = session.shops
+        updateSession(sessionId) { s ->
+            s.copy(shops = s.shops.map { snap ->
+                if (snap.type == shopType) {
+                    snap.copy(itemStocks = snap.itemStocks.mapValues { (name, stock) ->
+                        if (name == itemName) maxOf(0, stock - 1) else stock
+                    })
+                } else snap
+            })
+        }
+
+        // Send to server
+        when (shopType) {
+            "seed" -> actions.purchaseSeed(itemName)
+            "tool" -> actions.purchaseTool(itemName)
+            "egg" -> actions.purchaseEgg(itemName)
+            "decor" -> actions.purchaseDecor(itemName)
+        }
+
+        // Rollback after 5s if server hasn't confirmed (ShopsChanged would overwrite first)
+        val key = "$sessionId:$shopType:$itemName"
+        pendingPurchaseJobs[key]?.cancel()
+        pendingPurchaseJobs[key] = viewModelScope.launch {
+            delay(5000)
+            // If we get here, server never confirmed — rollback
+            updateSession(sessionId) { s ->
+                val current = s.shops.find { it.type == shopType }
+                if (current != null) s.copy(shops = previousShops) else s
+            }
+            pendingPurchaseJobs.remove(key)
+            // Show error briefly
+            _state.update { it.copy(purchaseError = "Purchase failed: $itemName") }
+            delay(3000)
+            _state.update { if (it.purchaseError == "Purchase failed: $itemName") it.copy(purchaseError = "") else it }
+        }
+    }
+
+    fun purchaseAllShopItem(sessionId: String, shopType: String, itemName: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val shop = session.shops.find { it.type == shopType } ?: return
+        val currentStock = shop.itemStocks[itemName] ?: 0
+        if (currentStock <= 0) return
+
+        // Optimistic: set stock to 0
+        val previousShops = session.shops
+        updateSession(sessionId) { s ->
+            s.copy(shops = s.shops.map { snap ->
+                if (snap.type == shopType) {
+                    snap.copy(itemStocks = snap.itemStocks.mapValues { (name, stock) ->
+                        if (name == itemName) 0 else stock
+                    })
+                } else snap
+            })
+        }
+
+        // Send N purchase commands to server
+        val purchaseFn: (String) -> Unit = when (shopType) {
+            "seed" -> actions::purchaseSeed
+            "tool" -> actions::purchaseTool
+            "egg" -> actions::purchaseEgg
+            "decor" -> actions::purchaseDecor
+            else -> return
+        }
+        repeat(currentStock) { purchaseFn(itemName) }
+
+        // Rollback after 5s if server hasn't confirmed
+        val key = "$sessionId:$shopType:$itemName"
+        pendingPurchaseJobs[key]?.cancel()
+        pendingPurchaseJobs[key] = viewModelScope.launch {
+            delay(5000)
+            updateSession(sessionId) { s ->
+                val current = s.shops.find { it.type == shopType }
+                if (current != null) s.copy(shops = previousShops) else s
+            }
+            pendingPurchaseJobs.remove(key)
+            _state.update { it.copy(purchaseError = "Purchase failed: $itemName") }
+            delay(3000)
+            _state.update { if (it.purchaseError == "Purchase failed: $itemName") it.copy(purchaseError = "") else it }
+        }
+    }
+
+    fun sendChat(sessionId: String, message: String) {
+        val trimmed = message.trim()
+        if (trimmed.isBlank()) return
+        clients[sessionId]?.actions?.chat(trimmed)
     }
 
     // ---- Alerts ----
@@ -348,6 +466,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val seeds = mutableListOf<InventorySeedItem>()
                 val eggs = mutableListOf<InventoryEggItem>()
                 val produce = mutableListOf<InventoryProduceItem>()
+                val plants = mutableListOf<InventoryPlantItem>()
                 val pets = mutableListOf<InventoryPetItem>()
                 val tools = mutableListOf<InventoryToolItem>()
                 val decors = mutableListOf<InventoryDecorItem>()
@@ -365,19 +484,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         ))
                         "Plant" -> {
                             val slots = obj["slots"] as? JsonArray
+                            val plantId = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                            val plantSpecies = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                            var plantPrice = 0L
                             slots?.forEach { slotEl ->
                                 val slot = slotEl as? JsonObject ?: return@forEach
+                                val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull
+                                    ?: plantSpecies
                                 val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
                                 val muts = (slot["mutations"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                                     ?.filter { it.isNotBlank() } ?: emptyList()
+                                plantPrice += PriceCalculator.calculateCropSellPrice(slotSpecies, scale, muts) ?: 0L
                                 produce.add(InventoryProduceItem(
-                                    species = slot["species"]?.jsonPrimitive?.contentOrNull
-                                        ?: obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                    plantId = plantId,
+                                    species = slotSpecies,
                                     targetScale = scale,
                                     mutations = muts,
                                 ))
                             }
+                            plants.add(InventoryPlantItem(
+                                id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                species = plantSpecies,
+                                growSlots = slots?.size ?: 0,
+                                totalPrice = plantPrice,
+                            ))
                         }
                         "Pet" -> pets.add(InventoryPetItem(
                             id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -405,7 +536,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val siloSeeds = mutableListOf<InventorySeedItem>()
                 val shedDecors = mutableListOf<InventoryDecorItem>()
                 val hutchPets = mutableListOf<InventoryPetItem>()
-                val troughEggs = mutableListOf<InventoryEggItem>()
+                val troughCrops = mutableListOf<InventoryCropsItem>()
 
                 for (storageEl in event.storages) {
                     val storage = storageEl as? JsonObject ?: continue
@@ -434,20 +565,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 abilities = (obj["abilities"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                             ))
-                            "FeedingTrough" -> troughEggs.add(InventoryEggItem(
-                                eggId = obj["eggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                                quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                            "FeedingTrough" -> troughCrops.add(InventoryCropsItem(
+                                id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                species = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                scale = obj["scale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                                mutations = (obj["mutations"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                    ?.filter { it.isNotBlank() } ?: emptyList(),
                             ))
                         }
                     }
                 }
                 updateSession(sessionId) {
                     it.copy(
-                        inventory = InventorySnapshot(seeds, eggs, produce, pets, tools, decors),
+                        inventory = InventorySnapshot(seeds, eggs, produce, plants, pets, tools, decors),
                         seedSilo = siloSeeds,
                         decorShed = shedDecors,
                         petHutch = hutchPets,
-                        feedingTrough = troughEggs,
+                        feedingTrough = troughCrops,
                     )
                 }
             }
@@ -465,13 +600,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             is ClientEvent.ShopsChanged -> {
                 val previousShops = _state.value.sessions.find { it.id == sessionId }?.shops.orEmpty()
+                val purchases = event.shopPurchases
                 val newShops = event.shops.map { shop ->
+                    val initialStocks = shop.getItemStocks()
+                    val purchaseMap = purchases
+                        ?.get(shop.type)
+                        ?.let { it as? JsonObject }
+                        ?.get("purchases")
+                        ?.let { it as? JsonObject }
+                    val remainingStocks = initialStocks.mapValues { (name, initial) ->
+                        val bought = purchaseMap?.get(name)?.jsonPrimitive?.intOrNull ?: 0
+                        maxOf(0, initial - bought)
+                    }
                     ShopSnapshot(
                         type = shop.type,
                         itemNames = shop.getItemNames(),
-                        itemStocks = shop.getItemStocks(),
+                        itemStocks = remainingStocks,
+                        initialStocks = initialStocks,
                         secondsUntilRestock = shop.secondsUntilRestock,
                     )
+                }
+                // Server confirmed — cancel any pending rollback jobs for this session
+                pendingPurchaseJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingPurchaseJobs.remove(key)?.cancel()
                 }
                 updateSession(sessionId) { it.copy(shops = newShops) }
                 // Only check alerts when actual items changed, not just the restock timer
@@ -480,6 +631,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (oldItems != newItems) {
                     alertNotifier.checkShopItems(newShops, _state.value.alerts)
                 }
+            }
+            is ClientEvent.ChatChanged -> {
+                updateSession(sessionId) { it.copy(chatMessages = event.messages) }
+            }
+            is ClientEvent.PlayersListChanged -> {
+                updateSession(sessionId) { it.copy(playersList = event.players) }
             }
             is ClientEvent.DebugLog -> { /* Could be stored for dev tools */ }
         }

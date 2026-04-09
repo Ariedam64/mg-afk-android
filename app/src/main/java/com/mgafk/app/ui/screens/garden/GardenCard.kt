@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -50,7 +51,7 @@ import com.mgafk.app.ui.theme.TextSecondary
 private val RarityCommon = Color(0xFFE7E7E7)
 private val RarityUncommon = Color(0xFF67BD4D)
 private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFC734)
+private val RarityLegendary = Color(0xFFFFD700)
 private val RarityMythical = Color(0xFF9944A7)
 private val RarityDivine = Color(0xFFFF7835)
 private val RarityCelestial = Color(0xFFFF00FF)
@@ -98,6 +99,7 @@ private data class ResolvedPlant(
     val cropSprite: String?,
     val maxScale: Double,
     val displayName: String,
+    val sellPrice: Long?,
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -116,6 +118,7 @@ fun GardenCard(plants: List<GardenPlantSnapshot>, apiReady: Boolean = false) {
                 cropSprite = entry?.cropSprite,
                 maxScale = entry?.maxScale ?: 1.0,
                 displayName = entry?.name?.removeSuffix(" Seed") ?: plant.species,
+                sellPrice = PriceCalculator.calculateCropSellPrice(plant.species, plant.targetScale, plant.mutations),
             )
         }
     }
@@ -145,16 +148,33 @@ fun GardenCard(plants: List<GardenPlantSnapshot>, apiReady: Boolean = false) {
         }
     }
 
+    val totalValue = remember(filtered) {
+        filtered.sumOf { it.sellPrice ?: 0L }
+    }
+
+
+
     AppCard(
         title = "Plants",
         trailing = {
-            Text(
-                text = if (safeRarity != null || safeMutation != null)
-                    "${filtered.size}/${plants.size}" else "${plants.size} plants",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Accent.copy(alpha = 0.7f),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (totalValue > 0) {
+                    Text(
+                        text = PriceCalculator.formatPrice(totalValue),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFFD700),
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                }
+                Text(
+                    text = if (safeRarity != null || safeMutation != null)
+                        "${filtered.size}/${plants.size}" else "${plants.size} plants",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Accent.copy(alpha = 0.7f),
+                )
+            }
         },
         collapsible = true,
     ) {
@@ -215,7 +235,7 @@ fun GardenCard(plants: List<GardenPlantSnapshot>, apiReady: Boolean = false) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Grid ──
+            // ── Garden grid ──
             if (filtered.isEmpty()) {
                 Text("No plants match filters.", fontSize = 12.sp, color = TextMuted)
             } else {
@@ -243,11 +263,12 @@ fun GardenCard(plants: List<GardenPlantSnapshot>, apiReady: Boolean = false) {
                     }
                 }
             }
+
         }
     }
 }
 
-// ── Plant tile ──
+// ── Garden plant tile ──
 
 @Composable
 private fun GardenPlantTile(rp: ResolvedPlant) {
@@ -257,7 +278,7 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
+            .aspectRatio(0.85f)
             .clip(RoundedCornerShape(10.dp))
             .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
             .background(SurfaceDark)
@@ -280,6 +301,16 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
 
         SizeBar(percent = sizePercent, color = color)
 
+        if (rp.sellPrice != null) {
+            Text(
+                text = PriceCalculator.formatPrice(rp.sellPrice),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFFFD700),
+                lineHeight = 10.sp,
+            )
+        }
+
         if (rp.snapshot.mutations.isNotEmpty()) {
             MutationIcons(mutations = rp.snapshot.mutations)
         }
@@ -292,13 +323,13 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
 private fun SizeBar(percent: Double, color: Color) {
     val fraction = (percent / 100.0).toFloat().coerceIn(0f, 1f)
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .weight(1f)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(color.copy(alpha = 0.15f)),
@@ -310,6 +341,7 @@ private fun SizeBar(percent: Double, color: Color) {
                     .background(color.copy(alpha = 0.8f)),
             )
         }
+        Spacer(modifier = Modifier.size(3.dp))
         Text(
             text = "${percent.toInt()}%",
             fontSize = 7.sp,

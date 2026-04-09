@@ -1,0 +1,127 @@
+{
+  "dateRoomCreated": 1775680143985,
+  "dateGameBegan": 1775680177971,
+  "players": [
+    {
+      "id": "p_FXju24Jdv4STBeLZ",
+      "name": "Romann",
+      "isConnected": true,
+      "discordAvatarUrl": "https://cdn.discordapp.com/avatars/128202956574162945/12b1054032398bb965e4a2d271fc9774.png?size=256",
+      "discordUserId": "128202956574162945",
+      "cosmetic": {
+        "color": "Red",
+        "avatar": [
+          "Top_DonutHalo.png",
+          "Top_DonutHalo.png",
+          "Top_DonutHalo.png",
+          "Expression_Alarmed.png"
+        ]
+      },
+      "emoteData": {
+        "emoteType": -1
+      },
+      "secondsRemainingUntilChatEnabled": 0,
+      "databaseUserId": "128202956574162945",
+      "guildId": null
+    },
+    {
+      "id": "p_m1at4ivoky64M5mV",
+      "name": "Fille",
+      "isConnected": true,
+      "discordAvatarUrl": "https://cdn.discordapp.com/embed/avatars/0.png",
+      "discordUserId": "1026151988255264779",
+      "cosmetic": {
+        "color": "White",
+        "avatar": [
+          "Bottom_DefaultGray.png",
+          "Mid_DefaultGray.png",
+          "Top_DiscordPopsicle.png",
+          "Expression_Default.png"
+        ]
+      },
+      "emoteData": {
+        "emoteType": -1
+      },
+      "secondsRemainingUntilChatEnabled": 0,
+      "databaseUserId": "1026151988255264779",
+      "guildId": null
+    }
+  ],
+  "bots": [],
+  "timer": {
+    "name": null,
+    "totalSeconds": 0,
+    "secondsRemaining": 0,
+    "progress": 0,
+    "rate": 1,
+    "isRunning": false,
+    "isPaused": false
+  },
+  "isGameStarting": false,
+  "animationInProgress": false,
+  "hostPlayerId": "p_FXju24Jdv4STBeLZ",
+  "roomSessionId": "rs_8Cwdt9AHcXHa",
+  "chat": {
+    "messages": [
+      {
+        "timestamp": 1775680244121,
+        "playerId": "p_m1at4ivoky64M5mV",
+        "message": "test"
+      },
+      {
+        "timestamp": 1775680245071,
+        "playerId": "p_m1at4ivoky64M5mV",
+        "message": "test"
+      }
+    ],
+    "playerCosmeticInfos": {
+      "p_FXju24Jdv4STBeLZ": {
+        "userStyle": {
+          "id": 1760720,
+          "userId": "128202956574162945",
+          "name": "Romann",
+          "avatarTop": "Top_DonutHalo.png",
+          "avatarMid": "Top_DonutHalo.png",
+          "avatarBottom": "Top_DonutHalo.png",
+          "avatarExpression": "Expression_Alarmed.png",
+          "color": "Red"
+        },
+        "discordAvatarUrl": "https://cdn.discordapp.com/avatars/128202956574162945/12b1054032398bb965e4a2d271fc9774.png?size=256",
+        "lastUpdatedAt": 1775680207779
+      },
+      "p_KNQDGVENiFgJjiBp": {
+        "userStyle": {
+          "id": 1760720,
+          "userId": "128202956574162945",
+          "name": "Romann",
+          "avatarTop": "Top_DonutHalo.png",
+          "avatarMid": "Top_DonutHalo.png",
+          "avatarBottom": "Top_DonutHalo.png",
+          "avatarExpression": "Expression_Alarmed.png",
+          "color": "Red"
+        },
+        "discordAvatarUrl": "https://cdn.discordapp.com/avatars/128202956574162945/12b1054032398bb965e4a2d271fc9774.png?size=256",
+        "lastUpdatedAt": 1775680144597
+      },
+      "p_m1at4ivoky64M5mV": {
+        "userStyle": {
+          "name": "Fille",
+          "avatarTop": "Top_DiscordPopsicle.png",
+          "avatarMid": "Mid_DefaultGray.png",
+          "avatarBottom": "Bottom_DefaultGray.png",
+          "avatarExpression": "Expression_Default.png",
+          "color": "White"
+        },
+        "discordAvatarUrl": "https://cdn.discordapp.com/embed/avatars/0.png",
+        "lastUpdatedAt": 1775680245071
+      }
+    }
+  },
+  "selectedGame": "Quinoa",
+  "gameVotes": {
+    "p_KNQDGVENiFgJjiBp": "Quinoa",
+    "p_FXju24Jdv4STBeLZ": "Quinoa",
+    "p_m1at4ivoky64M5mV": "Quinoa"
+  },
+  "roomId": "2AM"
+}

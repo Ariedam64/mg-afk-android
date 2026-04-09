@@ -41,7 +41,7 @@ data class PlayerModel(
     val selectedItemIndex: Int? = null,
 
     // Slot data
-    val coins: Int = 0,
+    val coins: Double = 0.0,
     val schemaVersion: String? = null,
     val inventory: JsonArray = EMPTY_ARRAY,
     val storages: JsonArray = EMPTY_ARRAY,
@@ -162,7 +162,7 @@ data class PlayerModel(
 
                 // Slot data fields
                 schemaVersion = data?.get("schemaVersion")?.jsonPrimitive?.contentOrNull,
-                coins = data?.get("coinsCount")?.jsonPrimitive?.intOrNull ?: 0,
+                coins = data?.get("coinsCount")?.jsonPrimitive?.doubleOrNull ?: 0.0,
                 inventory = inv?.get("items") as? JsonArray ?: EMPTY_ARRAY,
                 storages = inv?.get("storages") as? JsonArray ?: EMPTY_ARRAY,
                 favoritedItemIds = (inv?.get("favoritedItemIds") as? JsonArray)

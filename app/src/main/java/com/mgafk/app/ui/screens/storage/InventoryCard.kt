@@ -41,11 +41,13 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.InventoryEggItem
 import com.mgafk.app.data.model.InventoryPetItem
+import com.mgafk.app.data.model.InventoryPlantItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.model.InventorySnapshot
 import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -62,7 +64,7 @@ import com.mgafk.app.ui.theme.TextSecondary
 private val RarityCommon = Color(0xFFE7E7E7)
 private val RarityUncommon = Color(0xFF67BD4D)
 private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFC734)
+private val RarityLegendary = Color(0xFFFFD700)
 private val RarityMythical = Color(0xFF9944A7)
 private val RarityDivine = Color(0xFFFF7835)
 private val RarityCelestial = Color(0xFFFF00FF)
@@ -138,7 +140,7 @@ private fun fmtQty(q: Int): String = when {
 @Composable
 fun InventoryCard(inventory: InventorySnapshot, apiReady: Boolean = false) {
     val totalItems = inventory.seeds.size + inventory.eggs.size + inventory.produce.size +
-        inventory.pets.size + inventory.tools.size + inventory.decors.size
+        inventory.plants.size + inventory.pets.size + inventory.tools.size + inventory.decors.size
 
     AppCard(title = "Inventory", collapsible = true, trailing = {
         Text("$totalItems types", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
@@ -149,6 +151,7 @@ fun InventoryCard(inventory: InventorySnapshot, apiReady: Boolean = false) {
             val sortedSeeds = remember(inventory.seeds, apiReady) { inventory.seeds.sortedBy { raritySort(it.species) } }
             val sortedTools = remember(inventory.tools, apiReady) { inventory.tools.sortedBy { raritySort(it.toolId) } }
             val sortedEggs = remember(inventory.eggs, apiReady) { inventory.eggs.sortedBy { raritySort(it.eggId) } }
+            val sortedPlants = remember(inventory.plants, apiReady) { inventory.plants.sortedBy { raritySort(it.species) } }
             val sortedProduce = remember(inventory.produce, apiReady) { inventory.produce.sortedBy { raritySort(it.species) } }
             val sortedDecors = remember(inventory.decors, apiReady) { inventory.decors.sortedBy { raritySort(it.decorId) } }
             val sortedPets = remember(inventory.pets, apiReady) { inventory.pets.sortedBy { raritySortPet(it.petSpecies) } }
@@ -163,8 +166,21 @@ fun InventoryCard(inventory: InventorySnapshot, apiReady: Boolean = false) {
                 if (sortedEggs.isNotEmpty()) SubSection("Eggs", sortedEggs.size) {
                     GridOf(sortedEggs.size) { i -> QuantityTile(sortedEggs[i].eggId, sortedEggs[i].quantity, apiReady) }
                 }
-                if (sortedProduce.isNotEmpty()) SubSection("Produce", sortedProduce.size) {
-                    GridOf(sortedProduce.size) { i -> ProduceTile(sortedProduce[i], apiReady) }
+                if (sortedPlants.isNotEmpty()) {
+                    val totalPlantsValue = remember(sortedPlants) { sortedPlants.sumOf { it.totalPrice } }
+                    SubSection("Plants", sortedPlants.size, extraInfo = if (totalPlantsValue > 0) PriceCalculator.formatPrice(totalPlantsValue) else null) {
+                        GridOf(sortedPlants.size) { i -> PlantTile(sortedPlants[i], apiReady) }
+                    }
+                }
+                if (sortedProduce.isNotEmpty()) {
+                    val totalProduceValue = remember(sortedProduce, apiReady) {
+                        sortedProduce.sumOf { p ->
+                            PriceCalculator.calculateCropSellPrice(p.species, p.targetScale, p.mutations) ?: 0L
+                        }
+                    }
+                    SubSection("Produce", sortedProduce.size, extraInfo = if (totalProduceValue > 0) PriceCalculator.formatPrice(totalProduceValue) else null) {
+                        GridOf(sortedProduce.size) { i -> ProduceTile(sortedProduce[i], apiReady) }
+                    }
                 }
                 if (sortedDecors.isNotEmpty()) SubSection("Decors", sortedDecors.size) {
                     GridOf(sortedDecors.size) { i -> QuantityTile(sortedDecors[i].decorId, sortedDecors[i].quantity, apiReady) }
@@ -180,7 +196,7 @@ fun InventoryCard(inventory: InventorySnapshot, apiReady: Boolean = false) {
 // ── Sub-section with toggle ──
 
 @Composable
-private fun SubSection(label: String, count: Int, content: @Composable () -> Unit) {
+private fun SubSection(label: String, count: Int, extraInfo: String? = null, content: @Composable () -> Unit) {
     var expanded by rememberSaveable(label) { mutableStateOf(true) }
 
     HorizontalDivider(color = SurfaceBorder.copy(0.5f), thickness = 0.5.dp)
@@ -192,6 +208,10 @@ private fun SubSection(label: String, count: Int, content: @Composable () -> Uni
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, modifier = Modifier.weight(1f))
+        if (extraInfo != null) {
+            Text(extraInfo, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFFD700))
+            Spacer(modifier = Modifier.width(6.dp))
+        }
         Text("$count", fontSize = 11.sp, color = TextMuted)
         Spacer(modifier = Modifier.width(6.dp))
         Icon(
@@ -243,10 +263,13 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean) {
     val pct = sizePercent(item.targetScale, maxS)
     val fraction = (pct / 100.0).toFloat().coerceIn(0f, 1f)
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
+    val price = remember(item.species, item.targetScale, item.mutations, apiReady) {
+        PriceCalculator.calculateCropSellPrice(item.species, item.targetScale, item.mutations)
+    }
 
     Column(
         modifier = Modifier
-            .fillMaxWidth().aspectRatio(1f)
+            .fillMaxWidth().aspectRatio(0.85f)
             .clip(RoundedCornerShape(10.dp))
             .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
             .background(SurfaceDark)
@@ -257,16 +280,52 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean) {
         SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(color.copy(0.15f))) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(color.copy(0.15f))) {
                 Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(color.copy(0.8f)))
             }
+            Spacer(Modifier.width(3.dp))
             Text("${pct.toInt()}%", fontSize = 7.sp, color = TextSecondary, fontWeight = FontWeight.Medium, lineHeight = 8.sp)
         }
+        if (price != null) {
+            Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                color = Color(0xFFFFD700), lineHeight = 10.sp)
+        }
         if (item.mutations.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
-                item.mutations.take(4).forEach { SpriteImage(url = mutationSpriteUrl(it), size = 12.dp, contentDescription = it) }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                item.mutations.take(4).forEach { SpriteImage(url = mutationSpriteUrl(it), size = 16.dp, contentDescription = it) }
             }
+        }
+    }
+}
+
+// ── Plant tile ──
+
+@Composable
+private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
+    val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
+    val name = entry?.name?.removeSuffix(" Seed") ?: item.species
+    val color = rarityColor(entry?.rarity)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(if (item.totalPrice > 0) 0.85f else 1f)
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .background(SurfaceDark)
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
+        Text("${item.growSlots} slots", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
+        if (item.totalPrice > 0) {
+            Text(PriceCalculator.formatPrice(item.totalPrice), fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                color = Color(0xFFFFD700), lineHeight = 10.sp)
         }
     }
 }

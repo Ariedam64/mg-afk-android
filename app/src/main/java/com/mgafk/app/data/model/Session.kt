@@ -32,7 +32,10 @@ data class Session(
     val seedSilo: List<InventorySeedItem> = emptyList(),
     val decorShed: List<InventoryDecorItem> = emptyList(),
     val petHutch: List<InventoryPetItem> = emptyList(),
-    val feedingTrough: List<InventoryEggItem> = emptyList(),
+    val feedingTrough: List<InventoryCropsItem> = emptyList(),
+    val chatMessages: List<ChatMessage> = emptyList(),
+    val playersList: List<PlayerSnapshot> = emptyList(),
+    val gameVersion: String = "",
 )
 
 @Serializable
@@ -68,6 +71,7 @@ data class PetSnapshot(
 
 @Serializable
 data class AbilityLog(
+    val id: String = UUID.randomUUID().toString(),
     val timestamp: Long = 0,
     val action: String = "",
     val petName: String = "",
@@ -82,6 +86,7 @@ data class InventorySnapshot(
     val seeds: List<InventorySeedItem> = emptyList(),
     val eggs: List<InventoryEggItem> = emptyList(),
     val produce: List<InventoryProduceItem> = emptyList(),
+    val plants: List<InventoryPlantItem> = emptyList(),
     val pets: List<InventoryPetItem> = emptyList(),
     val tools: List<InventoryToolItem> = emptyList(),
     val decors: List<InventoryDecorItem> = emptyList(),
@@ -101,8 +106,25 @@ data class InventoryEggItem(
 
 @Serializable
 data class InventoryProduceItem(
+    val plantId: String = "",
     val species: String = "",
     val targetScale: Double = 0.0,
+    val mutations: List<String> = emptyList(),
+)
+
+@Serializable
+data class InventoryPlantItem(
+    val id: String = "",
+    val species: String = "",
+    val growSlots: Int = 0,
+    val totalPrice: Long = 0,
+)
+
+@Serializable
+data class InventoryCropsItem(
+    val id: String = "",
+    val species: String = "",
+    val scale: Double = 0.0,
     val mutations: List<String> = emptyList(),
 )
 
@@ -129,6 +151,29 @@ data class InventoryDecorItem(
     val quantity: Int = 0,
 )
 
+/** Player snapshot for room player list */
+@Serializable
+data class PlayerSnapshot(
+    val id: String = "",
+    val name: String = "",
+    val isConnected: Boolean = false,
+    val coins: Double = 0.0,
+    val color: String = "",
+    val avatarBottom: String = "",
+    val avatarMid: String = "",
+    val avatarTop: String = "",
+    val avatarExpression: String = "",
+)
+
+/** Chat message snapshot */
+@Serializable
+data class ChatMessage(
+    val timestamp: Long = 0,
+    val playerId: String = "",
+    val playerName: String = "",
+    val message: String = "",
+)
+
 /** Serializable snapshot of a garden egg for Session persistence */
 @Serializable
 data class GardenEggSnapshot(
@@ -153,5 +198,6 @@ data class ShopSnapshot(
     val type: String = "",
     val itemNames: List<String> = emptyList(),
     val itemStocks: Map<String, Int> = emptyMap(),
+    val initialStocks: Map<String, Int> = emptyMap(),
     val secondsUntilRestock: Int = 0,
 )

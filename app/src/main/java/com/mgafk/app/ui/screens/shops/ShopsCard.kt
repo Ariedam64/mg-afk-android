@@ -1,7 +1,12 @@
 package com.mgafk.app.ui.screens.shops
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -28,8 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +51,8 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
+
+private val StatusError = Color(0xFFF87171)
 
 // Game-authentic rarity colors (from Gemini theme definitions)
 private val RarityCommon = Color(0xFFE7E7E7)
@@ -75,7 +83,15 @@ private val SHOP_SECTIONS = listOf(
 
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
 @Composable
-fun ShopsCards(shops: List<ShopSnapshot>, apiReady: Boolean = false) {
+fun ShopsCards(
+    shops: List<ShopSnapshot>,
+    apiReady: Boolean = false,
+    purchaseError: String = "",
+    showTip: Boolean = false,
+    onDismissTip: () -> Unit = {},
+    onBuy: (shopType: String, itemName: String) -> Unit = { _, _ -> },
+    onBuyAll: (shopType: String, itemName: String) -> Unit = { _, _ -> },
+) {
     if (shops.isEmpty()) {
         AppCard(title = "Shops") {
             Text("No shop data yet.", fontSize = 12.sp, color = TextMuted)
@@ -83,15 +99,88 @@ fun ShopsCards(shops: List<ShopSnapshot>, apiReady: Boolean = false) {
         return
     }
 
+    // First-time tip
+    AnimatedVisibility(
+        visible = showTip,
+        enter = fadeIn(),
+        exit = fadeOut(),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Accent.copy(alpha = 0.1f))
+                .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                .clickable { onDismissTip() }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Tap an item to buy it. Hold to buy all remaining stock.",
+                        fontSize = 11.sp,
+                        color = Accent,
+                        lineHeight = 15.sp,
+                    )
+                }
+                Text(
+                    text = "OK",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Accent,
+                    modifier = Modifier.clickable { onDismissTip() },
+                )
+            }
+        }
+    }
+
+    // Purchase error banner
+    AnimatedVisibility(
+        visible = purchaseError.isNotBlank(),
+        enter = fadeIn(),
+        exit = fadeOut(),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(StatusError.copy(alpha = 0.15f))
+                .border(1.dp, StatusError.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = purchaseError,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = StatusError,
+            )
+        }
+    }
+
     SHOP_SECTIONS.forEach { (label, key) ->
         val shop = shops.find { it.type == key }
-        ShopCategoryCard(label = label, shop = shop, apiReady = apiReady)
+        ShopCategoryCard(
+            label = label,
+            shop = shop,
+            apiReady = apiReady,
+            onBuy = { itemName -> onBuy(key, itemName) },
+            onBuyAll = { itemName -> onBuyAll(key, itemName) },
+        )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ShopCategoryCard(label: String, shop: ShopSnapshot?, apiReady: Boolean) {
+private fun ShopCategoryCard(
+    label: String,
+    shop: ShopSnapshot?,
+    apiReady: Boolean,
+    onBuy: (itemName: String) -> Unit,
+    onBuyAll: (itemName: String) -> Unit,
+) {
     val items = shop?.itemNames ?: emptyList()
     val restockSec = shop?.secondsUntilRestock ?: 0
 
@@ -109,10 +198,16 @@ private fun ShopCategoryCard(label: String, shop: ShopSnapshot?, apiReady: Boole
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items.forEach { itemName ->
+                    val initialStock = shop?.initialStocks?.get(itemName) ?: 0
+                    val remaining = shop?.itemStocks?.get(itemName) ?: 0
                     ShopItemTile(
                         itemName = itemName,
-                        stock = shop?.itemStocks?.get(itemName) ?: 0,
+                        stock = remaining,
+                        inShop = initialStock > 0,
+                        soldOut = remaining <= 0,
                         apiReady = apiReady,
+                        onBuy = { onBuy(itemName) },
+                        onBuyAll = { onBuyAll(itemName) },
                     )
                 }
             }
@@ -121,12 +216,22 @@ private fun ShopCategoryCard(label: String, shop: ShopSnapshot?, apiReady: Boole
 }
 
 @Composable
-private fun ShopItemTile(itemName: String, stock: Int, apiReady: Boolean) {
+private fun ShopItemTile(
+    itemName: String,
+    stock: Int,
+    inShop: Boolean,
+    soldOut: Boolean,
+    apiReady: Boolean,
+    onBuy: () -> Unit,
+    onBuyAll: () -> Unit,
+) {
     val entry = remember(itemName, apiReady) { MgApi.findItem(itemName) }
     val displayName = entry?.name ?: itemName
     val spriteUrl = entry?.sprite
     val rarity = entry?.rarity
     val color = rarityColor(rarity)
+    val tileAlpha = if (soldOut) 0.35f else 1f
+    val borderColor = if (inShop) color.copy(alpha = if (soldOut) 0.3f else 0.5f) else TextMuted.copy(alpha = 0.3f)
 
     Box(
         modifier = Modifier.size(76.dp),
@@ -135,8 +240,17 @@ private fun ShopItemTile(itemName: String, stock: Int, apiReady: Boolean) {
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(10.dp))
-                .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
                 .background(SurfaceDark)
+                .then(
+                    if (!soldOut) Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onBuy() },
+                            onLongPress = { onBuyAll() },
+                        )
+                    } else Modifier
+                )
+                .alpha(tileAlpha)
                 .padding(horizontal = 4.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -149,7 +263,7 @@ private fun ShopItemTile(itemName: String, stock: Int, apiReady: Boolean) {
                 text = displayName,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary,
+                color = if (soldOut) TextMuted else TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
