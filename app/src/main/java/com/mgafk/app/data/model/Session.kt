@@ -196,6 +196,13 @@ data class GardenPlantSnapshot(
     val species: String = "",
     val targetScale: Double = 0.0,
     val mutations: List<String> = emptyList(),
+    // Optional growth timing for the active grow slot (ms since epoch)
+    val startTime: Long? = null,
+    val endTime: Long? = null,
+    // Optional slot identifier for multi-slot plants
+    val slotId: Int? = null,
+    // When true, this snapshot represents the whole tile (pre-mature multi-harvest plant)
+    val isTileLevel: Boolean = false,
 )
 
 /** Serializable snapshot of a shop for Session persistence */

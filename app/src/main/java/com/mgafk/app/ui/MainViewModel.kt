@@ -857,29 +857,84 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 alertNotifier.checkPetHunger(newPets, alerts)
             }
             is ClientEvent.GardenChanged -> {
-                val newGarden = event.plants.map { tile ->
+                // Flatten slots: produce one GardenPlantSnapshot per grow slot so multi-harvest
+                // plants are tracked per-slot. For slots missing start/end, fall back to
+                // tile plantedAt/maturedAt.
+                val newGarden = event.plants.flatMap { tile ->
                     val data = tile.data
-                    val species = data["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val tileSpecies = data["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val plantedAt = data["plantedAt"]?.jsonPrimitive?.longOrNull
+                    val maturedAt = data["maturedAt"]?.jsonPrimitive?.longOrNull
                     val slots = data["slots"] as? JsonArray
-                    // Use max targetScale across all slots
-                    var maxTargetScale = 0.0
-                    val allMutations = mutableSetOf<String>()
-                    slots?.forEach { slotEl ->
-                        val slot = slotEl as? JsonObject ?: return@forEach
-                        val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-                        if (scale > maxTargetScale) maxTargetScale = scale
-                        (slot["mutations"] as? JsonArray)?.forEach { m ->
-                            val name = m.jsonPrimitive.contentOrNull
-                            if (!name.isNullOrBlank()) allMutations.add(name)
+
+                    // If no explicit slots, create a single snapshot using plantedAt/maturedAt
+                    if (slots == null || slots.isEmpty()) {
+                        val muts = mutableSetOf<String>()
+                        val maxScale = 0.0
+                        listOf(GardenPlantSnapshot(
+                            tileId = tile.tileId,
+                            species = tileSpecies,
+                            targetScale = maxScale,
+                            mutations = muts.toList(),
+                            startTime = plantedAt,
+                            endTime = maturedAt,
+                            slotId = null,
+                            isTileLevel = true,
+                        ))
+                    } else {
+                        // If the tile-level maturedAt is in the future (plant not yet matured),
+                        // show a single tile-level snapshot (don't split into slot snapshots yet).
+                        val now = System.currentTimeMillis()
+                        if (maturedAt != null && maturedAt > now) {
+                            // Aggregate tile snapshot using plantedAt/maturedAt
+                            val muts = mutableSetOf<String>()
+                            var maxScale = 0.0
+                            slots.forEach { slotEl ->
+                                val slot = slotEl as? JsonObject ?: return@forEach
+                                val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                if (scale > maxScale) maxScale = scale
+                                (slot["mutations"] as? JsonArray)?.forEach { m ->
+                                    val name = m.jsonPrimitive.contentOrNull
+                                    if (!name.isNullOrBlank()) muts.add(name)
+                                }
+                            }
+                            listOf(GardenPlantSnapshot(
+                                tileId = tile.tileId,
+                                species = tileSpecies,
+                                targetScale = maxScale,
+                                mutations = muts.toList(),
+                                startTime = plantedAt,
+                                endTime = maturedAt,
+                                slotId = null,
+                                isTileLevel = true,
+                            ))
+                        } else {
+                            // Build a snapshot per slot
+                            slots.mapNotNull { slotEl ->
+                                val slot = slotEl as? JsonObject ?: return@mapNotNull null
+                                val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull ?: tileSpecies
+                                val slotStart = slot["startTime"]?.jsonPrimitive?.longOrNull ?: plantedAt
+                                val slotEnd = slot["endTime"]?.jsonPrimitive?.longOrNull ?: maturedAt
+                                val slotScale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                val slotMutations = (slot["mutations"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                    ?.filter { it.isNotBlank() } ?: emptyList()
+                                val sid = slot["slotId"]?.jsonPrimitive?.intOrNull
+
+                                GardenPlantSnapshot(
+                                    tileId = tile.tileId,
+                                    species = slotSpecies,
+                                    targetScale = slotScale,
+                                    mutations = slotMutations,
+                                    startTime = slotStart,
+                                    endTime = slotEnd,
+                                    slotId = sid,
+                                )
+                            }
                         }
                     }
-                    GardenPlantSnapshot(
-                        tileId = tile.tileId,
-                        species = species,
-                        targetScale = maxTargetScale,
-                        mutations = allMutations.toList(),
-                    )
                 }
+
                 updateSession(sessionId) { it.copy(garden = newGarden) }
             }
             is ClientEvent.InventoryChanged -> {

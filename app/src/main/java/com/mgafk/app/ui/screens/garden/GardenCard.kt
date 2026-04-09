@@ -275,6 +275,20 @@ fun GardenCard(plants: List<GardenPlantSnapshot>, apiReady: Boolean = false) {
 private fun GardenPlantTile(rp: ResolvedPlant) {
     val color = rarityColor(rp.rarity)
     val sizePercent = computeSizePercent(rp.snapshot.targetScale, rp.maxScale)
+    // Compute maturity percent if we have start/end timings
+    val maturityPercent = remember(rp.snapshot.startTime, rp.snapshot.endTime) {
+        val s = rp.snapshot.startTime
+        val e = rp.snapshot.endTime
+        if (s == null || e == null) null
+        else {
+            val now = System.currentTimeMillis()
+            if (e <= s) 100
+            else {
+                val frac = ((now - s).toDouble() / (e - s).toDouble()) * 100.0
+                frac.coerceIn(0.0, 100.0).toInt()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -301,6 +315,20 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
         )
 
         SizeBar(percent = sizePercent, color = color)
+
+        // Show progress label if this grow slot / tile hasn't finished yet
+        maturityPercent?.let { p ->
+            if (p < 100) {
+                val label = if (rp.snapshot.isTileLevel) "Maturing" else "Growing"
+                Text(
+                    text = "$label: $p%",
+                    fontSize = 7.sp,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 8.sp,
+                )
+            }
+        }
 
         if (rp.sellPrice != null) {
             Text(
