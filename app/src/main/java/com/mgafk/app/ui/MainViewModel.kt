@@ -879,29 +879,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             startTime = plantedAt,
                             endTime = maturedAt,
                             slotId = null,
+                            isTileLevel = true,
                         ))
                     } else {
-                        // Build a snapshot per slot
-                        slots.mapNotNull { slotEl ->
-                            val slot = slotEl as? JsonObject ?: return@mapNotNull null
-                            val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull ?: tileSpecies
-                            val slotStart = slot["startTime"]?.jsonPrimitive?.longOrNull ?: plantedAt
-                            val slotEnd = slot["endTime"]?.jsonPrimitive?.longOrNull ?: maturedAt
-                            val slotScale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-                            val slotMutations = (slot["mutations"] as? JsonArray)
-                                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
-                                ?.filter { it.isNotBlank() } ?: emptyList()
-                            val sid = slot["slotId"]?.jsonPrimitive?.intOrNull
-
-                            GardenPlantSnapshot(
+                        // If the tile-level maturedAt is in the future (plant not yet matured),
+                        // show a single tile-level snapshot (don't split into slot snapshots yet).
+                        val now = System.currentTimeMillis()
+                        if (maturedAt != null && maturedAt > now) {
+                            // Aggregate tile snapshot using plantedAt/maturedAt
+                            val muts = mutableSetOf<String>()
+                            var maxScale = 0.0
+                            slots.forEach { slotEl ->
+                                val slot = slotEl as? JsonObject ?: return@forEach
+                                val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                if (scale > maxScale) maxScale = scale
+                                (slot["mutations"] as? JsonArray)?.forEach { m ->
+                                    val name = m.jsonPrimitive.contentOrNull
+                                    if (!name.isNullOrBlank()) muts.add(name)
+                                }
+                            }
+                            listOf(GardenPlantSnapshot(
                                 tileId = tile.tileId,
-                                species = slotSpecies,
-                                targetScale = slotScale,
-                                mutations = slotMutations,
-                                startTime = slotStart,
-                                endTime = slotEnd,
-                                slotId = sid,
-                            )
+                                species = tileSpecies,
+                                targetScale = maxScale,
+                                mutations = muts.toList(),
+                                startTime = plantedAt,
+                                endTime = maturedAt,
+                                slotId = null,
+                                isTileLevel = true,
+                            ))
+                        } else {
+                            // Build a snapshot per slot
+                            slots.mapNotNull { slotEl ->
+                                val slot = slotEl as? JsonObject ?: return@mapNotNull null
+                                val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull ?: tileSpecies
+                                val slotStart = slot["startTime"]?.jsonPrimitive?.longOrNull ?: plantedAt
+                                val slotEnd = slot["endTime"]?.jsonPrimitive?.longOrNull ?: maturedAt
+                                val slotScale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                val slotMutations = (slot["mutations"] as? JsonArray)
+                                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                                    ?.filter { it.isNotBlank() } ?: emptyList()
+                                val sid = slot["slotId"]?.jsonPrimitive?.intOrNull
+
+                                GardenPlantSnapshot(
+                                    tileId = tile.tileId,
+                                    species = slotSpecies,
+                                    targetScale = slotScale,
+                                    mutations = slotMutations,
+                                    startTime = slotStart,
+                                    endTime = slotEnd,
+                                    slotId = sid,
+                                )
+                            }
                         }
                     }
                 }

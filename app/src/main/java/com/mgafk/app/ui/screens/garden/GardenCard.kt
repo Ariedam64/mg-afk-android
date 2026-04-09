@@ -316,11 +316,12 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
 
         SizeBar(percent = sizePercent, color = color)
 
-        // Show maturity percent if this grow slot hasn't finished yet
+        // Show progress label if this grow slot / tile hasn't finished yet
         maturityPercent?.let { p ->
             if (p < 100) {
+                val label = if (rp.snapshot.isTileLevel) "Maturing" else "Growing"
                 Text(
-                    text = "Maturing: $p%",
+                    text = "$label: $p%",
                     fontSize = 7.sp,
                     color = TextSecondary,
                     fontWeight = FontWeight.Medium,

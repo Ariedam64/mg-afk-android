@@ -201,6 +201,8 @@ data class GardenPlantSnapshot(
     val endTime: Long? = null,
     // Optional slot identifier for multi-slot plants
     val slotId: Int? = null,
+    // When true, this snapshot represents the whole tile (pre-mature multi-harvest plant)
+    val isTileLevel: Boolean = false,
 )
 
 /** Serializable snapshot of a shop for Session persistence */
