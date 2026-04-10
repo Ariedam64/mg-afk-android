@@ -1,8 +1,16 @@
 package com.mgafk.app.ui.screens.minigames
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +63,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -73,51 +82,53 @@ fun CoinFlipGame(
     onBack: () -> Unit,
     onResultShown: () -> Unit = {},
 ) {
+    val sound = rememberSoundManager()
     var amount by remember { mutableStateOf("") }
     var choice by remember { mutableStateOf<String?>(null) }
     var animating by remember { mutableStateOf(false) }
     var showResult by remember { mutableStateOf(false) }
+    var showBanner by remember { mutableStateOf(false) }
 
-    // When result arrives, start animation then show result
+    // Coin bounce scale on landing
+    val coinScale = remember { Animatable(1f) }
+
     LaunchedEffect(result) {
         if (result != null && !showResult) {
             animating = true
-            delay(2000) // animation duration
+            showBanner = false
+            sound.play(Sfx.BET)
+            delay(2200) // spin animation
+            // Bounce on land
+            coinScale.snapTo(0.7f)
+            coinScale.animateTo(1.1f, tween(120))
+            coinScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             animating = false
             showResult = true
+            sound.play(if (result.won) Sfx.WIN else Sfx.LOSE)
             onResultShown()
+            delay(250)
+            showBanner = true
         }
     }
 
-    // Header with back button
+    // Header
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = {
-            onReset()
-            onBack()
-        }) {
+        IconButton(onClick = { onReset(); onBack() }) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
         }
-        Text(
-            text = "Coin Flip",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-        )
+        Text("Coin Flip", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(modifier = Modifier.weight(1f))
-        // Balance display
         if (casinoBalance != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = numberFormat.format(casinoBalance),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace,
-                    color = StatusConnected,
+                    numberFormat.format(casinoBalance),
+                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Monospace, color = StatusConnected,
                 )
             }
         }
@@ -125,90 +136,121 @@ fun CoinFlipGame(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // ── Game area ──
     AppCard {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when {
-                // ── Animating ──
+                // Animating
                 animating && result != null -> {
                     Spacer(modifier = Modifier.height(16.dp))
-                    CoinAnimation(targetResult = result.result)
+                    CoinAnimation(targetResult = result.result, scale = coinScale.value)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Flipping...", fontSize = 14.sp, color = TextMuted)
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // ── Show result ──
+                // Show result
                 showResult && result != null -> {
                     Spacer(modifier = Modifier.height(16.dp))
-                    CoinFace(side = result.result, size = 100)
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Box(
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = coinScale.value
+                            scaleY = coinScale.value
+                        },
+                    ) {
+                        CoinFace(side = result.result, size = 100)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = result.result.replaceFirstChar { it.uppercase() },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        result.result.replaceFirstChar { it.uppercase() },
+                        fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Win / Lose banner
-                    val won = result.won
-                    val bannerColor = if (won) StatusConnected else StatusError
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(bannerColor.copy(alpha = 0.1f))
-                            .border(1.dp, bannerColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center,
+                    // Win/Lose banner with scale-in
+                    AnimatedVisibility(
+                        visible = showBanner,
+                        enter = scaleIn(
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                            initialScale = 0.5f,
+                        ) + fadeIn(),
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = if (won) "You Won!" else "You Lost",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = bannerColor,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
+                        val won = result.won
+                        val bannerColor = if (won) StatusConnected else StatusError
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(bannerColor.copy(alpha = 0.1f))
+                                .border(1.dp, bannerColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (won) "+${numberFormat.format(result.payout)}" else "-${numberFormat.format(result.bet)}",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = bannerColor,
+                                    if (won) "You Won!" else "You Lost",
+                                    fontSize = 22.sp, fontWeight = FontWeight.Bold, color = bannerColor,
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        if (won) "+${numberFormat.format(result.payout)}" else "-${numberFormat.format(result.bet)}",
+                                        fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace, color = bannerColor,
+                                    )
+                                }
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Play again button
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Accent)
-                            .clickable {
-                                showResult = false
-                                onReset()
-                            }
-                            .padding(vertical = 14.dp),
-                        contentAlignment = Alignment.Center,
+                    AnimatedVisibility(
+                        visible = showBanner,
+                        enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
                     ) {
-                        Text("Play Again", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(SurfaceBorder)
+                                    .clickable { onReset(); onBack() }
+                                    .padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("Back", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Accent)
+                                    .clickable {
+                                        val lastBet = result.bet
+                                        val lastChoice = choice
+                                        showResult = false; showBanner = false; onReset()
+                                        if (lastChoice != null) onPlay(lastBet, lastChoice)
+                                    }
+                                    .padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("Replay ${numberFormat.format(result.bet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                            }
+                        }
                     }
                 }
 
-                // ── Loading (waiting for server) ──
+                // Loading
                 loading -> {
                     Spacer(modifier = Modifier.height(32.dp))
                     CircularProgressIndicator(modifier = Modifier.size(32.dp), color = Accent, strokeWidth = 3.dp)
@@ -217,31 +259,19 @@ fun CoinFlipGame(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
 
-                // ── Betting UI ──
+                // Betting UI
                 else -> {
-                    // Coin preview
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                     ) {
-                        ChoiceButton(
-                            label = "Heads",
-                            imageUrl = COIN_HEADS_URL,
-                            selected = choice == "heads",
-                            onClick = { choice = "heads" },
-                        )
-                        ChoiceButton(
-                            label = "Tails",
-                            imageUrl = COIN_TAILS_URL,
-                            selected = choice == "tails",
-                            onClick = { choice = "tails" },
-                        )
+                        ChoiceButton("Heads", COIN_HEADS_URL, choice == "heads") { choice = "heads" }
+                        ChoiceButton("Tails", COIN_TAILS_URL, choice == "tails") { choice = "tails" }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Amount input
                     OutlinedTextField(
                         value = amount,
                         onValueChange = { new -> amount = new.filter { it.isDigit() } },
@@ -253,15 +283,12 @@ fun CoinFlipGame(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Accent,
-                            unfocusedBorderColor = SurfaceBorder,
-                            focusedLabelColor = Accent,
-                            cursorColor = Accent,
+                            focusedBorderColor = Accent, unfocusedBorderColor = SurfaceBorder,
+                            focusedLabelColor = Accent, cursorColor = Accent,
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    // Quick bet buttons
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -290,18 +317,14 @@ fun CoinFlipGame(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Text(
-                        text = "Pick a side and double your bet!  Payout: x2",
-                        fontSize = 11.sp,
-                        color = TextMuted,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
+                        "Pick a side and double your bet!  Payout: x2",
+                        fontSize = 11.sp, color = TextMuted,
+                        textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Flip button
                     val parsedAmount = amount.toLongOrNull()
                     val canPlay = parsedAmount != null && parsedAmount > 0 && choice != null
                     Box(
@@ -310,17 +333,13 @@ fun CoinFlipGame(
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (canPlay) Accent else TextMuted.copy(alpha = 0.3f))
                             .clickable(enabled = canPlay) {
-                                if (parsedAmount != null && choice != null) {
-                                    onPlay(parsedAmount, choice!!)
-                                }
+                                if (parsedAmount != null && choice != null) onPlay(parsedAmount, choice!!)
                             }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Flip!",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
+                            "Flip!", fontSize = 16.sp, fontWeight = FontWeight.Bold,
                             color = if (canPlay) SurfaceDark else TextMuted,
                         )
                     }
@@ -330,17 +349,24 @@ fun CoinFlipGame(
     }
 }
 
-// ── Coin animation ──
+// ── Coin animation with bounce ──
 
 @Composable
-private fun CoinAnimation(targetResult: String) {
+private fun CoinAnimation(targetResult: String, scale: Float) {
     val rotation = remember { Animatable(0f) }
+    // Vertical bounce
+    val bounceY = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // Spin fast then land on the target side
-        // Heads = even number of half-turns (0, 360, 720...), Tails = odd (180, 540, 900...)
-        val extraSpins = 5 * 360f // 5 full rotations
+        val extraSpins = 5 * 360f
         val finalAngle = if (targetResult == "heads") extraSpins else extraSpins + 180f
+
+        // Coin goes up then comes back down
+        launch {
+            bounceY.animateTo(-40f, tween(800, easing = EaseOutBack))
+            bounceY.animateTo(0f, tween(1200))
+        }
+
         rotation.animateTo(
             targetValue = finalAngle,
             animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
@@ -352,14 +378,17 @@ private fun CoinAnimation(targetResult: String) {
 
     Box(
         modifier = Modifier
-            .size(100.dp)
+            .size(110.dp)
             .graphicsLayer {
                 rotationX = rotation.value
+                translationY = bounceY.value
+                scaleX = scale
+                scaleY = scale
                 cameraDistance = 12f * density
             },
         contentAlignment = Alignment.Center,
     ) {
-        CoinFace(side = if (showHeads) "heads" else "tails", size = 100)
+        CoinFace(side = if (showHeads) "heads" else "tails", size = 110)
     }
 }
 
@@ -367,26 +396,26 @@ private fun CoinAnimation(targetResult: String) {
 private fun CoinFace(side: String, size: Int) {
     val url = if (side == "heads") COIN_HEADS_URL else COIN_TAILS_URL
     AsyncImage(
-        model = url,
-        contentDescription = side,
+        model = url, contentDescription = side,
         modifier = Modifier.size(size.dp).clip(CircleShape),
     )
 }
 
-// ── Choice button ──
+// ── Choice button with scale feedback ──
 
 @Composable
-private fun ChoiceButton(
-    label: String,
-    imageUrl: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
+private fun ChoiceButton(label: String, imageUrl: String, selected: Boolean, onClick: () -> Unit) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        label = "choiceScale",
+    )
     val borderColor = if (selected) Accent else SurfaceBorder
     val bgColor = if (selected) Accent.copy(alpha = 0.1f) else Color.Transparent
 
     Column(
         modifier = Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
             .border(2.dp, borderColor, RoundedCornerShape(14.dp))
@@ -395,14 +424,12 @@ private fun ChoiceButton(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         AsyncImage(
-            model = imageUrl,
-            contentDescription = label,
+            model = imageUrl, contentDescription = label,
             modifier = Modifier.size(48.dp).clip(CircleShape),
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            label,
-            fontSize = 13.sp,
+            label, fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color = if (selected) Accent else TextPrimary,
         )

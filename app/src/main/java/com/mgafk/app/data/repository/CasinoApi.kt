@@ -81,14 +81,21 @@ data class CoinflipResponse(
 )
 
 @Serializable
-data class SlotsResponse(
-    val game: String,
+data class SlotsMachineResult(
     val reels: List<String>,
     val payline: String, // "3-of-a-kind" | "2-of-a-kind" | "none"
     val multiplier: Double,
     val won: Boolean,
-    val bet: Long,
     val payout: Long,
+)
+
+@Serializable
+data class SlotsResponse(
+    val game: String,
+    val machines: List<SlotsMachineResult>,
+    val totalBet: Long,
+    val totalPayout: Long,
+    val won: Boolean,
     val newBalance: Long,
 )
 
@@ -130,6 +137,84 @@ data class MinesCashoutResponse(
     val newBalance: Long,
     val mines: List<Int> = emptyList(),
     val revealed: List<Int> = emptyList(),
+)
+
+@Serializable
+data class DiceResponse(
+    val game: String,
+    val roll: Int,
+    val target: Int,
+    val direction: String,
+    val winChance: Int,
+    val multiplier: Double,
+    val won: Boolean,
+    val bet: Long,
+    val payout: Long,
+    val newBalance: Long,
+)
+
+@Serializable
+data class CrashStartResponse(
+    val game: String,
+    val bet: Long,
+    val newBalance: Long,
+    val growthRate: Double,
+)
+
+@Serializable
+data class CrashStatusResponse(
+    val game: String,
+    val status: String, // "running" | "crashed"
+    val multiplier: Double,
+    val elapsed: Long = 0,
+    val crashPoint: Double = 0.0,
+    val won: Boolean = false,
+    val payout: Long = 0,
+)
+
+@Serializable
+data class CrashCashoutResponse(
+    val game: String,
+    val won: Boolean,
+    val multiplier: Double,
+    val crashPoint: Double,
+    val bet: Long = 0,
+    val payout: Long = 0,
+    val newBalance: Long = 0,
+)
+
+@Serializable
+data class BlackjackCard(
+    val rank: String,
+    val suit: String,
+)
+
+@Serializable
+data class BlackjackPlayerHand(
+    val cards: List<BlackjackCard>,
+    val value: Int,
+    val blackjack: Boolean = false,
+)
+
+@Serializable
+data class BlackjackDealerHand(
+    val cards: List<BlackjackCard>,
+    val value: Int = 0,
+    val visibleValue: Int = 0,
+    val blackjack: Boolean = false,
+)
+
+@Serializable
+data class BlackjackResponse(
+    val game: String,
+    val status: String, // "playing" | "done"
+    val result: String? = null, // "blackjack" | "win" | "lose" | "push" | "bust" | "dealer_bust" | "dealer_blackjack"
+    val player: BlackjackPlayerHand,
+    val dealer: BlackjackDealerHand,
+    val bet: Long = 0,
+    val payout: Long = 0,
+    val newBalance: Long = 0,
+    val canDouble: Boolean = false,
 )
 
 @Serializable
@@ -207,6 +292,70 @@ object CasinoApi {
 
     // ── Games ──
 
+    /** Play dice */
+    suspend fun playDice(apiKey: String, amount: Long, target: Int, direction: String): Result<DiceResponse> =
+        safeCall(apiKey, "dice") {
+            val request = post("/games/dice", apiKey, """{"amount":$amount,"target":$target,"direction":"$direction"}""")
+            val body = execute(request)
+            json.decodeFromString<DiceResponse>(body)
+        }
+
+    /** Start crash game */
+    suspend fun startCrash(apiKey: String, amount: Long): Result<CrashStartResponse> =
+        safeCall(apiKey, "crashStart") {
+            val request = post("/games/crash/start", apiKey, """{"amount":$amount}""")
+            val body = execute(request)
+            json.decodeFromString<CrashStartResponse>(body)
+        }
+
+    /** Get crash game status */
+    suspend fun getCrashStatus(apiKey: String): Result<CrashStatusResponse> =
+        safeCall(apiKey, "crashStatus") {
+            val request = get("/games/crash/status", apiKey)
+            val body = execute(request)
+            json.decodeFromString<CrashStatusResponse>(body)
+        }
+
+    /** Cashout crash game */
+    suspend fun cashoutCrash(apiKey: String): Result<CrashCashoutResponse> =
+        safeCall(apiKey, "crashCashout") {
+            val request = post("/games/crash/cashout", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<CrashCashoutResponse>(body)
+        }
+
+    /** Start blackjack game */
+    suspend fun startBlackjack(apiKey: String, amount: Long): Result<BlackjackResponse> =
+        safeCall(apiKey, "blackjackStart") {
+            val request = post("/games/blackjack/start", apiKey, """{"amount":$amount}""")
+            val body = execute(request)
+            json.decodeFromString<BlackjackResponse>(body)
+        }
+
+    /** Blackjack hit */
+    suspend fun blackjackHit(apiKey: String): Result<BlackjackResponse> =
+        safeCall(apiKey, "blackjackHit") {
+            val request = post("/games/blackjack/hit", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<BlackjackResponse>(body)
+        }
+
+    /** Blackjack stand */
+    suspend fun blackjackStand(apiKey: String): Result<BlackjackResponse> =
+        safeCall(apiKey, "blackjackStand") {
+            val request = post("/games/blackjack/stand", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<BlackjackResponse>(body)
+        }
+
+    /** Blackjack double */
+    suspend fun blackjackDouble(apiKey: String): Result<BlackjackResponse> =
+        safeCall(apiKey, "blackjackDouble") {
+            val request = post("/games/blackjack/double", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<BlackjackResponse>(body)
+        }
+
     /** Play coinflip */
     suspend fun playCoinflip(apiKey: String, amount: Long, choice: String): Result<CoinflipResponse> =
         safeCall(apiKey, "coinflip") {
@@ -216,9 +365,9 @@ object CasinoApi {
         }
 
     /** Play slots */
-    suspend fun playSlots(apiKey: String, amount: Long): Result<SlotsResponse> =
+    suspend fun playSlots(apiKey: String, amount: Long, machines: Int = 1): Result<SlotsResponse> =
         safeCall(apiKey, "slots") {
-            val request = post("/games/slots", apiKey, """{"amount":$amount}""")
+            val request = post("/games/slots", apiKey, """{"amount":$amount,"machines":$machines}""")
             val body = execute(request)
             json.decodeFromString<SlotsResponse>(body)
         }

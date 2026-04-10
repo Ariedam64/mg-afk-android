@@ -1,7 +1,19 @@
 package com.mgafk.app.ui.screens.minigames
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +42,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -79,6 +94,7 @@ fun MinesGame(
     onReset: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val sound = rememberSoundManager()
     // Header
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -101,12 +117,24 @@ fun MinesGame(
     var lastAmount by remember { mutableStateOf("") }
     var lastMineCount by remember { mutableIntStateOf(5) }
 
+    // Sound on reveal / game over
+    var prevRevealedCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(state.revealed.size) {
+        if (state.revealed.size > prevRevealedCount && prevRevealedCount > 0) {
+            sound.play(Sfx.REVEAL)
+        }
+        prevRevealedCount = state.revealed.size
+    }
+    LaunchedEffect(state.gameOver) {
+        if (state.gameOver) {
+            sound.play(if (state.won == true) Sfx.CASHOUT else Sfx.LOSE)
+        }
+    }
+
     Spacer(modifier = Modifier.height(8.dp))
 
     if (!state.active && !state.gameOver) {
-        // ── Setup screen ──
         MinesSetup(
-            balance = casinoBalance,
             error = state.error,
             loading = state.loading,
             initialAmount = lastAmount,
@@ -118,22 +146,39 @@ fun MinesGame(
             },
         )
     } else {
-        // ── Game board ──
         MinesBoard(state = state, onReveal = onReveal)
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ── Info bar ──
         if (!state.gameOver) {
             MinesInfoBar(state = state)
             Spacer(modifier = Modifier.height(8.dp))
-            // Cashout button
+
+            // Pulsing cashout button
             val canCashout = state.revealed.isNotEmpty() && !state.loading
+            val infiniteTransition = rememberInfiniteTransition(label = "minesCashout")
+            val cashoutPulse by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = if (canCashout) 1.03f else 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "minesCashoutPulse",
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer { scaleX = cashoutPulse; scaleY = cashoutPulse }
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (canCashout) StatusConnected else TextMuted.copy(alpha = 0.3f))
+                    .background(
+                        if (canCashout) Brush.verticalGradient(
+                            listOf(StatusConnected, StatusConnected.copy(alpha = 0.85f))
+                        ) else Brush.verticalGradient(
+                            listOf(TextMuted.copy(alpha = 0.3f), TextMuted.copy(alpha = 0.3f))
+                        ),
+                    )
                     .clickable(enabled = canCashout) { onCashout() }
                     .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center,
@@ -144,19 +189,39 @@ fun MinesGame(
                 Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (canCashout) SurfaceDark else TextMuted)
             }
         } else {
-            // ── Game over result ──
             MinesResult(state = state)
             Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Accent)
-                    .clickable { onReset() }
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Play Again", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceBorder)
+                        .clickable { onReset(); onBack() }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Back", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Accent)
+                        .clickable {
+                            val lastBet = state.bet
+                            val lastMines = state.mineCount
+                            onReset()
+                            onStart(lastBet, lastMines)
+                        }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Replay ${numberFormat.format(state.bet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                }
             }
         }
     }
@@ -166,7 +231,6 @@ fun MinesGame(
 
 @Composable
 private fun MinesSetup(
-    balance: Long?,
     error: String?,
     loading: Boolean,
     initialAmount: String = "",
@@ -186,7 +250,7 @@ private fun MinesSetup(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(10.dp))
-            // Amount
+
             OutlinedTextField(
                 value = amount,
                 onValueChange = { new -> amount = new.filter { it.isDigit() } },
@@ -198,15 +262,12 @@ private fun MinesSetup(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Accent,
-                    unfocusedBorderColor = SurfaceBorder,
-                    focusedLabelColor = Accent,
-                    cursorColor = Accent,
+                    focusedBorderColor = Accent, unfocusedBorderColor = SurfaceBorder,
+                    focusedLabelColor = Accent, cursorColor = Accent,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Quick bet
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -231,20 +292,13 @@ private fun MinesSetup(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Mine count slider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Mines", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-                Text(
-                    "$mineCount",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    color = MineColor,
-                )
+                Text("$mineCount", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = MineColor)
             }
             Slider(
                 value = mineCount.toFloat(),
@@ -252,8 +306,7 @@ private fun MinesSetup(
                 valueRange = 1f..24f,
                 steps = 22,
                 colors = SliderDefaults.colors(
-                    thumbColor = MineColor,
-                    activeTrackColor = MineColor,
+                    thumbColor = MineColor, activeTrackColor = MineColor,
                     inactiveTrackColor = SurfaceBorder,
                 ),
             )
@@ -273,7 +326,6 @@ private fun MinesSetup(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Start button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -285,8 +337,7 @@ private fun MinesSetup(
             ) {
                 Text(
                     if (loading) "Starting..." else "Start Game",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     color = if (canStart) SurfaceDark else TextMuted,
                 )
             }
@@ -309,50 +360,108 @@ private fun MinesBoard(state: MinesUiState, onReveal: (Int) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             items(25) { pos ->
-                val isRevealed = pos in state.revealed
-                val isMine = pos in state.mines
-                val isClickable = !isRevealed && !state.gameOver && !state.loading
-
-                val bgColor by animateColorAsState(
-                    targetValue = when {
-                        isMine -> MineBg
-                        isRevealed -> SafeRevealedBg
-                        else -> HiddenBg
-                    },
-                    animationSpec = tween(300),
-                    label = "cell_$pos",
+                MineCell(
+                    pos = pos,
+                    isRevealed = pos in state.revealed,
+                    isMine = pos in state.mines,
+                    gameOver = state.gameOver,
+                    loading = state.loading,
+                    onReveal = onReveal,
                 )
-                val borderColor = when {
-                    isMine -> MineColor.copy(alpha = 0.5f)
-                    isRevealed -> GemColor.copy(alpha = 0.3f)
-                    else -> SurfaceBorder
-                }
+            }
+        }
+    }
+}
 
+@Composable
+private fun MineCell(
+    pos: Int,
+    isRevealed: Boolean,
+    isMine: Boolean,
+    gameOver: Boolean,
+    loading: Boolean,
+    onReveal: (Int) -> Unit,
+) {
+    val isClickable = !isRevealed && !gameOver && !loading
+
+    // Scale animation when revealed
+    val revealScale = remember { Animatable(1f) }
+    LaunchedEffect(isRevealed, isMine) {
+        if (isRevealed || isMine) {
+            revealScale.snapTo(0f)
+            revealScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+        }
+    }
+
+    // Shake on mine hit
+    val mineShakeX = remember { Animatable(0f) }
+    LaunchedEffect(isMine) {
+        if (isMine) {
+            repeat(4) {
+                val intensity = (4 - it) * 3f
+                mineShakeX.animateTo(intensity, tween(30))
+                mineShakeX.animateTo(-intensity, tween(30))
+            }
+            mineShakeX.animateTo(0f, tween(30))
+        }
+    }
+
+    val bgColor by animateColorAsState(
+        targetValue = when {
+            isMine -> MineBg
+            isRevealed -> SafeRevealedBg
+            else -> HiddenBg
+        },
+        animationSpec = tween(300),
+        label = "cell_$pos",
+    )
+    val borderColor = when {
+        isMine -> MineColor.copy(alpha = 0.5f)
+        isRevealed -> GemColor.copy(alpha = 0.3f)
+        else -> SurfaceBorder
+    }
+
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .graphicsLayer { translationX = mineShakeX.value }
+            .clip(RoundedCornerShape(10.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .clickable(enabled = isClickable) { onReveal(pos) },
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            isMine -> {
+                AsyncImage(
+                    model = MINE_SPRITE_URL, contentDescription = "Mine",
+                    modifier = Modifier
+                        .size(28.dp)
+                        .graphicsLayer {
+                            scaleX = revealScale.value
+                            scaleY = revealScale.value
+                        },
+                )
+            }
+            isRevealed -> {
+                AsyncImage(
+                    model = GEM_SPRITE_URL, contentDescription = "Gem",
+                    modifier = Modifier
+                        .size(28.dp)
+                        .graphicsLayer {
+                            scaleX = revealScale.value
+                            scaleY = revealScale.value
+                        },
+                )
+            }
+            gameOver -> { /* dim empty */ }
+            else -> {
                 Box(
                     modifier = Modifier
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(bgColor)
-                        .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-                        .clickable(enabled = isClickable) { onReveal(pos) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    when {
-                        isMine -> AsyncImage(model = MINE_SPRITE_URL, contentDescription = "Mine", modifier = Modifier.size(28.dp))
-                        isRevealed -> AsyncImage(model = GEM_SPRITE_URL, contentDescription = "Gem", modifier = Modifier.size(28.dp))
-                        state.gameOver -> {
-                            // show unrevealed cells dim
-                        }
-                        else -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(TextMuted.copy(alpha = 0.3f)),
-                            )
-                        }
-                    }
-                }
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(TextMuted.copy(alpha = 0.3f)),
+                )
             }
         }
     }
@@ -390,10 +499,17 @@ private fun MinesResult(state: MinesUiState) {
     val won = state.won == true
     val color = if (won) StatusConnected else StatusError
 
+    // Scale-in the result
+    val resultScale = remember { Animatable(0.5f) }
+    LaunchedEffect(Unit) {
+        resultScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+    }
+
     AppCard {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { scaleX = resultScale.value; scaleY = resultScale.value }
                 .clip(RoundedCornerShape(12.dp))
                 .background(color.copy(alpha = 0.1f))
                 .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
@@ -402,28 +518,23 @@ private fun MinesResult(state: MinesUiState) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (won) "You Won!" else "Locked!",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
+                    if (won) "You Won!" else "Locked!",
+                    fontSize = 22.sp, fontWeight = FontWeight.Bold, color = color,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (won) "+${numberFormat.format(state.payout)}" else "-${numberFormat.format(state.bet)}",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        color = color,
+                        if (won) "+${numberFormat.format(state.payout)}" else "-${numberFormat.format(state.bet)}",
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace, color = color,
                     )
                 }
                 if (won && state.currentMultiplier > 0) {
                     Text(
                         "x${String.format("%.2f", state.currentMultiplier)}",
-                        fontSize = 13.sp,
-                        color = color.copy(alpha = 0.7f),
+                        fontSize = 13.sp, color = color.copy(alpha = 0.7f),
                     )
                 }
             }

@@ -86,7 +86,10 @@ import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
 import com.mgafk.app.ui.screens.minigames.BalanceCard
 import com.mgafk.app.ui.screens.minigames.CasinoLoginGate
+import com.mgafk.app.ui.screens.minigames.BlackjackGame
 import com.mgafk.app.ui.screens.minigames.CoinFlipGame
+import com.mgafk.app.ui.screens.minigames.CrashGame
+import com.mgafk.app.ui.screens.minigames.DiceGame
 import com.mgafk.app.ui.screens.minigames.MinesGame
 import com.mgafk.app.ui.screens.minigames.SlotsGame
 import com.mgafk.app.ui.screens.minigames.GamesGrid
@@ -670,7 +673,7 @@ private fun SectionContent(
                         result = state.slotsResult,
                         loading = state.slotsLoading,
                         error = state.slotsError,
-                        onPlay = { amount -> viewModel.playSlots(amount) },
+                        onPlay = { amount, machines -> viewModel.playSlots(amount, machines) },
                         onReset = { viewModel.resetSlots() },
                         onBack = {
                             viewModel.resetSlots()
@@ -678,6 +681,46 @@ private fun SectionContent(
                             currentGame = null
                         },
                         onResultShown = { viewModel.applySlotsResult() },
+                    )
+                    "dice" -> DiceGame(
+                        casinoBalance = state.casinoBalance,
+                        result = state.diceResult,
+                        loading = state.diceLoading,
+                        error = state.diceError,
+                        onPlay = { amount, target, direction -> viewModel.playDice(amount, target, direction) },
+                        onReset = { viewModel.resetDice() },
+                        onBack = {
+                            viewModel.resetDice()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                        onResultShown = { viewModel.applyDiceResult() },
+                    )
+                    "crash" -> CrashGame(
+                        casinoBalance = state.casinoBalance,
+                        state = state.crash,
+                        onStart = { amount -> viewModel.startCrash(amount) },
+                        onCashout = { viewModel.cashoutCrash() },
+                        onReset = { viewModel.resetCrash() },
+                        onBack = {
+                            viewModel.resetCrash()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                    )
+                    "blackjack" -> BlackjackGame(
+                        casinoBalance = state.casinoBalance,
+                        state = state.blackjack,
+                        onStart = { amount -> viewModel.startBlackjack(amount) },
+                        onHit = { viewModel.blackjackHit() },
+                        onStand = { viewModel.blackjackStand() },
+                        onDouble = { viewModel.blackjackDouble() },
+                        onReset = { viewModel.resetBlackjack() },
+                        onBack = {
+                            viewModel.resetBlackjack()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
                     )
                     "mines" -> MinesGame(
                         casinoBalance = state.casinoBalance,

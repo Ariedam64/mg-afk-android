@@ -65,6 +65,28 @@ import kotlinx.coroutines.launch
 
 private class TokenExpiredException : Exception("Discord token expired")
 
+data class BlackjackUiState(
+    val active: Boolean = false,
+    val response: com.mgafk.app.data.repository.BlackjackResponse? = null,
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
+data class CrashUiState(
+    val active: Boolean = false,
+    val bet: Long = 0,
+    val growthRate: Double = 0.00015,
+    val startTime: Long = 0, // System.currentTimeMillis() when game started
+    val crashed: Boolean = false,
+    val cashedOut: Boolean = false,
+    val crashPoint: Double = 0.0,
+    val multiplier: Double = 1.0,
+    val won: Boolean = false,
+    val payout: Long = 0,
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
 data class MinesUiState(
     val active: Boolean = false,
     val bet: Long = 0,
@@ -144,6 +166,14 @@ data class UiState(
     val slotsResult: com.mgafk.app.data.repository.SlotsResponse? = null,
     val slotsLoading: Boolean = false,
     val slotsError: String? = null,
+    // Dice
+    val diceResult: com.mgafk.app.data.repository.DiceResponse? = null,
+    val diceLoading: Boolean = false,
+    val diceError: String? = null,
+    // Crash
+    val crash: CrashUiState = CrashUiState(),
+    // Blackjack
+    val blackjack: BlackjackUiState = BlackjackUiState(),
     // Mines
     val mines: MinesUiState = MinesUiState(),
 ) {
@@ -631,6 +661,241 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ---- Dice ----
+
+    fun playDice(amount: Long, target: Int, direction: String) {
+        _state.update { it.copy(diceLoading = true, diceError = null, diceResult = null) }
+        viewModelScope.launch {
+            CasinoApi.playDice(casinoApiKey(), amount, target, direction)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            diceResult = resp,
+                            diceLoading = false,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(diceLoading = false, diceError = e.message) }
+                }
+        }
+    }
+
+    fun applyDiceResult() {
+        val result = _state.value.diceResult ?: return
+        _state.update { it.copy(casinoBalance = result.newBalance) }
+        fetchTransactions()
+    }
+
+    fun resetDice() {
+        _state.update { it.copy(diceResult = null, diceError = null, diceLoading = false) }
+    }
+
+    // ---- Crash ----
+
+    private var crashPollJob: Job? = null
+
+    fun startCrash(amount: Long) {
+        _state.update { it.copy(crash = CrashUiState(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.startCrash(casinoApiKey(), amount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            casinoBalance = resp.newBalance,
+                            crash = CrashUiState(
+                                active = true,
+                                bet = resp.bet,
+                                growthRate = resp.growthRate,
+                                startTime = System.currentTimeMillis(),
+                            ),
+                        )
+                    }
+                    startCrashPolling()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(crash = CrashUiState(error = e.message)) }
+                }
+        }
+    }
+
+    private fun startCrashPolling() {
+        crashPollJob?.cancel()
+        crashPollJob = viewModelScope.launch {
+            while (true) {
+                delay(500)
+                val current = _state.value.crash
+                if (!current.active || current.crashed || current.cashedOut) break
+                CasinoApi.getCrashStatus(casinoApiKey())
+                    .onSuccess { resp ->
+                        if (resp.status == "crashed") {
+                            _state.update {
+                                it.copy(crash = it.crash.copy(
+                                    crashed = true,
+                                    crashPoint = resp.crashPoint,
+                                    multiplier = resp.crashPoint,
+                                    won = false,
+                                    payout = 0,
+                                ))
+                            }
+                            fetchTransactions()
+                        }
+                    }
+                    .onFailure {
+                        // 404 = no active game, treat as crashed
+                        _state.update {
+                            it.copy(crash = it.crash.copy(
+                                crashed = true,
+                                won = false,
+                                payout = 0,
+                            ))
+                        }
+                    }
+            }
+        }
+    }
+
+    fun cashoutCrash() {
+        val current = _state.value.crash
+        if (!current.active || current.crashed || current.cashedOut) return
+        crashPollJob?.cancel()
+        _state.update { it.copy(crash = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.cashoutCrash(casinoApiKey())
+                .onSuccess { resp ->
+                    if (resp.won) {
+                        _state.update {
+                            it.copy(
+                                casinoBalance = resp.newBalance,
+                                crash = it.crash.copy(
+                                    loading = false,
+                                    cashedOut = true,
+                                    won = true,
+                                    multiplier = resp.multiplier,
+                                    crashPoint = resp.crashPoint,
+                                    payout = resp.payout,
+                                ),
+                            )
+                        }
+                    } else {
+                        // Too late — already crashed
+                        _state.update {
+                            it.copy(crash = it.crash.copy(
+                                loading = false,
+                                crashed = true,
+                                won = false,
+                                crashPoint = resp.crashPoint,
+                                multiplier = resp.crashPoint,
+                                payout = 0,
+                            ))
+                        }
+                    }
+                    fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(crash = it.crash.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun resetCrash() {
+        crashPollJob?.cancel()
+        _state.update { it.copy(crash = CrashUiState()) }
+    }
+
+    // ---- Blackjack ----
+
+    fun startBlackjack(amount: Long) {
+        _state.update { it.copy(blackjack = BlackjackUiState(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.startBlackjack(casinoApiKey(), amount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            casinoBalance = resp.newBalance,
+                            blackjack = BlackjackUiState(
+                                active = true,
+                                response = resp,
+                            ),
+                        )
+                    }
+                    if (resp.status == "done") fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(blackjack = BlackjackUiState(error = e.message)) }
+                }
+        }
+    }
+
+    fun blackjackHit() {
+        val current = _state.value.blackjack
+        if (!current.active || current.loading) return
+        _state.update { it.copy(blackjack = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.blackjackHit(casinoApiKey())
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            blackjack = it.blackjack.copy(loading = false, response = resp),
+                        )
+                    }
+                    if (resp.status == "done") {
+                        if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
+                        fetchTransactions()
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun blackjackStand() {
+        val current = _state.value.blackjack
+        if (!current.active || current.loading) return
+        _state.update { it.copy(blackjack = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.blackjackStand(casinoApiKey())
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            blackjack = it.blackjack.copy(loading = false, response = resp),
+                        )
+                    }
+                    if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
+                    fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun blackjackDouble() {
+        val current = _state.value.blackjack
+        if (!current.active || current.loading) return
+        _state.update { it.copy(blackjack = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.blackjackDouble(casinoApiKey())
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            blackjack = it.blackjack.copy(loading = false, response = resp),
+                        )
+                    }
+                    if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
+                    fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun resetBlackjack() {
+        _state.update { it.copy(blackjack = BlackjackUiState()) }
+    }
+
     // ---- Coinflip ----
 
     fun playCoinflip(amount: Long, choice: String) {
@@ -663,10 +928,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Slots ----
 
-    fun playSlots(amount: Long) {
+    fun playSlots(amount: Long, machines: Int = 1) {
         _state.update { it.copy(slotsLoading = true, slotsError = null, slotsResult = null) }
         viewModelScope.launch {
-            CasinoApi.playSlots(casinoApiKey(), amount)
+            CasinoApi.playSlots(casinoApiKey(), amount, machines)
                 .onSuccess { resp ->
                     _state.update {
                         it.copy(
