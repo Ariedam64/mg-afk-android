@@ -14,20 +14,34 @@ object PriceCalculator {
     // ── Mutation multipliers (fallback if API unavailable) ──
     // Source: game source mutationsDex.ts
 
-    private val GROWTH_MUTATIONS = mapOf(
+    private val GROWTH_MUTATIONS = setOf("Gold", "Rainbow")
+
+    private val FALLBACK_VALUES = mapOf(
         "Gold" to 25.0,
         "Rainbow" to 50.0,
-    )
-
-    private val CONDITION_MUTATIONS = mapOf(
         "Wet" to 2.0,
         "Chilled" to 2.0,
-        "Frozen" to 10.0,
-        "Dawnlit" to 2.0,
-        "Dawnbound" to 3.0,
-        "Amberlit" to 5.0,
-        "Amberbound" to 6.0,
+        "Frozen" to 6.0,
+        "Thunderstruck" to 5.0,
+        // Display names
+        "Dawnlit" to 4.0,
+        "Dawnbound" to 7.0,
+        "Amberlit" to 6.0,
+        "Amberbound" to 10.0,
+        // Internal names (game state uses these)
+        "Dawncharged" to 7.0,
+        "Ambershine" to 6.0,
+        "Ambercharged" to 10.0,
     )
+
+    /**
+     * Get mutation coinMultiplier from API data, falling back to hardcoded values.
+     */
+    private fun getMutationValue(mutation: String): Double {
+        val apiEntry = MgApi.getMutations()[mutation]
+        if (apiEntry != null) return apiEntry.coinMultiplier
+        return FALLBACK_VALUES[mutation] ?: 1.0
+    }
 
     /**
      * Calculate the mutation multiplier for a list of mutations.
@@ -41,17 +55,17 @@ object PriceCalculator {
         var conditionCount = 0
 
         for (mut in mutations) {
-            val growthVal = GROWTH_MUTATIONS[mut]
-            if (growthVal != null) {
+            if (mut in GROWTH_MUTATIONS) {
+                val value = getMutationValue(mut)
                 if (mut == "Rainbow") {
-                    growth = growthVal
+                    growth = value
                 } else if (growth == 1.0) {
-                    growth = growthVal
+                    growth = value
                 }
             } else {
-                val condVal = CONDITION_MUTATIONS[mut]
-                if (condVal != null && condVal > 1.0) {
-                    conditionSum += condVal
+                val value = getMutationValue(mut)
+                if (value > 1.0) {
+                    conditionSum += value
                     conditionCount++
                 }
             }

@@ -36,6 +36,7 @@ object MgApi {
     // ---- Thread-safe cache ----
 
     private val cache = ConcurrentHashMap<String, LinkedHashMap<String, GameEntry>>()
+    private val mutationsCache = ConcurrentHashMap<String, MutationEntry>()
 
     /** Rarity tiers in game order (lowest -> highest) */
     val RARITY_ORDER = listOf("Common", "Uncommon", "Rare", "Legendary", "Mythic", "Divine", "Celestial")
@@ -54,6 +55,12 @@ object MgApi {
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
+
+    data class MutationEntry(
+        val name: String,
+        val coinMultiplier: Double,
+        val sprite: String? = null,
+    )
 
     // ---- Public API ----
 
@@ -87,7 +94,25 @@ object MgApi {
                     }
                 }
             }
+            // Fetch mutations separately (different structure)
+            val mutJob = async(Dispatchers.IO) {
+                try {
+                    val data = fetchMutations()
+                    mutationsCache.putAll(data)
+                    Log.d(TAG, "Loaded mutations: ${data.size} entries")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load mutations: ${e.message}")
+                    try {
+                        val data = fetchMutations()
+                        mutationsCache.putAll(data)
+                        Log.d(TAG, "Retry OK mutations: ${data.size} entries")
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Retry also failed for mutations: ${e2.message}")
+                    }
+                }
+            }
             jobs.forEach { it.await() }
+            mutJob.await()
             isReady = true
             Log.d(TAG, "All preloaded. Cache keys: ${cache.keys}")
         }
@@ -100,6 +125,7 @@ object MgApi {
     fun getEggs(): Map<String, GameEntry> = cache["eggs"] ?: emptyMap()
     fun getWeathers(): Map<String, GameEntry> = cache["weathers"] ?: emptyMap()
     fun getAbilities(): Map<String, GameEntry> = cache["abilities"] ?: emptyMap()
+    fun getMutations(): Map<String, MutationEntry> = mutationsCache
 
     fun spriteUrl(category: String, name: String): String =
         "$BASE_URL/assets/sprites/$category/$name.png"
@@ -137,10 +163,39 @@ object MgApi {
     /** Clear all caches (call on version change) */
     fun clearCache() {
         cache.clear()
+        mutationsCache.clear()
         isReady = false
     }
 
     // ---- Internal ----
+
+    private fun fetchMutations(): Map<String, MutationEntry> {
+        val request = Request.Builder()
+            .url("$BASE_URL/DATA/mutations")
+            .header("Accept", "application/json")
+            .build()
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code} for /DATA/mutations")
+        }
+        val body = response.body?.string()
+            ?: throw Exception("Empty body for /DATA/mutations")
+        val root = json.parseToJsonElement(body) as? JsonObject
+            ?: throw Exception("Invalid JSON for /DATA/mutations")
+
+        val result = mutableMapOf<String, MutationEntry>()
+        for ((id, element) in root) {
+            val obj = element as? JsonObject ?: continue
+            val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: id
+            val coinMultiplier = obj["coinMultiplier"]?.jsonPrimitive?.doubleOrNull ?: 1.0
+            val sprite = obj["sprite"]?.jsonPrimitive?.contentOrNull
+            val entry = MutationEntry(name = name, coinMultiplier = coinMultiplier, sprite = sprite)
+            // Key by both internal id (e.g. "Ambercharged") and display name (e.g. "Amberbound")
+            result[id] = entry
+            if (name != id) result[name] = entry
+        }
+        return result
+    }
 
     private fun fetchCategory(category: String): LinkedHashMap<String, GameEntry> {
         val request = Request.Builder()
