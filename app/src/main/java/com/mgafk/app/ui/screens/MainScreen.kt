@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
@@ -83,6 +84,14 @@ import com.mgafk.app.ui.screens.connection.ConnectionCard
 import com.mgafk.app.ui.screens.room.ChatCard
 import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
+import com.mgafk.app.ui.screens.minigames.BalanceCard
+import com.mgafk.app.ui.screens.minigames.CasinoLoginGate
+import com.mgafk.app.ui.screens.minigames.CoinFlipGame
+import com.mgafk.app.ui.screens.minigames.MinesGame
+import com.mgafk.app.ui.screens.minigames.SlotsGame
+import com.mgafk.app.ui.screens.minigames.GamesGrid
+import com.mgafk.app.ui.screens.minigames.HistoryCard
+import com.mgafk.app.ui.screens.minigames.WalletCard
 import com.mgafk.app.ui.screens.garden.EggsCard
 import com.mgafk.app.ui.screens.garden.GardenCard
 import com.mgafk.app.ui.screens.storage.DecorShedCard
@@ -122,6 +131,7 @@ enum class NavSection(
     STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true),
     GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
     SHOPS("Shops", Icons.Outlined.ShoppingCart, requiresConnection = true),
+    MINI_GAMES("Mini Games", Icons.Outlined.SportsEsports),
     ALERTS("Alerts", Icons.Outlined.Notifications),
     SETTINGS("Settings", Icons.Outlined.Settings),
     DEBUG("Debug", Icons.Outlined.BugReport),
@@ -133,6 +143,7 @@ enum class NavSection(
 fun MainScreen(
     viewModel: MainViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
+    onCasinoLoginRequest: (sessionId: String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     val session = state.activeSession
@@ -231,6 +242,7 @@ fun MainScreen(
                                         state = state,
                                         viewModel = viewModel,
                                         onLoginRequest = onLoginRequest,
+                                        onCasinoLoginRequest = onCasinoLoginRequest,
                                     )
                                     Spacer(modifier = Modifier.height(24.dp))
                                 }
@@ -388,9 +400,16 @@ private fun DrawerContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Alerts, Settings & Debug — pinned at bottom
+        // Mini Games, Alerts, Settings & Debug — pinned at bottom
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(4.dp))
+        DrawerItem(
+            icon = NavSection.MINI_GAMES.icon,
+            label = NavSection.MINI_GAMES.label,
+            selected = selected == NavSection.MINI_GAMES,
+            enabled = true,
+            onClick = { onSelect(NavSection.MINI_GAMES) },
+        )
         DrawerItem(
             icon = NavSection.ALERTS.icon,
             label = NavSection.ALERTS.label,
@@ -497,6 +516,7 @@ private fun SectionContent(
     state: com.mgafk.app.ui.UiState,
     viewModel: MainViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
+    onCasinoLoginRequest: (sessionId: String) -> Unit = {},
 ) {
     when (section) {
         NavSection.DASHBOARD -> {
@@ -620,6 +640,98 @@ private fun SectionContent(
                     viewModel.removeItemFromFeedingTrough(session.id, itemId)
                 },
             )
+        }
+        NavSection.MINI_GAMES -> {
+            val casinoConnected = session.casinoApiKey.isNotBlank()
+            var currentGame by remember { mutableStateOf<String?>(null) }
+
+            // Login gate — blocks everything until authenticated
+            if (!casinoConnected) {
+                CasinoLoginGate(onLogin = { onCasinoLoginRequest(session.id) })
+            } else if (currentGame != null) {
+                // ── Game screen ──
+                when (currentGame) {
+                    "coinflip" -> CoinFlipGame(
+                        casinoBalance = state.casinoBalance,
+                        result = state.coinflipResult,
+                        loading = state.coinflipLoading,
+                        error = state.coinflipError,
+                        onPlay = { amount, choice -> viewModel.playCoinflip(amount, choice) },
+                        onReset = { viewModel.resetCoinflip() },
+                        onBack = {
+                            viewModel.resetCoinflip()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                        onResultShown = { viewModel.applyCoinflipResult() },
+                    )
+                    "slots" -> SlotsGame(
+                        casinoBalance = state.casinoBalance,
+                        result = state.slotsResult,
+                        loading = state.slotsLoading,
+                        error = state.slotsError,
+                        onPlay = { amount -> viewModel.playSlots(amount) },
+                        onReset = { viewModel.resetSlots() },
+                        onBack = {
+                            viewModel.resetSlots()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                        onResultShown = { viewModel.applySlotsResult() },
+                    )
+                    "mines" -> MinesGame(
+                        casinoBalance = state.casinoBalance,
+                        state = state.mines,
+                        onStart = { amount, mineCount -> viewModel.startMines(amount, mineCount) },
+                        onReveal = { position -> viewModel.revealMines(position) },
+                        onCashout = { viewModel.cashoutMines() },
+                        onReset = { viewModel.resetMines() },
+                        onBack = {
+                            viewModel.resetMines()
+                            viewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                    )
+                }
+            } else {
+                // ── Main mini games hub ──
+                var walletMode by remember { mutableStateOf<String?>(null) }
+
+                BalanceCard(
+                    gameBalance = state.currencyBalance,
+                    gameBalanceLoading = state.currencyBalanceLoading,
+                    gameBalanceError = state.currencyBalanceError,
+                    casinoBalance = state.casinoBalance,
+                    casinoBalanceLoading = state.casinoBalanceLoading,
+                    casinoConnected = true,
+                    onRefreshGameBalance = { viewModel.fetchCurrencyBalance(session.id) },
+                    onRefreshCasinoBalance = { viewModel.fetchCasinoBalance() },
+                    onConnectCasino = {},
+                    onDeposit = { walletMode = "deposit" },
+                    onWithdraw = { walletMode = "withdraw" },
+                )
+
+                // Show WalletCard only when deposit/withdraw is active
+                if (walletMode != null || state.deposit.active || state.withdraw.status.isNotEmpty()) {
+                    WalletCard(
+                        deposit = state.deposit,
+                        withdraw = state.withdraw,
+                        onRequestDeposit = { amount -> viewModel.requestDeposit(amount) },
+                        onCancelDeposit = { viewModel.cancelDeposit() },
+                        onResetDeposit = { viewModel.resetDeposit(); walletMode = null },
+                        onRequestWithdraw = { amount -> viewModel.requestWithdraw(amount) },
+                        onResetWithdraw = { viewModel.resetWithdraw(); walletMode = null },
+                        initialMode = walletMode,
+                    )
+                }
+
+                GamesGrid(onGameClick = { gameId -> currentGame = gameId })
+                HistoryCard(
+                    transactions = state.transactions,
+                    loading = state.transactionsLoading,
+                    onLoad = { viewModel.fetchTransactions() },
+                )
+            }
         }
         NavSection.ALERTS -> {
             AlertsCards(

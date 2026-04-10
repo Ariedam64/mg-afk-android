@@ -36,7 +36,13 @@ class OAuthActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setOAuthCookies()
+        // Clear existing cookies so Discord always prompts a fresh login,
+        // then set the OAuth cookies once the clear is done.
+        val cm = CookieManager.getInstance()
+        cm.removeAllCookies {
+            cm.flush()
+            runOnUiThread { setOAuthCookies() }
+        }
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true

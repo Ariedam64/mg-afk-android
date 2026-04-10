@@ -46,6 +46,11 @@
             android:theme="@style/Theme.MgAfk" />
 
         <activity
+            android:name=".auth.CasinoOAuthActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MgAfk" />
+
+        <activity
             android:name=".service.AlarmActivity"
             android:exported="false"
             android:showWhenLocked="true"

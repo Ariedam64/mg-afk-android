@@ -1,0 +1,297 @@
+package com.mgafk.app.data.repository
+
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
+
+// ── Response models ──
+
+@Serializable
+data class CasinoBalanceResponse(val balance: Long)
+
+@Serializable
+data class DepositRequestResponse(
+    val depositId: Long,
+    val command: String,
+    val amount: Long,
+    val createdAt: String,
+    val expiresAt: String,
+)
+
+@Serializable
+data class DepositStatusResponse(val deposit: DepositInfo?)
+
+@Serializable
+data class DepositInfo(
+    val id: Long,
+    val amount: Long,
+    val status: String, // pending | confirmed | expired | cancelled
+    val createdAt: String,
+    val expiresAt: String,
+    val confirmedAt: String? = null,
+)
+
+@Serializable
+data class DepositCancelResponse(val cancelled: Boolean, val depositId: Long)
+
+@Serializable
+data class WithdrawResponse(
+    val success: Boolean,
+    val withdrawId: Long,
+    val position: Int,
+    val message: String,
+)
+
+@Serializable
+data class WithdrawStatusResponse(
+    val status: String, // "pending" | "completed" | "failed"
+    val position: Int = 0,
+)
+
+@Serializable
+data class TransactionHistoryResponse(val transactions: List<Transaction>)
+
+@Serializable
+data class Transaction(
+    val id: Long,
+    val from_player: String? = null,
+    val to_player: String? = null,
+    val ref_id: String? = null,
+    val amount: Long,
+    val type: String, // deposit | withdraw | bet | win | transfer
+    val created_at: String,
+)
+
+@Serializable
+data class CoinflipResponse(
+    val game: String,
+    val result: String, // "heads" | "tails"
+    val choice: String,
+    val won: Boolean,
+    val bet: Long,
+    val payout: Long,
+    val newBalance: Long,
+)
+
+@Serializable
+data class SlotsResponse(
+    val game: String,
+    val reels: List<String>,
+    val payline: String, // "3-of-a-kind" | "2-of-a-kind" | "none"
+    val multiplier: Double,
+    val won: Boolean,
+    val bet: Long,
+    val payout: Long,
+    val newBalance: Long,
+)
+
+@Serializable
+data class MinesStartResponse(
+    val game: String,
+    val gridSize: Int,
+    val mineCount: Int,
+    val bet: Long,
+    val newBalance: Long,
+    val nextMultiplier: Double,
+)
+
+@Serializable
+data class MinesRevealResponse(
+    val game: String,
+    val result: String, // "safe" | "mine"
+    val position: Int,
+    val revealed: List<Int> = emptyList(),
+    val mines: List<Int> = emptyList(),
+    val currentMultiplier: Double = 0.0,
+    val currentPayout: Long = 0,
+    val nextMultiplier: Double = 0.0,
+    val safeRemaining: Int = 0,
+    val won: Boolean? = null,
+    val allRevealed: Boolean = false,
+    val payout: Long = 0,
+    val multiplier: Double = 0.0,
+    val newBalance: Long = 0,
+)
+
+@Serializable
+data class MinesCashoutResponse(
+    val game: String,
+    val won: Boolean,
+    val multiplier: Double,
+    val bet: Long,
+    val payout: Long,
+    val newBalance: Long,
+    val mines: List<Int> = emptyList(),
+    val revealed: List<Int> = emptyList(),
+)
+
+@Serializable
+data class CasinoErrorResponse(val error: String? = null, val balance: Long? = null)
+
+// ── API client ──
+
+object CasinoApi {
+
+    private const val TAG = "CasinoApi"
+    private const val BASE_URL = "https://ariesmod-api.ariedam.fr"
+    private val JSON_MEDIA = "application/json".toMediaType()
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    /** Fetch casino balance */
+    suspend fun getBalance(apiKey: String): Result<Long> = safeCall(apiKey, "getBalance") {
+        val request = get("/deposits/balance", apiKey)
+        val body = execute(request)
+        json.decodeFromString<CasinoBalanceResponse>(body).balance
+    }
+
+    /** Create a deposit request */
+    suspend fun requestDeposit(apiKey: String, amount: Long): Result<DepositRequestResponse> =
+        safeCall(apiKey, "requestDeposit") {
+            val request = post("/deposits/request", apiKey, """{"amount":$amount}""")
+            val body = execute(request)
+            json.decodeFromString<DepositRequestResponse>(body)
+        }
+
+    /** Poll deposit status */
+    suspend fun getDepositStatus(apiKey: String): Result<DepositInfo?> =
+        safeCall(apiKey, "getDepositStatus") {
+            val request = get("/deposits/status", apiKey)
+            val body = execute(request)
+            json.decodeFromString<DepositStatusResponse>(body).deposit
+        }
+
+    /** Cancel pending deposit */
+    suspend fun cancelDeposit(apiKey: String): Result<DepositCancelResponse> =
+        safeCall(apiKey, "cancelDeposit") {
+            val request = post("/deposits/cancel", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<DepositCancelResponse>(body)
+        }
+
+    /** Withdraw breads */
+    suspend fun withdraw(apiKey: String, amount: Long): Result<WithdrawResponse> =
+        safeCall(apiKey, "withdraw") {
+            val request = post("/deposits/withdraw", apiKey, """{"amount":$amount}""")
+            val body = execute(request)
+            json.decodeFromString<WithdrawResponse>(body)
+        }
+
+    /** Fetch transaction history */
+    suspend fun getHistory(apiKey: String, limit: Int = 20): Result<List<Transaction>> =
+        safeCall(apiKey, "getHistory") {
+            val request = get("/deposits/history?limit=$limit", apiKey)
+            val body = execute(request)
+            json.decodeFromString<TransactionHistoryResponse>(body).transactions
+        }
+
+    /** Poll withdraw status */
+    suspend fun getWithdrawStatus(apiKey: String, withdrawId: Long): Result<WithdrawStatusResponse> =
+        safeCall(apiKey, "withdrawStatus") {
+            val request = get("/deposits/withdraw/status/$withdrawId", apiKey)
+            val body = execute(request)
+            json.decodeFromString<WithdrawStatusResponse>(body)
+        }
+
+    // ── Games ──
+
+    /** Play coinflip */
+    suspend fun playCoinflip(apiKey: String, amount: Long, choice: String): Result<CoinflipResponse> =
+        safeCall(apiKey, "coinflip") {
+            val request = post("/games/coinflip", apiKey, """{"amount":$amount,"choice":"$choice"}""")
+            val body = execute(request)
+            json.decodeFromString<CoinflipResponse>(body)
+        }
+
+    /** Play slots */
+    suspend fun playSlots(apiKey: String, amount: Long): Result<SlotsResponse> =
+        safeCall(apiKey, "slots") {
+            val request = post("/games/slots", apiKey, """{"amount":$amount}""")
+            val body = execute(request)
+            json.decodeFromString<SlotsResponse>(body)
+        }
+
+    /** Start mines game */
+    suspend fun startMines(apiKey: String, amount: Long, mineCount: Int): Result<MinesStartResponse> =
+        safeCall(apiKey, "minesStart") {
+            val request = post("/games/mines/start", apiKey, """{"amount":$amount,"mineCount":$mineCount}""")
+            val body = execute(request)
+            json.decodeFromString<MinesStartResponse>(body)
+        }
+
+    /** Reveal a cell */
+    suspend fun revealMines(apiKey: String, position: Int): Result<MinesRevealResponse> =
+        safeCall(apiKey, "minesReveal") {
+            val request = post("/games/mines/reveal", apiKey, """{"position":$position}""")
+            val body = execute(request)
+            json.decodeFromString<MinesRevealResponse>(body)
+        }
+
+    /** Cashout mines */
+    suspend fun cashoutMines(apiKey: String): Result<MinesCashoutResponse> =
+        safeCall(apiKey, "minesCashout") {
+            val request = post("/games/mines/cashout", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<MinesCashoutResponse>(body)
+        }
+
+    // ── Internal helpers ──
+
+    private fun get(path: String, apiKey: String): Request =
+        Request.Builder()
+            .url("$BASE_URL$path")
+            .header("Authorization", "Bearer $apiKey")
+            .build()
+
+    private fun post(path: String, apiKey: String, jsonBody: String?): Request {
+        val body = jsonBody?.toRequestBody(JSON_MEDIA)
+            ?: "".toRequestBody(JSON_MEDIA)
+        return Request.Builder()
+            .url("$BASE_URL$path")
+            .header("Authorization", "Bearer $apiKey")
+            .post(body)
+            .build()
+    }
+
+    private suspend fun execute(request: Request): String = withContext(Dispatchers.IO) {
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: ""
+        Log.d(TAG, "[${request.method}] ${request.url} → ${response.code}")
+        if (!response.isSuccessful) {
+            val errorMsg = try {
+                json.decodeFromString<CasinoErrorResponse>(body).error ?: "HTTP ${response.code}"
+            } catch (_: Exception) {
+                "HTTP ${response.code}: $body"
+            }
+            throw CasinoApiException(response.code, errorMsg)
+        }
+        body
+    }
+
+    private suspend fun <T> safeCall(apiKey: String, tag: String, block: suspend () -> T): Result<T> {
+        return try {
+            if (apiKey.isBlank()) return Result.failure(CasinoApiException(401, "No API key"))
+            Result.success(block())
+        } catch (e: CasinoApiException) {
+            Log.e(TAG, "[$tag] API error ${e.code}: ${e.message}")
+            Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "[$tag] Error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+}
+
+class CasinoApiException(val code: Int, message: String) : Exception(message)

@@ -39,6 +39,7 @@ import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.data.repository.AppRelease
+import com.mgafk.app.data.repository.CasinoApi
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
@@ -55,10 +56,51 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private class TokenExpiredException : Exception("Discord token expired")
+
+data class MinesUiState(
+    val active: Boolean = false,
+    val bet: Long = 0,
+    val mineCount: Int = 5,
+    val revealed: Set<Int> = emptySet(),
+    val mines: List<Int> = emptyList(), // revealed on game over / cashout
+    val currentMultiplier: Double = 0.0,
+    val currentPayout: Long = 0,
+    val nextMultiplier: Double = 0.0,
+    val safeRemaining: Int = 0,
+    val gameOver: Boolean = false,
+    val won: Boolean? = null,
+    val payout: Long = 0,
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
+data class WithdrawUiState(
+    val loading: Boolean = false,
+    val error: String? = null,
+    val withdrawId: Long? = null,
+    val position: Int = 0,
+    val status: String = "", // "" | "pending" | "completed" | "failed"
+    val message: String = "",
+)
+
+data class DepositUiState(
+    val active: Boolean = false,
+    val depositId: Long? = null,
+    val command: String = "",
+    val amount: Long = 0,
+    val status: String = "", // pending | confirmed | expired | cancelled
+    val expiresAt: String = "",
+    val loading: Boolean = false,
+    val error: String? = null,
+)
 
 private fun WakeLockMode.toServiceMode(): Int = when (this) {
     WakeLockMode.OFF -> AfkService.MODE_OFF
@@ -84,6 +126,26 @@ data class UiState(
     val petTeams: List<PetTeam> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val serviceLogs: List<AfkService.ServiceLog> = emptyList(),
+    val currencyBalance: Long? = null,
+    val currencyBalanceLoading: Boolean = false,
+    val currencyBalanceError: String? = null,
+    // Casino
+    val casinoBalance: Long? = null,
+    val casinoBalanceLoading: Boolean = false,
+    val deposit: DepositUiState = DepositUiState(),
+    val withdraw: WithdrawUiState = WithdrawUiState(),
+    val transactions: List<com.mgafk.app.data.repository.Transaction> = emptyList(),
+    val transactionsLoading: Boolean = false,
+    // Coinflip
+    val coinflipResult: com.mgafk.app.data.repository.CoinflipResponse? = null,
+    val coinflipLoading: Boolean = false,
+    val coinflipError: String? = null,
+    // Slots
+    val slotsResult: com.mgafk.app.data.repository.SlotsResponse? = null,
+    val slotsLoading: Boolean = false,
+    val slotsError: String? = null,
+    // Mines
+    val mines: MinesUiState = MinesUiState(),
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -344,6 +406,405 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissGardenTip() {
         _state.update { it.copy(showGardenTip = false) }
         viewModelScope.launch { repo.dismissGardenTip() }
+    }
+
+    // ---- Currency balance ----
+
+    fun fetchCurrencyBalance(sessionId: String) {
+        val session = _state.value.sessions.find { it.id == sessionId } ?: run {
+            Log.w(TAG, "[Balance] Session $sessionId not found")
+            return
+        }
+        if (session.cookie.isBlank() || session.gameVersion.isBlank() || session.room.isBlank()) {
+            Log.w(TAG, "[Balance] Skipped: cookie=${session.cookie.isNotBlank()}, version=${session.gameVersion}, room=${session.room}")
+            return
+        }
+        _state.update { it.copy(currencyBalanceLoading = true) }
+        viewModelScope.launch {
+            try {
+                val host = session.gameUrl
+                    .removePrefix("https://")
+                    .removePrefix("http://")
+                    .ifBlank { "magicgarden.gg" }
+                val url = "https://$host/version/${session.gameVersion}/api/rooms/${session.room}/me"
+                Log.d(TAG, "[Balance] GET $url")
+                Log.d(TAG, "[Balance] Cookie: mc_jwt=${session.cookie}")
+                val balance = withContext(Dispatchers.IO) {
+                    val request = okhttp3.Request.Builder()
+                        .url(url)
+                        .header("Cookie", "mc_jwt=${session.cookie}")
+                        .build()
+                    val client = okhttp3.OkHttpClient()
+                    val response = client.newCall(request).execute()
+                    val code = response.code
+                    Log.d(TAG, "[Balance] HTTP $code")
+                    val body = response.body?.string() ?: throw Exception("Empty response")
+                    Log.d(TAG, "[Balance] Body: $body")
+                    if (code == 401) {
+                        throw TokenExpiredException()
+                    }
+                    if (!response.isSuccessful) {
+                        throw Exception("HTTP $code")
+                    }
+                    val obj = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                        .parseToJsonElement(body).jsonObject
+                    obj["currencyBalance"]?.jsonPrimitive?.longOrNull
+                        ?: throw Exception("No currencyBalance field in response")
+                }
+                Log.d(TAG, "[Balance] OK -> $balance breads")
+                _state.update { it.copy(currencyBalance = balance, currencyBalanceLoading = false, currencyBalanceError = null) }
+            } catch (e: TokenExpiredException) {
+                Log.e(TAG, "[Balance] Token expired — need re-login")
+                _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = "token_expired") }
+            } catch (e: Exception) {
+                Log.e(TAG, "[Balance] Failed: ${e.message}", e)
+                _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = e.message) }
+            }
+        }
+    }
+
+    // ---- Casino ----
+
+    private fun casinoApiKey(): String = _state.value.activeSession.casinoApiKey
+
+    fun setCasinoApiKey(sessionId: String, apiKey: String) {
+        updateSession(sessionId) { it.copy(casinoApiKey = apiKey) }
+        // Auto-fetch casino balance after login
+        viewModelScope.launch { fetchCasinoBalance() }
+    }
+
+    private var depositPollJob: Job? = null
+
+    fun fetchCasinoBalance() {
+        _state.update { it.copy(casinoBalanceLoading = true) }
+        viewModelScope.launch {
+            CasinoApi.getBalance(casinoApiKey())
+                .onSuccess { balance ->
+                    _state.update { it.copy(casinoBalance = balance, casinoBalanceLoading = false) }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "[Casino] Balance failed: ${e.message}")
+                    _state.update { it.copy(casinoBalanceLoading = false) }
+                }
+        }
+    }
+
+    fun requestDeposit(amount: Long) {
+        _state.update { it.copy(deposit = it.deposit.copy(loading = true, error = null)) }
+        viewModelScope.launch {
+            CasinoApi.requestDeposit(casinoApiKey(), amount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(deposit = DepositUiState(
+                            active = true,
+                            depositId = resp.depositId,
+                            command = resp.command,
+                            amount = resp.amount,
+                            status = "pending",
+                            expiresAt = resp.expiresAt,
+                            loading = false,
+                        ))
+                    }
+                    startDepositPolling()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(deposit = it.deposit.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    private fun startDepositPolling() {
+        depositPollJob?.cancel()
+        depositPollJob = viewModelScope.launch {
+            Log.d(TAG, "[Deposit] Polling started")
+            while (true) {
+                delay(3_000)
+                val dep = _state.value.deposit
+                Log.d(TAG, "[Deposit] Loop check: active=${dep.active}, status=${dep.status}")
+                if (!dep.active || dep.status != "pending") break
+
+                Log.d(TAG, "[Deposit] Polling status...")
+                CasinoApi.getDepositStatus(casinoApiKey())
+                    .onSuccess { info ->
+                        Log.d(TAG, "[Deposit] Poll result: ${info?.status}")
+                        if (info == null) {
+                            _state.update { it.copy(deposit = DepositUiState()) }
+                            return@launch
+                        }
+                        _state.update { it.copy(deposit = it.deposit.copy(status = info.status)) }
+                        when (info.status) {
+                            "confirmed" -> {
+                                fetchCasinoBalance()
+                                fetchTransactions()
+                                return@launch
+                            }
+                            "expired", "cancelled" -> return@launch
+                        }
+                    }
+                    .onFailure { return@launch }
+            }
+        }
+    }
+
+    fun cancelDeposit() {
+        viewModelScope.launch {
+            CasinoApi.cancelDeposit(casinoApiKey())
+                .onSuccess {
+                    _state.update { it.copy(deposit = DepositUiState()) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(deposit = it.deposit.copy(error = e.message)) }
+                }
+        }
+        depositPollJob?.cancel()
+    }
+
+    fun resetDeposit() {
+        depositPollJob?.cancel()
+        _state.update { it.copy(deposit = DepositUiState()) }
+    }
+
+    private var withdrawPollJob: Job? = null
+
+    fun requestWithdraw(amount: Long) {
+        _state.update { it.copy(withdraw = WithdrawUiState(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.withdraw(casinoApiKey(), amount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(withdraw = WithdrawUiState(
+                            withdrawId = resp.withdrawId,
+                            position = resp.position,
+                            status = "pending",
+                            message = resp.message,
+                        ))
+                    }
+                    startWithdrawPolling(resp.withdrawId)
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(withdraw = WithdrawUiState(error = e.message)) }
+                }
+        }
+    }
+
+    private fun startWithdrawPolling(withdrawId: Long) {
+        withdrawPollJob?.cancel()
+        withdrawPollJob = viewModelScope.launch {
+            while (true) {
+                delay(3_000)
+                CasinoApi.getWithdrawStatus(casinoApiKey(), withdrawId)
+                    .onSuccess { resp ->
+                        _state.update { it.copy(withdraw = it.withdraw.copy(status = resp.status, position = resp.position)) }
+                        when (resp.status) {
+                            "completed" -> {
+                                fetchCasinoBalance()
+                                fetchTransactions()
+                                return@launch
+                            }
+                            "failed" -> {
+                                fetchCasinoBalance()
+                                fetchTransactions()
+                                return@launch
+                            }
+                        }
+                    }
+                    .onFailure { return@launch }
+            }
+        }
+    }
+
+    fun resetWithdraw() {
+        withdrawPollJob?.cancel()
+        _state.update { it.copy(withdraw = WithdrawUiState()) }
+    }
+
+    fun fetchTransactions() {
+        _state.update { it.copy(transactionsLoading = true) }
+        viewModelScope.launch {
+            CasinoApi.getHistory(casinoApiKey(), limit = 50)
+                .onSuccess { txs ->
+                    _state.update { it.copy(transactions = txs, transactionsLoading = false) }
+                }
+                .onFailure {
+                    _state.update { it.copy(transactionsLoading = false) }
+                }
+        }
+    }
+
+    // ---- Coinflip ----
+
+    fun playCoinflip(amount: Long, choice: String) {
+        _state.update { it.copy(coinflipLoading = true, coinflipError = null, coinflipResult = null) }
+        viewModelScope.launch {
+            CasinoApi.playCoinflip(casinoApiKey(), amount, choice)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            coinflipResult = resp,
+                            coinflipLoading = false,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(coinflipLoading = false, coinflipError = e.message) }
+                }
+        }
+    }
+
+    fun applyCoinflipResult() {
+        val result = _state.value.coinflipResult ?: return
+        _state.update { it.copy(casinoBalance = result.newBalance) }
+        fetchTransactions()
+    }
+
+    fun resetCoinflip() {
+        _state.update { it.copy(coinflipResult = null, coinflipError = null, coinflipLoading = false) }
+    }
+
+    // ---- Slots ----
+
+    fun playSlots(amount: Long) {
+        _state.update { it.copy(slotsLoading = true, slotsError = null, slotsResult = null) }
+        viewModelScope.launch {
+            CasinoApi.playSlots(casinoApiKey(), amount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            slotsResult = resp,
+                            slotsLoading = false,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(slotsLoading = false, slotsError = e.message) }
+                }
+        }
+    }
+
+    fun applySlotsResult() {
+        val result = _state.value.slotsResult ?: return
+        _state.update { it.copy(casinoBalance = result.newBalance) }
+        fetchTransactions()
+    }
+
+    fun resetSlots() {
+        _state.update { it.copy(slotsResult = null, slotsError = null, slotsLoading = false) }
+    }
+
+    // ---- Mines ----
+
+    fun startMines(amount: Long, mineCount: Int) {
+        _state.update { it.copy(mines = MinesUiState(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.startMines(casinoApiKey(), amount, mineCount)
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            casinoBalance = resp.newBalance,
+                            mines = MinesUiState(
+                                active = true,
+                                bet = resp.bet,
+                                mineCount = resp.mineCount,
+                                nextMultiplier = resp.nextMultiplier,
+                                safeRemaining = resp.gridSize - resp.mineCount,
+                            ),
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(mines = MinesUiState(error = e.message)) }
+                }
+        }
+    }
+
+    fun revealMines(position: Int) {
+        val current = _state.value.mines
+        if (!current.active || current.gameOver || current.loading) return
+        _state.update { it.copy(mines = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.revealMines(casinoApiKey(), position)
+                .onSuccess { resp ->
+                    if (resp.result == "mine") {
+                        // Hit a mine — game over
+                        _state.update {
+                            it.copy(mines = it.mines.copy(
+                                loading = false,
+                                revealed = resp.revealed.toSet(),
+                                mines = resp.mines,
+                                gameOver = true,
+                                won = false,
+                                payout = 0,
+                            ))
+                        }
+                        fetchTransactions()
+                    } else if (resp.allRevealed) {
+                        // All safe revealed — auto cashout
+                        _state.update {
+                            it.copy(
+                                casinoBalance = resp.newBalance,
+                                mines = it.mines.copy(
+                                    loading = false,
+                                    revealed = resp.revealed.toSet(),
+                                    mines = resp.mines,
+                                    gameOver = true,
+                                    won = true,
+                                    payout = resp.payout,
+                                    currentMultiplier = resp.multiplier,
+                                ),
+                            )
+                        }
+                        fetchTransactions()
+                    } else {
+                        // Safe — continue
+                        _state.update {
+                            it.copy(mines = it.mines.copy(
+                                loading = false,
+                                revealed = resp.revealed.toSet(),
+                                currentMultiplier = resp.currentMultiplier,
+                                currentPayout = resp.currentPayout,
+                                nextMultiplier = resp.nextMultiplier,
+                                safeRemaining = resp.safeRemaining,
+                            ))
+                        }
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(mines = it.mines.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun cashoutMines() {
+        val current = _state.value.mines
+        if (!current.active || current.gameOver || current.revealed.isEmpty()) return
+        _state.update { it.copy(mines = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.cashoutMines(casinoApiKey())
+                .onSuccess { resp ->
+                    _state.update {
+                        it.copy(
+                            casinoBalance = resp.newBalance,
+                            mines = it.mines.copy(
+                                loading = false,
+                                mines = resp.mines,
+                                revealed = resp.revealed.toSet(),
+                                gameOver = true,
+                                won = true,
+                                payout = resp.payout,
+                                currentMultiplier = resp.multiplier,
+                            ),
+                        )
+                    }
+                    fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(mines = it.mines.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun resetMines() {
+        _state.update { it.copy(mines = MinesUiState()) }
     }
 
     fun purchaseShopItem(sessionId: String, shopType: String, itemName: String) {
@@ -929,6 +1390,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val url = entry.sprite ?: return@forEach
                 loader.enqueue(ImageRequest.Builder(app).data(url).build())
             }
+        }
+        // Preload casino/minigame images
+        val casinoUrls = listOf(
+            "https://i.imgur.com/HlvVrpI.png",  // bread sprite
+            "https://i.imgur.com/yPcQYDB.png",   // coin heads
+            "https://i.imgur.com/J2gqn25.png",   // coin tails
+            "https://mg-api.ariedam.fr/assets/sprites/plants/Carrot.png",     // slots cherry
+            "https://mg-api.ariedam.fr/assets/sprites/plants/Lemon.png",      // slots lemon
+            "https://mg-api.ariedam.fr/assets/sprites/plants/Lychee.png",     // slots orange
+            "https://mg-api.ariedam.fr/assets/sprites/plants/Grape.png",      // slots grape
+            "https://mg-api.ariedam.fr/assets/sprites/plants/Starweaver.png", // slots diamond / mines gem
+            "https://mg-api.ariedam.fr/assets/sprites/items/Shovel.png",      // slots 7
+            "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png",         // mines bomb
+        )
+        casinoUrls.forEach { url ->
+            loader.enqueue(ImageRequest.Builder(app).data(url).build())
         }
     }
 
