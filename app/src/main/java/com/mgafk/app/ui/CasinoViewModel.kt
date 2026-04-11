@@ -81,11 +81,11 @@ data class DepositUiState(
     val command: String = "",
     val amount: Long = 0,
     val receivedAmount: Long = 0,
+    val refundedAmount: Long = 0,
     val status: String = "",
     val expiresAt: String = "",
     val loading: Boolean = false,
     val error: String? = null,
-    val refunded: Long = 0,
 )
 
 data class CasinoUiState(
@@ -209,7 +209,7 @@ class CasinoViewModel : ViewModel() {
                             _state.update { it.copy(deposit = DepositUiState()) }
                             return@launch
                         }
-                        _state.update { it.copy(deposit = it.deposit.copy(status = info.status, receivedAmount = info.receivedAmount)) }
+                        _state.update { it.copy(deposit = it.deposit.copy(status = info.status, receivedAmount = info.receivedAmount, refundedAmount = info.refundedAmount)) }
                         when (info.status) {
                             "confirmed" -> {
                                 fetchCasinoBalance()
@@ -231,7 +231,7 @@ class CasinoViewModel : ViewModel() {
                     _state.update {
                         it.copy(deposit = it.deposit.copy(
                             status = "cancelled",
-                            refunded = resp.refunded,
+                            refundedAmount = resp.refunded,
                         ))
                     }
                 }

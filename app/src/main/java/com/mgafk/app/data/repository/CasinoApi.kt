@@ -33,6 +33,7 @@ data class DepositInfo(
     val id: Long,
     val amount: Long,
     val receivedAmount: Long = 0,
+    val refundedAmount: Long = 0,
     val status: String, // pending | confirmed | expired | cancelled
     val createdAt: String,
     val expiresAt: String,

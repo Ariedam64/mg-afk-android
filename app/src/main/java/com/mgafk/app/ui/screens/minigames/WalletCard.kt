@@ -244,23 +244,29 @@ private fun DepositPopup(
             Column(modifier = Modifier.fillMaxWidth()) {
                 when (deposit.status) {
                     "confirmed" -> {
+                        val subtitle = buildString {
+                            append("${numberFormat.format(deposit.amount)} breads added to your casino balance.")
+                            if (deposit.refundedAmount > 0) {
+                                append("\n${numberFormat.format(deposit.refundedAmount)} breads surplus refunded.")
+                            }
+                        }
                         StatusBanner(
                             icon = Icons.Outlined.CheckCircle,
                             color = StatusConnected,
                             title = "Deposit confirmed!",
-                            subtitle = "${numberFormat.format(deposit.amount)} breads added to your casino balance.",
+                            subtitle = subtitle,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         FilledButton(label = "Done", color = StatusConnected, onClick = onDone)
                     }
 
                     "cancelled" -> {
-                        if (deposit.refunded > 0) {
+                        if (deposit.refundedAmount > 0) {
                             StatusBanner(
                                 icon = Icons.Outlined.CheckCircle,
                                 color = StatusConnecting,
                                 title = "Deposit cancelled",
-                                subtitle = "${numberFormat.format(deposit.refunded)} breads refunded to your account.",
+                                subtitle = "${numberFormat.format(deposit.refundedAmount)} breads refunded to your account.",
                             )
                         } else {
                             StatusBanner(
@@ -276,21 +282,20 @@ private fun DepositPopup(
 
                     "expired" -> {
                         val expiryMin = depositConfig?.limits?.depositExpiryMinutes ?: 5
-                        if (deposit.receivedAmount > 0) {
-                            StatusBanner(
-                                icon = Icons.Outlined.ErrorOutline,
-                                color = StatusError,
-                                title = "Deposit expired",
-                                subtitle = "The $expiryMin minute window has passed. ${numberFormat.format(deposit.receivedAmount)} breads refunded to your account.",
-                            )
-                        } else {
-                            StatusBanner(
-                                icon = Icons.Outlined.ErrorOutline,
-                                color = StatusError,
-                                title = "Deposit expired",
-                                subtitle = "The $expiryMin minute window has passed. Try again.",
-                            )
+                        val subtitle = buildString {
+                            append("The $expiryMin minute window has passed.")
+                            if (deposit.refundedAmount > 0) {
+                                append(" ${numberFormat.format(deposit.refundedAmount)} breads refunded.")
+                            } else {
+                                append(" Try again.")
+                            }
                         }
+                        StatusBanner(
+                            icon = Icons.Outlined.ErrorOutline,
+                            color = StatusError,
+                            title = "Deposit expired",
+                            subtitle = subtitle,
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         FilledButton(label = "Close", color = Accent, onClick = onDone)
                     }
