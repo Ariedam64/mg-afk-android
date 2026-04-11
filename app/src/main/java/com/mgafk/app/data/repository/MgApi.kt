@@ -1,11 +1,11 @@
 package com.mgafk.app.data.repository
 
-import android.util.Log
+import com.mgafk.app.data.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
+import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -31,7 +31,7 @@ object MgApi {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = AppJson.default
 
     // ---- Thread-safe cache ----
 
@@ -80,16 +80,16 @@ object MgApi {
                     try {
                         val data = fetchCategory(cat)
                         cache[cat] = data
-                        Log.d(TAG, "Loaded $cat: ${data.size} entries")
+                        AppLog.d(TAG, "Loaded $cat: ${data.size} entries")
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to load $cat: ${e.message}")
+                        AppLog.e(TAG, "Failed to load $cat: ${e.message}")
                         // Retry once
                         try {
                             val data = fetchCategory(cat)
                             cache[cat] = data
-                            Log.d(TAG, "Retry OK $cat: ${data.size} entries")
+                            AppLog.d(TAG, "Retry OK $cat: ${data.size} entries")
                         } catch (e2: Exception) {
-                            Log.e(TAG, "Retry also failed for $cat: ${e2.message}")
+                            AppLog.e(TAG, "Retry also failed for $cat: ${e2.message}")
                         }
                     }
                 }
@@ -99,22 +99,22 @@ object MgApi {
                 try {
                     val data = fetchMutations()
                     mutationsCache.putAll(data)
-                    Log.d(TAG, "Loaded mutations: ${data.size} entries")
+                    AppLog.d(TAG, "Loaded mutations: ${data.size} entries")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load mutations: ${e.message}")
+                    AppLog.e(TAG, "Failed to load mutations: ${e.message}")
                     try {
                         val data = fetchMutations()
                         mutationsCache.putAll(data)
-                        Log.d(TAG, "Retry OK mutations: ${data.size} entries")
+                        AppLog.d(TAG, "Retry OK mutations: ${data.size} entries")
                     } catch (e2: Exception) {
-                        Log.e(TAG, "Retry also failed for mutations: ${e2.message}")
+                        AppLog.e(TAG, "Retry also failed for mutations: ${e2.message}")
                     }
                 }
             }
             jobs.forEach { it.await() }
             mutJob.await()
             isReady = true
-            Log.d(TAG, "All preloaded. Cache keys: ${cache.keys}")
+            AppLog.d(TAG, "All preloaded. Cache keys: ${cache.keys}")
         }
     }
 

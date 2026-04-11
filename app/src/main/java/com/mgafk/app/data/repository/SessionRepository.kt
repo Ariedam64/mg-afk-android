@@ -14,12 +14,12 @@ import com.mgafk.app.data.model.Session
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.mgafk.app.data.AppJson
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mgafk_prefs")
 
 class SessionRepository(private val context: Context) {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = AppJson.storage
 
     companion object {
         private val KEY_SESSIONS = stringPreferencesKey("mgafk.sessions")

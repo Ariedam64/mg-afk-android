@@ -1,10 +1,10 @@
 package com.mgafk.app.data.repository
 
-import android.util.Log
+import com.mgafk.app.data.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.mgafk.app.data.AppJson
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -239,7 +239,7 @@ object CasinoApi {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = AppJson.default
 
     /** Fetch casino balance */
     suspend fun getBalance(apiKey: String): Result<Long> = safeCall(apiKey, "getBalance") {
@@ -447,7 +447,7 @@ object CasinoApi {
     private suspend fun execute(request: Request): String = withContext(Dispatchers.IO) {
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: ""
-        Log.d(TAG, "[${request.method}] ${request.url} → ${response.code}")
+        AppLog.d(TAG, "[${request.method}] ${request.url} → ${response.code}")
         if (!response.isSuccessful) {
             val errorMsg = try {
                 json.decodeFromString<CasinoErrorResponse>(body).error ?: "HTTP ${response.code}"
@@ -464,10 +464,10 @@ object CasinoApi {
             if (apiKey.isBlank()) return Result.failure(CasinoApiException(401, "No API key"))
             Result.success(block())
         } catch (e: CasinoApiException) {
-            Log.e(TAG, "[$tag] API error ${e.code}: ${e.message}")
+            AppLog.e(TAG, "[$tag] API error ${e.code}: ${e.message}")
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "[$tag] Error: ${e.message}", e)
+            AppLog.e(TAG, "[$tag] Error: ${e.message}", e)
             Result.failure(e)
         }
     }

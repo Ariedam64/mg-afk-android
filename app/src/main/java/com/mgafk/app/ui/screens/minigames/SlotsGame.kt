@@ -65,10 +65,6 @@ import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
 
 private val ALL_SYMBOLS = listOf("\uD83C\uDF52", "\uD83C\uDF4B", "\uD83C\uDF4A", "\uD83C\uDF47", "\uD83D\uDC8E", "7\uFE0F\u20E3")
 
@@ -195,24 +191,7 @@ fun SlotsGame(
         showBanner = true
     }
 
-    // Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { onReset(); onBack() }) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-        Text("Slots", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.weight(1f))
-        if (casinoBalance != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(numberFormat.format(casinoBalance), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = StatusConnected)
-            }
-        }
-    }
+    GameHeader(title = "Slots", casinoBalance = casinoBalance, onBack = { onReset(); onBack() })
 
     Spacer(modifier = Modifier.height(8.dp))
 

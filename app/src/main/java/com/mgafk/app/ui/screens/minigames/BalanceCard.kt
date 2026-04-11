@@ -52,12 +52,6 @@ import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
-import java.text.NumberFormat
-import java.util.Locale
-
-internal const val BREAD_SPRITE_URL = "https://i.imgur.com/HlvVrpI.png"
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
 
 @Composable
 fun BalanceCard(

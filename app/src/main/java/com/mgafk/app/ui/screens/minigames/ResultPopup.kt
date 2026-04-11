@@ -40,10 +40,6 @@ import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
-import java.text.NumberFormat
-import java.util.Locale
-
-private val fmt = NumberFormat.getNumberInstance(Locale.US)
 
 /**
  * Shared result popup dialog for all mini-games.
@@ -101,8 +97,8 @@ fun ResultPopup(
             // Net result
             val net = payout - bet
             val netText = when {
-                net > 0 -> "+${fmt.format(net)}"
-                net < 0 -> "-${fmt.format(-net)}"
+                net > 0 -> "+${numberFormat.format(net)}"
+                net < 0 -> "-${numberFormat.format(-net)}"
                 else -> "0"
             }
             val netLabel = when {
@@ -133,11 +129,11 @@ fun ResultPopup(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Bet", fontSize = 10.sp, color = TextMuted)
-                    Text(fmt.format(bet), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = TextPrimary)
+                    Text(numberFormat.format(bet), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = TextPrimary)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Payout", fontSize = 10.sp, color = TextMuted)
-                    Text(fmt.format(payout), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = if (payout > 0) StatusConnected else TextMuted)
+                    Text(numberFormat.format(payout), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = if (payout > 0) StatusConnected else TextMuted)
                 }
             }
 
@@ -168,7 +164,7 @@ fun ResultPopup(
                         .padding(vertical = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("Replay ${fmt.format(bet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                    Text("Replay ${numberFormat.format(bet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
                 }
             }
         }

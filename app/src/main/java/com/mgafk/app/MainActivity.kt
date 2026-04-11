@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import com.mgafk.app.auth.CasinoOAuthActivity
 import com.mgafk.app.auth.OAuthActivity
+import com.mgafk.app.ui.CasinoViewModel
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.screens.MainScreen
 import com.mgafk.app.ui.theme.MgAfkTheme
@@ -19,6 +20,7 @@ import com.mgafk.app.ui.theme.MgAfkTheme
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private val casinoViewModel: CasinoViewModel by viewModels()
     private var pendingOAuthSessionId: String? = null
     private var pendingCasinoOAuthSessionId: String? = null
 
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
         pendingCasinoOAuthSessionId = null
         if (!apiKey.isNullOrBlank() && sessionId != null) {
             viewModel.setCasinoApiKey(sessionId, apiKey)
+            casinoViewModel.setApiKey(apiKey)
         }
     }
 
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
             MgAfkTheme {
                 MainScreen(
                     viewModel = viewModel,
+                    casinoViewModel = casinoViewModel,
                     onLoginRequest = { sessionId ->
                         pendingOAuthSessionId = sessionId
                         oauthLauncher.launch(Intent(this, OAuthActivity::class.java))

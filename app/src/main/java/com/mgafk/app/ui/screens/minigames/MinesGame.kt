@@ -62,10 +62,6 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
-import java.text.NumberFormat
-import java.util.Locale
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
 
 private const val GEM_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/plants/Starweaver.png"
 private const val MINE_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"
@@ -98,24 +94,7 @@ fun MinesGame(
 ) {
     val sound = rememberSoundManager()
 
-    // Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { onReset(); onBack() }) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-        Text("Mines", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.weight(1f))
-        if (casinoBalance != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(numberFormat.format(casinoBalance), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace, color = StatusConnected)
-            }
-        }
-    }
+    GameHeader(title = "Mines", casinoBalance = casinoBalance, onBack = { onReset(); onBack() })
 
     var lastAmount by remember { mutableStateOf("") }
     var lastMineCount by remember { mutableIntStateOf(5) }

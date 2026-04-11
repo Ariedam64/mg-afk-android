@@ -45,13 +45,9 @@ import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
-import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
 private val timeFormatter = DateTimeFormatter.ofPattern("dd/MM HH:mm")
 
 @Composable

@@ -86,83 +86,11 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.sin
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
-
-// ── Background themes per milestone ──
-private data class SpaceTheme(
-    val topColor: Color,
-    val bottomColor: Color,
-    val starColor: Color,
-    val label: String,
-)
-
-private val THEME_LAUNCH = SpaceTheme(
-    topColor = Color(0xFF0A1628),
-    bottomColor = Color(0xFF1A2940),
-    starColor = Color.White.copy(alpha = 0.4f),
-    label = "LAUNCH",
-)
-private val THEME_SKY = SpaceTheme(
-    topColor = Color(0xFF0D1B2A),
-    bottomColor = Color(0xFF1B3A5C),
-    starColor = Color.White.copy(alpha = 0.5f),
-    label = "ATMOSPHERE",
-)
-private val THEME_SPACE = SpaceTheme(
-    topColor = Color(0xFF050D1A),
-    bottomColor = Color(0xFF0A1628),
-    starColor = Color.White.copy(alpha = 0.7f),
-    label = "SPACE",
-)
-private val THEME_DEEP = SpaceTheme(
-    topColor = Color(0xFF1A0A0A),
-    bottomColor = Color(0xFF2A0F0F),
-    starColor = Color(0xFFFF6B6B).copy(alpha = 0.5f),
-    label = "DANGER ZONE",
-)
-private val THEME_EXTREME = SpaceTheme(
-    topColor = Color(0xFF2A0000),
-    bottomColor = Color(0xFF400A0A),
-    starColor = Color(0xFFFF4444).copy(alpha = 0.6f),
-    label = "CRITICAL",
-)
-
-private fun themeForMultiplier(mult: Double): SpaceTheme = when {
-    mult >= 10.0 -> THEME_EXTREME
-    mult >= 5.0 -> THEME_DEEP
-    mult >= 2.0 -> THEME_SPACE
-    mult >= 1.3 -> THEME_SKY
-    else -> THEME_LAUNCH
-}
-
-// Particle for trail/explosion
-private data class Particle(
-    var x: Float,
-    var y: Float,
-    var vx: Float,
-    var vy: Float,
-    var life: Float,
-    var decay: Float,
-    var size: Float,
-    var color: Color,
-)
-
-// Star in the background
-private data class Star(
-    val xFrac: Float, // 0..1
-    val yFrac: Float, // 0..1
-    val size: Float,
-    val twinkleSpeed: Float,
-    val twinkleOffset: Float,
-)
 
 @Composable
 fun CrashGame(
@@ -194,7 +122,7 @@ fun CrashGame(
     var alarmPlaying by remember { mutableStateOf(false) }
 
     // Particles for trail + explosion
-    val particles = remember { mutableStateListOf<Particle>() }
+    val particles = remember { mutableStateListOf<CrashParticle>() }
 
 
     // Stars for background (generated once)
@@ -358,7 +286,7 @@ fun CrashGame(
                 val angle = Math.random() * 2 * PI
                 val speed = 1f + Math.random().toFloat() * 12f
                 particles.add(
-                    Particle(
+                    CrashParticle(
                         x = (Math.random() * 10 - 5).toFloat(),
                         y = (Math.random() * 10 - 5).toFloat(),
                         vx = (cos(angle) * speed).toFloat(),
@@ -381,7 +309,7 @@ fun CrashGame(
                 val angle = Math.random() * 2 * PI
                 val speed = 2f + Math.random().toFloat() * 5f
                 particles.add(
-                    Particle(
+                    CrashParticle(
                         x = 0f, y = 0f,
                         vx = (cos(angle) * speed).toFloat(),
                         vy = (sin(angle) * speed).toFloat(),
@@ -420,7 +348,7 @@ fun CrashGame(
                 val angle = Math.random() * 2 * PI
                 val speed = 1.5f + Math.random().toFloat() * 5f
                 particles.add(
-                    Particle(
+                    CrashParticle(
                         x = 0f, y = 0f,
                         vx = (cos(angle) * speed).toFloat(),
                         vy = (sin(angle) * speed).toFloat(),
@@ -522,28 +450,7 @@ fun CrashGame(
         ).filter { it.isNotBlank() }.map { "$baseUrl/$it" }
     }
 
-    // Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { onReset(); onBack() }) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-        Text("Crash", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.weight(1f))
-        if (casinoBalance != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    numberFormat.format(casinoBalance),
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace, color = StatusConnected,
-                )
-            }
-        }
-    }
+    GameHeader(title = "Crash", casinoBalance = casinoBalance, onBack = { onReset(); onBack() })
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -1166,177 +1073,3 @@ fun CrashGame(
     }
 }
 
-// ── Rocket drawing ──
-
-private fun DrawScope.drawRocket(
-    cx: Float,
-    cy: Float,
-    tilt: Float,
-    cashedOut: Boolean,
-    multiplier: Double,
-) {
-    rotate(degrees = tilt, pivot = Offset(cx, cy)) {
-        val bodyWidth = 70f
-        val bodyHeight = 120f
-        val noseHeight = 35f
-
-        // Body color changes with multiplier
-        val bodyColor = when {
-            multiplier >= 10.0 -> Color(0xFFFF4444)
-            multiplier >= 5.0 -> Color(0xFFFFA500)
-            else -> Color(0xFFE8ECF0)
-        }
-        val accentColor = when {
-            multiplier >= 10.0 -> Color(0xFFCC0000)
-            multiplier >= 5.0 -> Color(0xFFCC7700)
-            else -> Color(0xFF6C8CFF)
-        }
-
-        val bodyTop = cy - bodyHeight / 2 + noseHeight / 2
-
-        // Body (rounded rectangle)
-        drawRoundRect(
-            color = bodyColor,
-            topLeft = Offset(cx - bodyWidth / 2, bodyTop),
-            size = Size(bodyWidth, bodyHeight),
-            cornerRadius = CornerRadius(12f, 12f),
-        )
-
-        // Nose cone (triangle)
-        val nosePath = Path().apply {
-            moveTo(cx, cy - bodyHeight / 2 - noseHeight / 2 + 3)
-            lineTo(cx - bodyWidth / 2, bodyTop)
-            lineTo(cx + bodyWidth / 2, bodyTop)
-            close()
-        }
-        drawPath(nosePath, accentColor)
-
-        // Porthole window (circle)
-        val portholeY = bodyTop + 35f
-        drawCircle(
-            color = Color(0xFF1A2940),
-            radius = 20f,
-            center = Offset(cx, portholeY),
-        )
-        drawCircle(
-            color = accentColor.copy(alpha = 0.5f),
-            radius = 20f,
-            center = Offset(cx, portholeY),
-            style = Stroke(width = 2f),
-        )
-        // Window shine
-        drawCircle(
-            color = Color.White.copy(alpha = 0.15f),
-            radius = 6f,
-            center = Offset(cx - 6f, portholeY - 7f),
-        )
-
-        // Side fins
-        val finBottom = cy + bodyHeight / 2 + noseHeight / 2
-        // Left fin
-        val leftFin = Path().apply {
-            moveTo(cx - bodyWidth / 2, finBottom - 30f)
-            lineTo(cx - bodyWidth / 2 - 22f, finBottom + 9f)
-            lineTo(cx - bodyWidth / 2, finBottom)
-            close()
-        }
-        drawPath(leftFin, accentColor)
-        // Right fin
-        val rightFin = Path().apply {
-            moveTo(cx + bodyWidth / 2, finBottom - 30f)
-            lineTo(cx + bodyWidth / 2 + 22f, finBottom + 9f)
-            lineTo(cx + bodyWidth / 2, finBottom)
-            close()
-        }
-        drawPath(rightFin, accentColor)
-
-        // Stripe on body
-        drawRoundRect(
-            color = accentColor.copy(alpha = 0.3f),
-            topLeft = Offset(cx - bodyWidth / 2 + 8f, cy + 15f),
-            size = Size(bodyWidth - 16f, 7f),
-            cornerRadius = CornerRadius(3f, 3f),
-        )
-
-        // Second stripe
-        drawRoundRect(
-            color = accentColor.copy(alpha = 0.2f),
-            topLeft = Offset(cx - bodyWidth / 2 + 8f, cy + 27f),
-            size = Size(bodyWidth - 16f, 5f),
-            cornerRadius = CornerRadius(2f, 2f),
-        )
-
-        // Cashout glow
-        if (cashedOut) {
-            drawCircle(StatusConnected.copy(alpha = 0.3f), radius = 40f, center = Offset(cx, cy))
-        }
-    }
-}
-
-private fun DrawScope.drawRocketFlame(
-    cx: Float,
-    topY: Float,
-    flameHeight: Float,
-    multiplier: Double,
-) {
-    val flameColor1 = when {
-        multiplier >= 10.0 -> Color(0xFFFF0000)
-        multiplier >= 5.0 -> Color(0xFFFF6B00)
-        else -> Color(0xFFFF8C00)
-    }
-    val flameColor2 = when {
-        multiplier >= 10.0 -> Color(0xFFFF4444)
-        multiplier >= 5.0 -> Color(0xFFFFAA00)
-        else -> Color(0xFFFFD700)
-    }
-
-    // Outer flame
-    val outerFlame = Path().apply {
-        moveTo(cx - 22f, topY)
-        lineTo(cx, topY + flameHeight)
-        lineTo(cx + 22f, topY)
-        close()
-    }
-    drawPath(
-        outerFlame,
-        Brush.verticalGradient(
-            colors = listOf(flameColor1.copy(alpha = 0.8f), flameColor2.copy(alpha = 0.2f)),
-            startY = topY,
-            endY = topY + flameHeight,
-        ),
-    )
-
-    // Inner flame (brighter, shorter)
-    val innerFlame = Path().apply {
-        moveTo(cx - 11f, topY)
-        lineTo(cx, topY + flameHeight * 0.6f)
-        lineTo(cx + 11f, topY)
-        close()
-    }
-    drawPath(
-        innerFlame,
-        Brush.verticalGradient(
-            colors = listOf(Color.White.copy(alpha = 0.9f), flameColor2.copy(alpha = 0.3f)),
-            startY = topY,
-            endY = topY + flameHeight * 0.6f,
-        ),
-    )
-}
-
-@Composable
-private fun TimeChip(time: String, mult: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceCard.copy(alpha = 0.5f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(time, fontSize = 10.sp, color = TextMuted)
-        Text(mult, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = TextPrimary)
-    }
-}
-
-private fun ClosedFloatingPointRange<Float>.random(): Float {
-    return start + (Math.random() * (endInclusive - start)).toFloat()
-}

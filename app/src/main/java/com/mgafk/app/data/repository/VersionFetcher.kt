@@ -2,7 +2,7 @@ package com.mgafk.app.data.repository
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
+import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -16,7 +16,7 @@ data class AppRelease(
 
 object VersionFetcher {
     private val client = OkHttpClient()
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = AppJson.default
 
     suspend fun fetchGameVersion(host: String = "magicgarden.gg"): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()

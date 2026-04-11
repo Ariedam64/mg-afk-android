@@ -7,7 +7,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
-import android.util.Log
+import com.mgafk.app.data.AppLog
 import coil.imageLoader
 import coil.request.ImageRequest
 import androidx.lifecycle.AndroidViewModel
@@ -39,8 +39,6 @@ import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.data.repository.AppRelease
-import com.mgafk.app.data.repository.CasinoApi
-import com.mgafk.app.data.repository.CasinoApiException
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
@@ -65,77 +63,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private class TokenExpiredException : Exception("Discord token expired")
-
-data class BlackjackUiState(
-    val active: Boolean = false,
-    val response: com.mgafk.app.data.repository.BlackjackResponse? = null,
-    val loading: Boolean = false,
-    val error: String? = null,
-)
-
-data class CrashUiState(
-    val active: Boolean = false,
-    val bet: Long = 0,
-    val growthRate: Double = 0.00015,
-    val startTime: Long = 0, // System.currentTimeMillis() when game started
-    val crashed: Boolean = false,
-    val cashedOut: Boolean = false,
-    val crashPoint: Double = 0.0,
-    val multiplier: Double = 1.0,
-    val won: Boolean = false,
-    val payout: Long = 0,
-    val loading: Boolean = false,
-    val error: String? = null,
-)
-
-data class MinesUiState(
-    val active: Boolean = false,
-    val bet: Long = 0,
-    val mineCount: Int = 5,
-    val revealed: Set<Int> = emptySet(),
-    val mines: List<Int> = emptyList(), // revealed on game over / cashout
-    val currentMultiplier: Double = 0.0,
-    val currentPayout: Long = 0,
-    val nextMultiplier: Double = 0.0,
-    val safeRemaining: Int = 0,
-    val gameOver: Boolean = false,
-    val won: Boolean? = null,
-    val payout: Long = 0,
-    val loading: Boolean = false,
-    val error: String? = null,
-)
-
-/**
- * Shown when a game start returns 409 (active game already exists).
- * [game] is "crash" | "blackjack" | "mines".
- * [pendingAmount] + [pendingExtra] hold the original start params so we can retry.
- */
-data class GameConflict(
-    val game: String = "",
-    val pendingAmount: Long = 0,
-    val pendingExtra: Int = 0, // mineCount for mines, unused for others
-    val loading: Boolean = false,
-)
-
-data class WithdrawUiState(
-    val loading: Boolean = false,
-    val error: String? = null,
-    val withdrawId: Long? = null,
-    val position: Int = 0,
-    val status: String = "", // "" | "pending" | "completed" | "failed"
-    val message: String = "",
-)
-
-data class DepositUiState(
-    val active: Boolean = false,
-    val depositId: Long? = null,
-    val command: String = "",
-    val amount: Long = 0,
-    val status: String = "", // pending | confirmed | expired | cancelled
-    val expiresAt: String = "",
-    val loading: Boolean = false,
-    val error: String? = null,
-)
 
 private fun WakeLockMode.toServiceMode(): Int = when (this) {
     WakeLockMode.OFF -> AfkService.MODE_OFF
@@ -164,33 +91,6 @@ data class UiState(
     val currencyBalance: Long? = null,
     val currencyBalanceLoading: Boolean = false,
     val currencyBalanceError: String? = null,
-    // Casino
-    val casinoBalance: Long? = null,
-    val casinoBalanceLoading: Boolean = false,
-    val deposit: DepositUiState = DepositUiState(),
-    val withdraw: WithdrawUiState = WithdrawUiState(),
-    val transactions: List<com.mgafk.app.data.repository.Transaction> = emptyList(),
-    val transactionsLoading: Boolean = false,
-    // Coinflip
-    val coinflipResult: com.mgafk.app.data.repository.CoinflipResponse? = null,
-    val coinflipLoading: Boolean = false,
-    val coinflipError: String? = null,
-    // Slots
-    val slotsResult: com.mgafk.app.data.repository.SlotsResponse? = null,
-    val slotsLoading: Boolean = false,
-    val slotsError: String? = null,
-    // Dice
-    val diceResult: com.mgafk.app.data.repository.DiceResponse? = null,
-    val diceLoading: Boolean = false,
-    val diceError: String? = null,
-    // Crash
-    val crash: CrashUiState = CrashUiState(),
-    // Blackjack
-    val blackjack: BlackjackUiState = BlackjackUiState(),
-    // Mines
-    val mines: MinesUiState = MinesUiState(),
-    // Active game conflict (409)
-    val gameConflict: GameConflict? = null,
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -457,11 +357,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun fetchCurrencyBalance(sessionId: String) {
         val session = _state.value.sessions.find { it.id == sessionId } ?: run {
-            Log.w(TAG, "[Balance] Session $sessionId not found")
+            AppLog.w(TAG, "[Balance] Session $sessionId not found")
             return
         }
         if (session.cookie.isBlank() || session.gameVersion.isBlank() || session.room.isBlank()) {
-            Log.w(TAG, "[Balance] Skipped: cookie=${session.cookie.isNotBlank()}, version=${session.gameVersion}, room=${session.room}")
+            AppLog.w(TAG, "[Balance] Skipped: cookie=${session.cookie.isNotBlank()}, version=${session.gameVersion}, room=${session.room}")
             return
         }
         _state.update { it.copy(currencyBalanceLoading = true) }
@@ -472,8 +372,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .removePrefix("http://")
                     .ifBlank { "magicgarden.gg" }
                 val url = "https://$host/version/${session.gameVersion}/api/rooms/${session.room}/me"
-                Log.d(TAG, "[Balance] GET $url")
-                Log.d(TAG, "[Balance] Cookie: mc_jwt=${session.cookie}")
+                AppLog.d(TAG, "[Balance] GET $url")
+                AppLog.d(TAG, "[Balance] Cookie: mc_jwt=${session.cookie}")
                 val balance = withContext(Dispatchers.IO) {
                     val request = okhttp3.Request.Builder()
                         .url(url)
@@ -482,677 +382,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val client = okhttp3.OkHttpClient()
                     val response = client.newCall(request).execute()
                     val code = response.code
-                    Log.d(TAG, "[Balance] HTTP $code")
+                    AppLog.d(TAG, "[Balance] HTTP $code")
                     val body = response.body?.string() ?: throw Exception("Empty response")
-                    Log.d(TAG, "[Balance] Body: $body")
+                    AppLog.d(TAG, "[Balance] Body: $body")
                     if (code == 401) {
                         throw TokenExpiredException()
                     }
                     if (!response.isSuccessful) {
                         throw Exception("HTTP $code")
                     }
-                    val obj = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                    val obj = com.mgafk.app.data.AppJson.default
                         .parseToJsonElement(body).jsonObject
                     obj["currencyBalance"]?.jsonPrimitive?.longOrNull
                         ?: throw Exception("No currencyBalance field in response")
                 }
-                Log.d(TAG, "[Balance] OK -> $balance breads")
+                AppLog.d(TAG, "[Balance] OK -> $balance breads")
                 _state.update { it.copy(currencyBalance = balance, currencyBalanceLoading = false, currencyBalanceError = null) }
             } catch (e: TokenExpiredException) {
-                Log.e(TAG, "[Balance] Token expired — need re-login")
+                AppLog.e(TAG, "[Balance] Token expired — need re-login")
                 _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = "token_expired") }
             } catch (e: Exception) {
-                Log.e(TAG, "[Balance] Failed: ${e.message}", e)
+                AppLog.e(TAG, "[Balance] Failed: ${e.message}", e)
                 _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = e.message) }
             }
         }
     }
 
-    // ---- Casino ----
-
-    private fun casinoApiKey(): String = _state.value.activeSession.casinoApiKey
-
     fun setCasinoApiKey(sessionId: String, apiKey: String) {
         updateSession(sessionId) { it.copy(casinoApiKey = apiKey) }
-        // Auto-fetch casino balance after login
-        viewModelScope.launch { fetchCasinoBalance() }
-    }
-
-    private var depositPollJob: Job? = null
-
-    fun fetchCasinoBalance() {
-        _state.update { it.copy(casinoBalanceLoading = true) }
-        viewModelScope.launch {
-            CasinoApi.getBalance(casinoApiKey())
-                .onSuccess { balance ->
-                    _state.update { it.copy(casinoBalance = balance, casinoBalanceLoading = false) }
-                }
-                .onFailure { e ->
-                    Log.e(TAG, "[Casino] Balance failed: ${e.message}")
-                    _state.update { it.copy(casinoBalanceLoading = false) }
-                }
-        }
-    }
-
-    fun requestDeposit(amount: Long) {
-        _state.update { it.copy(deposit = it.deposit.copy(loading = true, error = null)) }
-        viewModelScope.launch {
-            CasinoApi.requestDeposit(casinoApiKey(), amount)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(deposit = DepositUiState(
-                            active = true,
-                            depositId = resp.depositId,
-                            command = resp.command,
-                            amount = resp.amount,
-                            status = "pending",
-                            expiresAt = resp.expiresAt,
-                            loading = false,
-                        ))
-                    }
-                    startDepositPolling()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(deposit = it.deposit.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    private fun startDepositPolling() {
-        depositPollJob?.cancel()
-        depositPollJob = viewModelScope.launch {
-            Log.d(TAG, "[Deposit] Polling started")
-            while (true) {
-                delay(3_000)
-                val dep = _state.value.deposit
-                Log.d(TAG, "[Deposit] Loop check: active=${dep.active}, status=${dep.status}")
-                if (!dep.active || dep.status != "pending") break
-
-                Log.d(TAG, "[Deposit] Polling status...")
-                CasinoApi.getDepositStatus(casinoApiKey())
-                    .onSuccess { info ->
-                        Log.d(TAG, "[Deposit] Poll result: ${info?.status}")
-                        if (info == null) {
-                            _state.update { it.copy(deposit = DepositUiState()) }
-                            return@launch
-                        }
-                        _state.update { it.copy(deposit = it.deposit.copy(status = info.status)) }
-                        when (info.status) {
-                            "confirmed" -> {
-                                fetchCasinoBalance()
-                                fetchTransactions()
-                                return@launch
-                            }
-                            "expired", "cancelled" -> return@launch
-                        }
-                    }
-                    .onFailure { return@launch }
-            }
-        }
-    }
-
-    fun cancelDeposit() {
-        viewModelScope.launch {
-            CasinoApi.cancelDeposit(casinoApiKey())
-                .onSuccess {
-                    _state.update { it.copy(deposit = DepositUiState()) }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(deposit = it.deposit.copy(error = e.message)) }
-                }
-        }
-        depositPollJob?.cancel()
-    }
-
-    fun resetDeposit() {
-        depositPollJob?.cancel()
-        _state.update { it.copy(deposit = DepositUiState()) }
-    }
-
-    private var withdrawPollJob: Job? = null
-
-    fun requestWithdraw(amount: Long) {
-        _state.update { it.copy(withdraw = WithdrawUiState(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.withdraw(casinoApiKey(), amount)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(withdraw = WithdrawUiState(
-                            withdrawId = resp.withdrawId,
-                            position = resp.position,
-                            status = "pending",
-                            message = resp.message,
-                        ))
-                    }
-                    startWithdrawPolling(resp.withdrawId)
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(withdraw = WithdrawUiState(error = e.message)) }
-                }
-        }
-    }
-
-    private fun startWithdrawPolling(withdrawId: Long) {
-        withdrawPollJob?.cancel()
-        withdrawPollJob = viewModelScope.launch {
-            while (true) {
-                delay(3_000)
-                CasinoApi.getWithdrawStatus(casinoApiKey(), withdrawId)
-                    .onSuccess { resp ->
-                        _state.update { it.copy(withdraw = it.withdraw.copy(status = resp.status, position = resp.position)) }
-                        when (resp.status) {
-                            "completed" -> {
-                                fetchCasinoBalance()
-                                fetchTransactions()
-                                return@launch
-                            }
-                            "failed" -> {
-                                fetchCasinoBalance()
-                                fetchTransactions()
-                                return@launch
-                            }
-                        }
-                    }
-                    .onFailure { return@launch }
-            }
-        }
-    }
-
-    fun resetWithdraw() {
-        withdrawPollJob?.cancel()
-        _state.update { it.copy(withdraw = WithdrawUiState()) }
-    }
-
-    fun fetchTransactions() {
-        _state.update { it.copy(transactionsLoading = true) }
-        viewModelScope.launch {
-            CasinoApi.getHistory(casinoApiKey(), limit = 50)
-                .onSuccess { txs ->
-                    _state.update { it.copy(transactions = txs, transactionsLoading = false) }
-                }
-                .onFailure {
-                    _state.update { it.copy(transactionsLoading = false) }
-                }
-        }
-    }
-
-    // ---- Dice ----
-
-    fun playDice(amount: Long, target: Int, direction: String) {
-        _state.update { it.copy(diceLoading = true, diceError = null, diceResult = null) }
-        viewModelScope.launch {
-            CasinoApi.playDice(casinoApiKey(), amount, target, direction)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            diceResult = resp,
-                            diceLoading = false,
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(diceLoading = false, diceError = e.message) }
-                }
-        }
-    }
-
-    fun applyDiceResult() {
-        val result = _state.value.diceResult ?: return
-        _state.update { it.copy(casinoBalance = result.newBalance) }
-        fetchTransactions()
-    }
-
-    fun resetDice() {
-        _state.update { it.copy(diceResult = null, diceError = null, diceLoading = false) }
-    }
-
-    // ---- Crash ----
-
-    private var crashPollJob: Job? = null
-
-    fun startCrash(amount: Long) {
-        _state.update { it.copy(crash = CrashUiState(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.startCrash(casinoApiKey(), amount)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            casinoBalance = resp.newBalance,
-                            crash = CrashUiState(
-                                active = true,
-                                bet = resp.bet,
-                                growthRate = resp.growthRate,
-                                startTime = System.currentTimeMillis(),
-                            ),
-                        )
-                    }
-                    startCrashPolling()
-                }
-                .onFailure { e ->
-                    if (e is CasinoApiException && e.code == 409) {
-                        _state.update {
-                            it.copy(
-                                crash = CrashUiState(),
-                                gameConflict = GameConflict(game = "crash", pendingAmount = amount),
-                            )
-                        }
-                    } else {
-                        _state.update { it.copy(crash = CrashUiState(error = e.message)) }
-                    }
-                }
-        }
-    }
-
-    private fun startCrashPolling() {
-        crashPollJob?.cancel()
-        crashPollJob = viewModelScope.launch {
-            while (true) {
-                delay(500)
-                val current = _state.value.crash
-                if (!current.active || current.crashed || current.cashedOut) break
-                CasinoApi.getCrashStatus(casinoApiKey())
-                    .onSuccess { resp ->
-                        if (resp.status == "crashed") {
-                            _state.update {
-                                it.copy(crash = it.crash.copy(
-                                    crashed = true,
-                                    crashPoint = resp.crashPoint,
-                                    multiplier = resp.crashPoint,
-                                    won = false,
-                                    payout = 0,
-                                ))
-                            }
-                            fetchTransactions()
-                        }
-                    }
-                    .onFailure {
-                        // 404 = no active game, treat as crashed
-                        _state.update {
-                            it.copy(crash = it.crash.copy(
-                                crashed = true,
-                                won = false,
-                                payout = 0,
-                            ))
-                        }
-                    }
-            }
-        }
-    }
-
-    fun cashoutCrash() {
-        val current = _state.value.crash
-        if (!current.active || current.crashed || current.cashedOut) return
-        crashPollJob?.cancel()
-        _state.update { it.copy(crash = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.cashoutCrash(casinoApiKey())
-                .onSuccess { resp ->
-                    if (resp.won) {
-                        _state.update {
-                            it.copy(
-                                casinoBalance = resp.newBalance,
-                                crash = it.crash.copy(
-                                    loading = false,
-                                    cashedOut = true,
-                                    won = true,
-                                    multiplier = resp.multiplier,
-                                    crashPoint = resp.crashPoint,
-                                    payout = resp.payout,
-                                ),
-                            )
-                        }
-                    } else {
-                        // Too late — already crashed
-                        _state.update {
-                            it.copy(crash = it.crash.copy(
-                                loading = false,
-                                crashed = true,
-                                won = false,
-                                crashPoint = resp.crashPoint,
-                                multiplier = resp.crashPoint,
-                                payout = 0,
-                            ))
-                        }
-                    }
-                    fetchTransactions()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(crash = it.crash.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun resetCrash() {
-        crashPollJob?.cancel()
-        _state.update { it.copy(crash = CrashUiState()) }
-    }
-
-    // ---- Game conflict (409) ----
-
-    fun dismissConflict() {
-        _state.update { it.copy(gameConflict = null) }
-    }
-
-    fun forfeitAndRetry() {
-        val conflict = _state.value.gameConflict ?: return
-        _state.update { it.copy(gameConflict = conflict.copy(loading = true)) }
-        viewModelScope.launch {
-            val forfeitResult = when (conflict.game) {
-                "crash" -> CasinoApi.forfeitCrash(casinoApiKey())
-                "blackjack" -> CasinoApi.forfeitBlackjack(casinoApiKey())
-                "mines" -> CasinoApi.forfeitMines(casinoApiKey())
-                else -> Result.failure(Exception("Unknown game"))
-            }
-            forfeitResult
-                .onSuccess {
-                    _state.update { it.copy(gameConflict = null) }
-                    fetchCasinoBalance()
-                    // Retry the original start
-                    when (conflict.game) {
-                        "crash" -> startCrash(conflict.pendingAmount)
-                        "blackjack" -> startBlackjack(conflict.pendingAmount)
-                        "mines" -> startMines(conflict.pendingAmount, conflict.pendingExtra)
-                    }
-                }
-                .onFailure { e ->
-                    _state.update {
-                        it.copy(gameConflict = null)
-                    }
-                    // Show error on the relevant game
-                    when (conflict.game) {
-                        "crash" -> _state.update { it.copy(crash = CrashUiState(error = "Forfeit failed: ${e.message}")) }
-                        "blackjack" -> _state.update { it.copy(blackjack = BlackjackUiState(error = "Forfeit failed: ${e.message}")) }
-                        "mines" -> _state.update { it.copy(mines = MinesUiState(error = "Forfeit failed: ${e.message}")) }
-                    }
-                }
-        }
-    }
-
-    // ---- Blackjack ----
-
-    fun startBlackjack(amount: Long) {
-        _state.update { it.copy(blackjack = BlackjackUiState(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.startBlackjack(casinoApiKey(), amount)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            casinoBalance = resp.newBalance,
-                            blackjack = BlackjackUiState(
-                                active = true,
-                                response = resp,
-                            ),
-                        )
-                    }
-                    if (resp.status == "done") fetchTransactions()
-                }
-                .onFailure { e ->
-                    if (e is CasinoApiException && e.code == 409) {
-                        _state.update {
-                            it.copy(
-                                blackjack = BlackjackUiState(),
-                                gameConflict = GameConflict(game = "blackjack", pendingAmount = amount),
-                            )
-                        }
-                    } else {
-                        _state.update { it.copy(blackjack = BlackjackUiState(error = e.message)) }
-                    }
-                }
-        }
-    }
-
-    fun blackjackHit() {
-        val current = _state.value.blackjack
-        if (!current.active || current.loading) return
-        _state.update { it.copy(blackjack = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.blackjackHit(casinoApiKey())
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            blackjack = it.blackjack.copy(loading = false, response = resp),
-                        )
-                    }
-                    if (resp.status == "done") {
-                        if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
-                        fetchTransactions()
-                    }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun blackjackStand() {
-        val current = _state.value.blackjack
-        if (!current.active || current.loading) return
-        _state.update { it.copy(blackjack = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.blackjackStand(casinoApiKey())
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            blackjack = it.blackjack.copy(loading = false, response = resp),
-                        )
-                    }
-                    if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
-                    fetchTransactions()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun blackjackDouble() {
-        val current = _state.value.blackjack
-        if (!current.active || current.loading) return
-        _state.update { it.copy(blackjack = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.blackjackDouble(casinoApiKey())
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            blackjack = it.blackjack.copy(loading = false, response = resp),
-                        )
-                    }
-                    if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
-                    fetchTransactions()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun resetBlackjack() {
-        _state.update { it.copy(blackjack = BlackjackUiState()) }
-    }
-
-    // ---- Coinflip ----
-
-    fun playCoinflip(amount: Long, choice: String) {
-        _state.update { it.copy(coinflipLoading = true, coinflipError = null, coinflipResult = null) }
-        viewModelScope.launch {
-            CasinoApi.playCoinflip(casinoApiKey(), amount, choice)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            coinflipResult = resp,
-                            coinflipLoading = false,
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(coinflipLoading = false, coinflipError = e.message) }
-                }
-        }
-    }
-
-    fun applyCoinflipResult() {
-        val result = _state.value.coinflipResult ?: return
-        _state.update { it.copy(casinoBalance = result.newBalance) }
-        fetchTransactions()
-    }
-
-    fun resetCoinflip() {
-        _state.update { it.copy(coinflipResult = null, coinflipError = null, coinflipLoading = false) }
-    }
-
-    // ---- Slots ----
-
-    fun playSlots(amount: Long, machines: Int = 1) {
-        _state.update { it.copy(slotsLoading = true, slotsError = null, slotsResult = null) }
-        viewModelScope.launch {
-            CasinoApi.playSlots(casinoApiKey(), amount, machines)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            slotsResult = resp,
-                            slotsLoading = false,
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(slotsLoading = false, slotsError = e.message) }
-                }
-        }
-    }
-
-    fun applySlotsResult() {
-        val result = _state.value.slotsResult ?: return
-        _state.update { it.copy(casinoBalance = result.newBalance) }
-        fetchTransactions()
-    }
-
-    fun resetSlots() {
-        _state.update { it.copy(slotsResult = null, slotsError = null, slotsLoading = false) }
-    }
-
-    // ---- Mines ----
-
-    fun startMines(amount: Long, mineCount: Int) {
-        _state.update { it.copy(mines = MinesUiState(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.startMines(casinoApiKey(), amount, mineCount)
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            casinoBalance = resp.newBalance,
-                            mines = MinesUiState(
-                                active = true,
-                                bet = resp.bet,
-                                mineCount = resp.mineCount,
-                                nextMultiplier = resp.nextMultiplier,
-                                safeRemaining = resp.gridSize - resp.mineCount,
-                            ),
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    if (e is CasinoApiException && e.code == 409) {
-                        _state.update {
-                            it.copy(
-                                mines = MinesUiState(),
-                                gameConflict = GameConflict(game = "mines", pendingAmount = amount, pendingExtra = mineCount),
-                            )
-                        }
-                    } else {
-                        _state.update { it.copy(mines = MinesUiState(error = e.message)) }
-                    }
-                }
-        }
-    }
-
-    fun revealMines(position: Int) {
-        val current = _state.value.mines
-        if (!current.active || current.gameOver || current.loading) return
-        _state.update { it.copy(mines = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.revealMines(casinoApiKey(), position)
-                .onSuccess { resp ->
-                    if (resp.result == "mine") {
-                        // Hit a mine — game over
-                        _state.update {
-                            it.copy(mines = it.mines.copy(
-                                loading = false,
-                                revealed = resp.revealed.toSet(),
-                                mines = resp.mines,
-                                gameOver = true,
-                                won = false,
-                                payout = 0,
-                            ))
-                        }
-                        fetchTransactions()
-                    } else if (resp.allRevealed) {
-                        // All safe revealed — auto cashout
-                        _state.update {
-                            it.copy(
-                                casinoBalance = resp.newBalance,
-                                mines = it.mines.copy(
-                                    loading = false,
-                                    revealed = resp.revealed.toSet(),
-                                    mines = resp.mines,
-                                    gameOver = true,
-                                    won = true,
-                                    payout = resp.payout,
-                                    currentMultiplier = resp.multiplier,
-                                ),
-                            )
-                        }
-                        fetchTransactions()
-                    } else {
-                        // Safe — continue
-                        _state.update {
-                            it.copy(mines = it.mines.copy(
-                                loading = false,
-                                revealed = resp.revealed.toSet(),
-                                currentMultiplier = resp.currentMultiplier,
-                                currentPayout = resp.currentPayout,
-                                nextMultiplier = resp.nextMultiplier,
-                                safeRemaining = resp.safeRemaining,
-                            ))
-                        }
-                    }
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(mines = it.mines.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun cashoutMines() {
-        val current = _state.value.mines
-        if (!current.active || current.gameOver || current.revealed.isEmpty()) return
-        _state.update { it.copy(mines = current.copy(loading = true)) }
-        viewModelScope.launch {
-            CasinoApi.cashoutMines(casinoApiKey())
-                .onSuccess { resp ->
-                    _state.update {
-                        it.copy(
-                            casinoBalance = resp.newBalance,
-                            mines = it.mines.copy(
-                                loading = false,
-                                mines = resp.mines,
-                                revealed = resp.revealed.toSet(),
-                                gameOver = true,
-                                won = true,
-                                payout = resp.payout,
-                                currentMultiplier = resp.multiplier,
-                            ),
-                        )
-                    }
-                    fetchTransactions()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(mines = it.mines.copy(loading = false, error = e.message)) }
-                }
-        }
-    }
-
-    fun resetMines() {
-        _state.update { it.copy(mines = MinesUiState()) }
     }
 
     fun purchaseShopItem(sessionId: String, shopType: String, itemName: String) {
@@ -1393,15 +650,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun equipPet(sessionId: String, targetPetId: String, targetIsInHutch: Boolean) {
         val client = clients[sessionId] ?: run {
-            Log.w(TAG, "[EquipPet] No client for session $sessionId")
+            AppLog.w(TAG, "[EquipPet] No client for session $sessionId")
             return
         }
         val actions = client.actions
 
-        Log.d(TAG, "[EquipPet] petId=$targetPetId, isInHutch=$targetIsInHutch")
+        AppLog.d(TAG, "[EquipPet] petId=$targetPetId, isInHutch=$targetIsInHutch")
 
         if (targetIsInHutch) {
-            Log.d(TAG, "[EquipPet] Retrieving from hutch first")
+            AppLog.d(TAG, "[EquipPet] Retrieving from hutch first")
             actions.retrieveItemFromStorage(itemId = targetPetId, storageId = "PetHutch")
         }
 
@@ -1413,7 +670,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Find which local indices (0,1,2) are occupied by active pets
         val occupiedLocal = mutableSetOf<Int>()
         val slotInfos = me?.petSlotInfos
-        Log.d(TAG, "[EquipPet] petSlotInfos = $slotInfos")
+        AppLog.d(TAG, "[EquipPet] petSlotInfos = $slotInfos")
         if (slotInfos != null) {
             for ((_, infoEl) in slotInfos) {
                 val pos = (infoEl as? JsonObject)?.get("position") as? JsonObject ?: continue
@@ -1427,7 +684,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val freeLocal = (0..2).firstOrNull { it !in occupiedLocal } ?: 0
         val x = base.first + freeLocal
         val y = base.second
-        Log.d(TAG, "[EquipPet] slotIndex=$slotIndex, occupied=$occupiedLocal, freeLocal=$freeLocal, pos=($x,$y)")
+        AppLog.d(TAG, "[EquipPet] slotIndex=$slotIndex, occupied=$occupiedLocal, freeLocal=$freeLocal, pos=($x,$y)")
         actions.placePet(
             itemId = targetPetId,
             x = x.toDouble(), y = y.toDouble(),
@@ -1449,45 +706,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Finds a dirt tile in our garden that is not occupied by a pet. */
     private fun findFreeDirtTile(client: RoomClient): DirtTile? {
         val gs = client.gameState.gameState as? JsonObject
-        if (gs == null) { Log.w(TAG, "[FindTile] gameState is null"); return null }
+        if (gs == null) { AppLog.w(TAG, "[FindTile] gameState is null"); return null }
 
         val me = client.gameState.getPlayer(client.playerId)
-        if (me == null) { Log.w(TAG, "[FindTile] player not found for ${client.playerId}"); return null }
+        if (me == null) { AppLog.w(TAG, "[FindTile] player not found for ${client.playerId}"); return null }
 
         val slotIndex = me.slotIndex
-        if (slotIndex == null) { Log.w(TAG, "[FindTile] slotIndex is null"); return null }
-        Log.d(TAG, "[FindTile] slotIndex=$slotIndex")
+        if (slotIndex == null) { AppLog.w(TAG, "[FindTile] slotIndex is null"); return null }
+        AppLog.d(TAG, "[FindTile] slotIndex=$slotIndex")
 
         // Read map data — map lives in roomState, not gameState
         val rs = client.gameState.roomState as? JsonObject
         val map = rs?.get("map") as? JsonObject
             ?: gs["map"] as? JsonObject
         if (map == null) {
-            Log.w(TAG, "[FindTile] map not found. roomState keys: ${rs?.keys?.take(20)}, gameState keys: ${gs.keys.take(20)}")
+            AppLog.w(TAG, "[FindTile] map not found. roomState keys: ${rs?.keys?.take(20)}, gameState keys: ${gs.keys.take(20)}")
             return null
         }
 
         val cols = map["cols"]?.jsonPrimitive?.intOrNull
-        if (cols == null) { Log.w(TAG, "[FindTile] map.cols is null. Map keys: ${map.keys.take(20)}"); return null }
+        if (cols == null) { AppLog.w(TAG, "[FindTile] map.cols is null. Map keys: ${map.keys.take(20)}"); return null }
 
         val dirtArrays = map["userSlotIdxAndDirtTileIdxToGlobalTileIdx"] as? JsonArray
-        if (dirtArrays == null) { Log.w(TAG, "[FindTile] dirtArrays is null. Map keys: ${map.keys}"); return null }
+        if (dirtArrays == null) { AppLog.w(TAG, "[FindTile] dirtArrays is null. Map keys: ${map.keys}"); return null }
 
         val myDirtTiles = dirtArrays.getOrNull(slotIndex) as? JsonArray
-        if (myDirtTiles == null) { Log.w(TAG, "[FindTile] No dirt tiles for slot $slotIndex (array size=${dirtArrays.size})"); return null }
-        Log.d(TAG, "[FindTile] Found ${myDirtTiles.size} dirt tiles for slot $slotIndex")
+        if (myDirtTiles == null) { AppLog.w(TAG, "[FindTile] No dirt tiles for slot $slotIndex (array size=${dirtArrays.size})"); return null }
+        AppLog.d(TAG, "[FindTile] Found ${myDirtTiles.size} dirt tiles for slot $slotIndex")
 
         // Collect positions occupied by active pets
         val occupiedPositions = mutableSetOf<Pair<Int, Int>>()
         val slotInfos = me.petSlotInfos
-        Log.d(TAG, "[FindTile] petSlotInfos keys: ${slotInfos?.keys}")
+        AppLog.d(TAG, "[FindTile] petSlotInfos keys: ${slotInfos?.keys}")
         if (slotInfos != null) {
             for ((key, infoEl) in slotInfos) {
                 val info = infoEl as? JsonObject ?: continue
                 val pos = info["position"] as? JsonObject ?: continue
                 val px = pos["x"]?.jsonPrimitive?.intOrNull ?: continue
                 val py = pos["y"]?.jsonPrimitive?.intOrNull ?: continue
-                Log.d(TAG, "[FindTile] Pet $key occupies tile ($px, $py)")
+                AppLog.d(TAG, "[FindTile] Pet $key occupies tile ($px, $py)")
                 occupiedPositions.add(px to py)
             }
         }
@@ -1498,13 +755,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val x = globalIndex % cols
             val y = globalIndex / cols
             if ((x to y) !in occupiedPositions) {
-                Log.d(TAG, "[FindTile] Free tile found: local=$localIndex, global=$globalIndex, pos=($x, $y)")
+                AppLog.d(TAG, "[FindTile] Free tile found: local=$localIndex, global=$globalIndex, pos=($x, $y)")
                 return DirtTile(x = x.toDouble(), y = y.toDouble(), localIndex = localIndex)
             }
         }
 
         // Fallback: use first tile anyway
-        Log.w(TAG, "[FindTile] No free tile found, using fallback (first tile)")
+        AppLog.w(TAG, "[FindTile] No free tile found, using fallback (first tile)")
         val globalIndex = myDirtTiles.firstOrNull()?.jsonPrimitive?.intOrNull ?: return null
         return DirtTile(
             x = (globalIndex % cols).toDouble(),
@@ -1601,16 +858,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Already the same team? Skip.
         if (activePetIds == targetPetIds) {
-            Log.d(TAG, "[ActivateTeam] Team already active, skipping")
+            AppLog.d(TAG, "[ActivateTeam] Team already active, skipping")
             return
         }
 
-        Log.d(TAG, "[ActivateTeam] active=$activePetIds, target=$targetPetIds")
+        AppLog.d(TAG, "[ActivateTeam] active=$activePetIds, target=$targetPetIds")
 
         // Step 1: Remove pets that are active but NOT in target
         val toRemove = activePetIds - targetPetIds
         for (petId in toRemove) {
-            Log.d(TAG, "[ActivateTeam] Removing $petId")
+            AppLog.d(TAG, "[ActivateTeam] Removing $petId")
             actions.pickupPet(petId = petId)
             actions.putItemInStorage(itemId = petId, storageId = "PetHutch")
         }
@@ -1631,18 +888,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val isInInventory = petId in inventoryPetIds
 
             if (!isInHutch && !isInInventory) {
-                Log.w(TAG, "[ActivateTeam] Pet $petId not found in hutch or inventory, skipping")
+                AppLog.w(TAG, "[ActivateTeam] Pet $petId not found in hutch or inventory, skipping")
                 continue
             }
 
             if (isInHutch) {
-                Log.d(TAG, "[ActivateTeam] Retrieving $petId from hutch")
+                AppLog.d(TAG, "[ActivateTeam] Retrieving $petId from hutch")
                 actions.retrieveItemFromStorage(itemId = petId, storageId = "PetHutch")
             }
 
             val x = base.first + nextLocal
             val y = base.second
-            Log.d(TAG, "[ActivateTeam] Placing $petId at ($x, $y) local=$nextLocal")
+            AppLog.d(TAG, "[ActivateTeam] Placing $petId at ($x, $y) local=$nextLocal")
             actions.placePet(
                 itemId = petId,
                 x = x.toDouble(), y = y.toDouble(),

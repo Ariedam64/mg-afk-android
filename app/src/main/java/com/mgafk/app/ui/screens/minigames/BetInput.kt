@@ -33,10 +33,6 @@ import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
-import java.text.NumberFormat
-import java.util.Locale
-
-private val fmt = NumberFormat.getNumberInstance(Locale.US)
 
 /**
  * Shared bet amount input used across all mini-games.
@@ -62,7 +58,7 @@ fun BetInput(
         value = amount,
         onValueChange = { new -> onAmountChange(new.filter { it.isDigit() }) },
         label = { Text(label) },
-        placeholder = { Text("Max ${fmt.format(maxBet)}") },
+        placeholder = { Text("Max ${numberFormat.format(maxBet)}") },
         leadingIcon = {
             AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(20.dp))
         },

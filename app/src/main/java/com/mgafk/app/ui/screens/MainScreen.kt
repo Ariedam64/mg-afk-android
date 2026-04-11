@@ -146,11 +146,20 @@ enum class NavSection(
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
+    casinoViewModel: com.mgafk.app.ui.CasinoViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
     onCasinoLoginRequest: (sessionId: String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
+    val casinoState by casinoViewModel.state.collectAsState()
     val session = state.activeSession
+
+    // Sync casino API key when active session changes
+    LaunchedEffect(session.casinoApiKey) {
+        if (session.casinoApiKey.isNotBlank()) {
+            casinoViewModel.setApiKey(session.casinoApiKey)
+        }
+    }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var currentSection by rememberSaveable { mutableStateOf(NavSection.DASHBOARD.name) }
@@ -245,6 +254,8 @@ fun MainScreen(
                                         session = session,
                                         state = state,
                                         viewModel = viewModel,
+                                        casinoViewModel = casinoViewModel,
+                                        casinoState = casinoState,
                                         onLoginRequest = onLoginRequest,
                                         onCasinoLoginRequest = onCasinoLoginRequest,
                                     )
@@ -519,6 +530,8 @@ private fun SectionContent(
     session: Session,
     state: com.mgafk.app.ui.UiState,
     viewModel: MainViewModel,
+    casinoViewModel: com.mgafk.app.ui.CasinoViewModel,
+    casinoState: com.mgafk.app.ui.CasinoUiState,
     onLoginRequest: (sessionId: String) -> Unit,
     onCasinoLoginRequest: (sessionId: String) -> Unit = {},
 ) {
@@ -656,101 +669,101 @@ private fun SectionContent(
                 // ── Game screen ──
                 when (currentGame) {
                     "coinflip" -> CoinFlipGame(
-                        casinoBalance = state.casinoBalance,
-                        result = state.coinflipResult,
-                        loading = state.coinflipLoading,
-                        error = state.coinflipError,
-                        onPlay = { amount, choice -> viewModel.playCoinflip(amount, choice) },
-                        onReset = { viewModel.resetCoinflip() },
+                        casinoBalance = casinoState.casinoBalance,
+                        result = casinoState.coinflipResult,
+                        loading = casinoState.coinflipLoading,
+                        error = casinoState.coinflipError,
+                        onPlay = { amount, choice -> casinoViewModel.playCoinflip(amount, choice) },
+                        onReset = { casinoViewModel.resetCoinflip() },
                         onBack = {
-                            viewModel.resetCoinflip()
-                            viewModel.fetchCasinoBalance()
+                            casinoViewModel.resetCoinflip()
+                            casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
-                        onResultShown = { viewModel.applyCoinflipResult() },
+                        onResultShown = { casinoViewModel.applyCoinflipResult() },
                     )
                     "slots" -> SlotsGame(
-                        casinoBalance = state.casinoBalance,
-                        result = state.slotsResult,
-                        loading = state.slotsLoading,
-                        error = state.slotsError,
-                        onPlay = { amount, machines -> viewModel.playSlots(amount, machines) },
-                        onReset = { viewModel.resetSlots() },
+                        casinoBalance = casinoState.casinoBalance,
+                        result = casinoState.slotsResult,
+                        loading = casinoState.slotsLoading,
+                        error = casinoState.slotsError,
+                        onPlay = { amount, machines -> casinoViewModel.playSlots(amount, machines) },
+                        onReset = { casinoViewModel.resetSlots() },
                         onBack = {
-                            viewModel.resetSlots()
-                            viewModel.fetchCasinoBalance()
+                            casinoViewModel.resetSlots()
+                            casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
-                        onResultShown = { viewModel.applySlotsResult() },
+                        onResultShown = { casinoViewModel.applySlotsResult() },
                     )
                     "dice" -> DiceGame(
-                        casinoBalance = state.casinoBalance,
-                        result = state.diceResult,
-                        loading = state.diceLoading,
-                        error = state.diceError,
-                        onPlay = { amount, target, direction -> viewModel.playDice(amount, target, direction) },
-                        onReset = { viewModel.resetDice() },
+                        casinoBalance = casinoState.casinoBalance,
+                        result = casinoState.diceResult,
+                        loading = casinoState.diceLoading,
+                        error = casinoState.diceError,
+                        onPlay = { amount, target, direction -> casinoViewModel.playDice(amount, target, direction) },
+                        onReset = { casinoViewModel.resetDice() },
                         onBack = {
-                            viewModel.resetDice()
-                            viewModel.fetchCasinoBalance()
+                            casinoViewModel.resetDice()
+                            casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
-                        onResultShown = { viewModel.applyDiceResult() },
+                        onResultShown = { casinoViewModel.applyDiceResult() },
                     )
                     "crash" -> {
                         val myPlayer = session.playersList.find { it.id == session.playerId }
                         CrashGame(
-                            casinoBalance = state.casinoBalance,
-                            state = state.crash,
+                            casinoBalance = casinoState.casinoBalance,
+                            state = casinoState.crash,
                             playerSnapshot = myPlayer,
                             gameVersion = session.gameVersion,
                             gameHost = session.gameUrl,
-                            onStart = { amount -> viewModel.startCrash(amount) },
-                            onCashout = { viewModel.cashoutCrash() },
-                            onReset = { viewModel.resetCrash() },
+                            onStart = { amount -> casinoViewModel.startCrash(amount) },
+                            onCashout = { casinoViewModel.cashoutCrash() },
+                            onReset = { casinoViewModel.resetCrash() },
                             onBack = {
-                                viewModel.resetCrash()
-                                viewModel.fetchCasinoBalance()
+                                casinoViewModel.resetCrash()
+                                casinoViewModel.fetchCasinoBalance()
                                 currentGame = null
                             },
                         )
                     }
                     "blackjack" -> BlackjackGame(
-                        casinoBalance = state.casinoBalance,
-                        state = state.blackjack,
-                        onStart = { amount -> viewModel.startBlackjack(amount) },
-                        onHit = { viewModel.blackjackHit() },
-                        onStand = { viewModel.blackjackStand() },
-                        onDouble = { viewModel.blackjackDouble() },
-                        onReset = { viewModel.resetBlackjack() },
+                        casinoBalance = casinoState.casinoBalance,
+                        state = casinoState.blackjack,
+                        onStart = { amount -> casinoViewModel.startBlackjack(amount) },
+                        onHit = { casinoViewModel.blackjackHit() },
+                        onStand = { casinoViewModel.blackjackStand() },
+                        onDouble = { casinoViewModel.blackjackDouble() },
+                        onReset = { casinoViewModel.resetBlackjack() },
                         onBack = {
-                            viewModel.resetBlackjack()
-                            viewModel.fetchCasinoBalance()
+                            casinoViewModel.resetBlackjack()
+                            casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
                     )
                     "mines" -> MinesGame(
-                        casinoBalance = state.casinoBalance,
-                        state = state.mines,
-                        onStart = { amount, mineCount -> viewModel.startMines(amount, mineCount) },
-                        onReveal = { position -> viewModel.revealMines(position) },
-                        onCashout = { viewModel.cashoutMines() },
-                        onReset = { viewModel.resetMines() },
+                        casinoBalance = casinoState.casinoBalance,
+                        state = casinoState.mines,
+                        onStart = { amount, mineCount -> casinoViewModel.startMines(amount, mineCount) },
+                        onReveal = { position -> casinoViewModel.revealMines(position) },
+                        onCashout = { casinoViewModel.cashoutMines() },
+                        onReset = { casinoViewModel.resetMines() },
                         onBack = {
-                            viewModel.resetMines()
-                            viewModel.fetchCasinoBalance()
+                            casinoViewModel.resetMines()
+                            casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
                     )
                 }
 
                 // Game conflict dialog (409 — active game)
-                val conflict = state.gameConflict
+                val conflict = casinoState.gameConflict
                 if (conflict != null) {
                     GameConflictDialog(
                         conflict = conflict,
-                        onForfeit = { viewModel.forfeitAndRetry() },
-                        onDismiss = { viewModel.dismissConflict() },
+                        onForfeit = { casinoViewModel.forfeitAndRetry() },
+                        onDismiss = { casinoViewModel.dismissConflict() },
                     )
                 }
             } else {
@@ -761,35 +774,35 @@ private fun SectionContent(
                     gameBalance = state.currencyBalance,
                     gameBalanceLoading = state.currencyBalanceLoading,
                     gameBalanceError = state.currencyBalanceError,
-                    casinoBalance = state.casinoBalance,
-                    casinoBalanceLoading = state.casinoBalanceLoading,
+                    casinoBalance = casinoState.casinoBalance,
+                    casinoBalanceLoading = casinoState.casinoBalanceLoading,
                     casinoConnected = true,
                     onRefreshGameBalance = { viewModel.fetchCurrencyBalance(session.id) },
-                    onRefreshCasinoBalance = { viewModel.fetchCasinoBalance() },
+                    onRefreshCasinoBalance = { casinoViewModel.fetchCasinoBalance() },
                     onConnectCasino = {},
                     onDeposit = { walletMode = "deposit" },
                     onWithdraw = { walletMode = "withdraw" },
                 )
 
                 // Show WalletCard only when deposit/withdraw is active
-                if (walletMode != null || state.deposit.active || state.withdraw.status.isNotEmpty()) {
+                if (walletMode != null || casinoState.deposit.active || casinoState.withdraw.status.isNotEmpty()) {
                     WalletCard(
-                        deposit = state.deposit,
-                        withdraw = state.withdraw,
-                        onRequestDeposit = { amount -> viewModel.requestDeposit(amount) },
-                        onCancelDeposit = { viewModel.cancelDeposit() },
-                        onResetDeposit = { viewModel.resetDeposit(); walletMode = null },
-                        onRequestWithdraw = { amount -> viewModel.requestWithdraw(amount) },
-                        onResetWithdraw = { viewModel.resetWithdraw(); walletMode = null },
+                        deposit = casinoState.deposit,
+                        withdraw = casinoState.withdraw,
+                        onRequestDeposit = { amount -> casinoViewModel.requestDeposit(amount) },
+                        onCancelDeposit = { casinoViewModel.cancelDeposit() },
+                        onResetDeposit = { casinoViewModel.resetDeposit(); walletMode = null },
+                        onRequestWithdraw = { amount -> casinoViewModel.requestWithdraw(amount) },
+                        onResetWithdraw = { casinoViewModel.resetWithdraw(); walletMode = null },
                         initialMode = walletMode,
                     )
                 }
 
                 GamesGrid(onGameClick = { gameId -> currentGame = gameId })
                 HistoryCard(
-                    transactions = state.transactions,
-                    loading = state.transactionsLoading,
-                    onLoad = { viewModel.fetchTransactions() },
+                    transactions = casinoState.transactions,
+                    loading = casinoState.transactionsLoading,
+                    onLoad = { casinoViewModel.fetchTransactions() },
                 )
             }
         }

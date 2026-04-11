@@ -1,6 +1,6 @@
 package com.mgafk.app.data.websocket
 
-import android.util.Log
+import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.ChatMessage
 import com.mgafk.app.data.model.PlayerSnapshot
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -75,7 +75,7 @@ class RoomClient {
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = AppJson.default
     private val httpClient = OkHttpClient.Builder()
         .pingInterval(30, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -191,7 +191,7 @@ class RoomClient {
         )
 
         val url = UrlBuilder.buildUrl(this.host, this.version, this.room, this.playerId)
-        Log.d(TAG, "connect() url=$url isRetry=$isRetry retryCount=$retryCount")
+        AppLog.d(TAG, "connect() url=$url isRetry=$isRetry retryCount=$retryCount")
 
         state = "connecting"
         emitStatus(SessionStatus.CONNECTING)
@@ -260,7 +260,7 @@ class RoomClient {
     // ---- Internal handlers ----
 
     private fun handleOpen() {
-        Log.d(TAG, "onOpen — sending handshake")
+        AppLog.d(TAG, "onOpen — sending handshake")
         actions.voteForGame()
         actions.setSelectedGame()
     }
@@ -278,7 +278,7 @@ class RoomClient {
         }
 
         val type = msg["type"]?.jsonPrimitive?.contentOrNull
-        Log.d(TAG, "onMessage type=$type")
+        AppLog.d(TAG, "onMessage type=$type")
 
         try {
             when (type) {
@@ -286,15 +286,15 @@ class RoomClient {
                 "PartialState" -> handlePartialState(msg)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing $type: ${e.message}", e)
+            AppLog.e(TAG, "Error processing $type: ${e.message}", e)
         }
     }
 
     private fun handleWelcome(msg: JsonObject) {
-        Log.d(TAG, "handleWelcome — playerId=$playerId")
+        AppLog.d(TAG, "handleWelcome — playerId=$playerId")
         // Check auth before accepting state
         val fullState = msg["fullState"]?.jsonObject ?: run {
-            Log.w(TAG, "Welcome missing fullState!")
+            AppLog.w(TAG, "Welcome missing fullState!")
             return
         }
         val roomData = fullState["data"] as? JsonObject
@@ -303,11 +303,11 @@ class RoomClient {
             (el as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull == playerId
         } as? JsonObject
         if (me != null && me["databaseUserId"]?.jsonPrimitive?.contentOrNull == null) {
-            Log.e(TAG, "Auth failed — player found but no databaseUserId")
+            AppLog.e(TAG, "Auth failed — player found but no databaseUserId")
             failAuth("Invalid mc_jwt cookie.")
             return
         }
-        Log.d(TAG, "Auth OK — me=${me != null} players=${players?.size ?: 0}")
+        AppLog.d(TAG, "Auth OK — me=${me != null} players=${players?.size ?: 0}")
 
         // Delegate full state handling to GameState
         gameState.handleMessage(msg)
@@ -470,7 +470,7 @@ class RoomClient {
     }
 
     private fun handleClose(code: Int, reason: String) {
-        Log.w(TAG, "onClose code=$code reason=$reason manualClose=$manualClose")
+        AppLog.w(TAG, "onClose code=$code reason=$reason manualClose=$manualClose")
         state = "disconnected"
         connectedAt = 0
         welcomed = false
@@ -490,13 +490,13 @@ class RoomClient {
 
     private fun handleError(throwable: Throwable) {
         val msg = throwable.message ?: throwable.toString()
-        Log.e(TAG, "onError: $msg", throwable)
+        AppLog.e(TAG, "onError: $msg", throwable)
         emit(ClientEvent.DebugLog("error", "ws error", msg))
         handleClose(1006, msg)
     }
 
     private fun failAuth(message: String) {
-        Log.e(TAG, "failAuth: $message")
+        AppLog.e(TAG, "failAuth: $message")
         cancelRetryJob()
         state = "error"
         connectedAt = 0

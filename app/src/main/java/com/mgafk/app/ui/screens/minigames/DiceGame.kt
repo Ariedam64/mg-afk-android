@@ -68,11 +68,7 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 import kotlin.math.roundToInt
-
-private val numberFormat = NumberFormat.getNumberInstance(Locale.US)
 
 @Composable
 fun DiceGame(
@@ -200,28 +196,7 @@ fun DiceGame(
     val winChance = if (direction == "over") 100 - targetInt else targetInt - 1
     val multiplier = if (winChance > 0) (96.0 / winChance) else 0.0
 
-    // Header
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { onReset(); onBack() }) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-        Text("Dice", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.weight(1f))
-        if (casinoBalance != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    numberFormat.format(casinoBalance),
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace, color = StatusConnected,
-                )
-            }
-        }
-    }
+    GameHeader(title = "Dice", casinoBalance = casinoBalance, onBack = { onReset(); onBack() })
 
     Spacer(modifier = Modifier.height(8.dp))
 
