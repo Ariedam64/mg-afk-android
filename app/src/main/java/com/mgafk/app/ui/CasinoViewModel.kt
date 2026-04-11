@@ -224,6 +224,29 @@ class CasinoViewModel : ViewModel() {
         }
     }
 
+    fun refreshDeposit() {
+        viewModelScope.launch {
+            CasinoApi.getDepositStatus(apiKey)
+                .onSuccess { info ->
+                    if (info == null) {
+                        _state.update { it.copy(deposit = DepositUiState()) }
+                        return@launch
+                    }
+                    _state.update {
+                        it.copy(deposit = it.deposit.copy(
+                            status = info.status,
+                            receivedAmount = info.receivedAmount,
+                            refundedAmount = info.refundedAmount,
+                        ))
+                    }
+                    if (info.status == "confirmed") {
+                        fetchCasinoBalance()
+                        fetchTransactions()
+                    }
+                }
+        }
+    }
+
     fun cancelDeposit() {
         viewModelScope.launch {
             CasinoApi.cancelDeposit(apiKey)

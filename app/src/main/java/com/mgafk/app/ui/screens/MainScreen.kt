@@ -796,6 +796,7 @@ private fun SectionContent(
                         withdraw = casinoState.withdraw,
                         onRequestDeposit = { amount -> casinoViewModel.requestDeposit(amount) },
                         onCancelDeposit = { casinoViewModel.cancelDeposit() },
+                        onRefreshDeposit = { casinoViewModel.refreshDeposit() },
                         onResetDeposit = { casinoViewModel.resetDeposit(); walletMode = null },
                         onRequestWithdraw = { amount -> casinoViewModel.requestWithdraw(amount) },
                         onResetWithdraw = { casinoViewModel.resetWithdraw(); walletMode = null },

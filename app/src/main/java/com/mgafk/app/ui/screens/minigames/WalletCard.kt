@@ -79,6 +79,7 @@ fun WalletCard(
     withdraw: WithdrawUiState,
     onRequestDeposit: (Long) -> Unit,
     onCancelDeposit: () -> Unit,
+    onRefreshDeposit: () -> Unit,
     onResetDeposit: () -> Unit,
     onRequestWithdraw: (Long) -> Unit,
     onResetWithdraw: () -> Unit,
@@ -101,9 +102,10 @@ fun WalletCard(
             deposit = deposit,
             depositConfig = depositConfig,
             onCancel = {
-                if (deposit.active && deposit.status == "pending") onCancelDeposit()
+                if (deposit.active) onCancelDeposit()
                 else { onResetDeposit(); mode = WalletMode.IDLE }
             },
+            onRefresh = { onRefreshDeposit() },
             onDone = {
                 onResetDeposit()
                 mode = WalletMode.IDLE
@@ -228,6 +230,7 @@ private fun DepositPopup(
     deposit: DepositUiState,
     depositConfig: com.mgafk.app.data.repository.DepositConfigResponse?,
     onCancel: () -> Unit,
+    onRefresh: () -> Unit,
     onDone: () -> Unit,
 ) {
     var copied by remember { mutableStateOf(false) }
@@ -428,8 +431,18 @@ private fun DepositPopup(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Cancel
-                        OutlinedButton(label = "Cancel Deposit", color = StatusError, onClick = onCancel)
+                        // Refresh + Cancel
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedButton(label = "Refresh", color = Accent, onClick = onRefresh)
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedButton(label = "Cancel", color = StatusError, onClick = onCancel)
+                            }
+                        }
                     }
                 }
             }
