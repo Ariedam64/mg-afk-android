@@ -33,6 +33,7 @@ class SessionRepository(private val context: Context) {
         private val KEY_PET_TEAMS = stringPreferencesKey("mgafk.petTeams")
         private val KEY_TEAM_TIP = booleanPreferencesKey("mgafk.teamTipDismissed")
         private val KEY_GARDEN_TIP = booleanPreferencesKey("mgafk.gardenTipDismissed")
+        private val KEY_NOTIFIED_VERSION = stringPreferencesKey("mgafk.lastNotifiedVersion")
     }
 
     suspend fun loadSessions(): List<Session> {
@@ -181,6 +182,16 @@ class SessionRepository(private val context: Context) {
     suspend fun savePetTeams(teams: List<PetTeam>) {
         context.dataStore.edit { prefs ->
             prefs[KEY_PET_TEAMS] = json.encodeToString(teams)
+        }
+    }
+
+    suspend fun getLastNotifiedVersion(): String? {
+        return context.dataStore.data.map { it[KEY_NOTIFIED_VERSION] }.first()
+    }
+
+    suspend fun setLastNotifiedVersion(version: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NOTIFIED_VERSION] = version
         }
     }
 }

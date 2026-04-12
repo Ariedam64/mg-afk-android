@@ -162,15 +162,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 preloadSprites()
                 _state.update { it.copy(apiReady = true, loadingStep = "") }
             }
-            // Check for app updates in background
+            // Check for app updates periodically (immediately + every hour)
             launch {
-                val release = VersionFetcher.fetchLatestRelease() ?: return@launch
-                val current = com.mgafk.app.BuildConfig.VERSION_NAME
-                if (VersionFetcher.isNewer(current, release.tagName)) {
-                    _state.update { it.copy(updateAvailable = release) }
-                    alertNotifier.notifyUpdate(release.tagName, release.downloadUrl)
+                while (true) {
+                    checkForUpdate()
+                    delay(3_600_000) // 1 hour
                 }
             }
+        }
+    }
+
+    // ---- Update check ----
+
+    private suspend fun checkForUpdate() {
+        try {
+            val release = VersionFetcher.fetchLatestRelease() ?: return
+            val current = com.mgafk.app.BuildConfig.VERSION_NAME
+            if (!VersionFetcher.isNewer(current, release.tagName)) return
+
+            _state.update { it.copy(updateAvailable = release) }
+
+            // Only send notification once per version
+            val lastNotified = repo.getLastNotifiedVersion()
+            if (lastNotified != release.tagName) {
+                alertNotifier.notifyUpdate(release.tagName, release.downloadUrl)
+                repo.setLastNotifiedVersion(release.tagName)
+            }
+        } catch (_: Exception) {
+            // Silent — don't crash the app over an update check
         }
     }
 
