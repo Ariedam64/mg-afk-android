@@ -168,6 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val current = com.mgafk.app.BuildConfig.VERSION_NAME
                 if (VersionFetcher.isNewer(current, release.tagName)) {
                     _state.update { it.copy(updateAvailable = release) }
+                    alertNotifier.notifyUpdate(release.tagName, release.downloadUrl)
                 }
             }
         }

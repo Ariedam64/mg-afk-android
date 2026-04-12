@@ -139,6 +139,25 @@ class AlertNotifier(private val context: Context) {
         stopGlobalAlarm()
     }
 
+    // ── Update notification ──
+
+    private val UPDATE_NOTIFICATION_ID = 998
+
+    fun notifyUpdate(version: String, downloadUrl: String) {
+        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(downloadUrl))
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val builder = NotificationCompat.Builder(context, MgAfkApp.CHANNEL_ALERTS)
+            .setContentTitle("MG AFK $version available")
+            .setContentText("Tap to download the update")
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+        manager.notify(UPDATE_NOTIFICATION_ID, builder.build())
+    }
+
     // ── Disconnect notification ──
 
     private val DISCONNECT_NOTIFICATION_ID = 999
