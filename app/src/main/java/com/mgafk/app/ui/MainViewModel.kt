@@ -36,6 +36,7 @@ import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.ShopSnapshot
+import com.mgafk.app.data.repository.AriesApi
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.data.repository.AppRelease
@@ -85,14 +86,18 @@ data class UiState(
     val showPetTip: Boolean = false,
     val showTeamTip: Boolean = false,
     val showGardenTip: Boolean = false,
+    val showStorageTip: Boolean = false,
     val showSeedTip: Boolean = false,
     val showEggTip: Boolean = false,
+    val showPlantTip: Boolean = false,
     val petTeams: List<PetTeam> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val serviceLogs: List<AfkService.ServiceLog> = emptyList(),
     val currencyBalance: Long? = null,
     val currencyBalanceLoading: Boolean = false,
     val currencyBalanceError: String? = null,
+    val publicRooms: List<AriesApi.PublicRoom> = emptyList(),
+    val publicRoomsLoading: Boolean = false,
 ) {
     val activeSession: Session
         get() = sessions.find { it.id == activeSessionId } ?: sessions.first()
@@ -137,6 +142,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val gardenTipDismissed = repo.isGardenTipDismissed()
             val seedTipDismissed = repo.isSeedTipDismissed()
             val eggTipDismissed = repo.isEggTipDismissed()
+            val plantTipDismissed = repo.isPlantTipDismissed()
             _state.value = UiState(
                 sessions = sessions,
                 activeSessionId = activeId,
@@ -147,8 +153,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 showPetTip = !petTipDismissed,
                 showTeamTip = !teamTipDismissed,
                 showGardenTip = !gardenTipDismissed,
+                showStorageTip = !repo.isStorageTipDismissed(),
                 showSeedTip = !seedTipDismissed,
                 showEggTip = !eggTipDismissed,
+                showPlantTip = !plantTipDismissed,
                 petTeams = petTeams,
                 settings = settings,
             )
@@ -387,6 +395,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissEggTip() {
         _state.update { it.copy(showEggTip = false) }
         viewModelScope.launch { repo.dismissEggTip() }
+    }
+
+    fun dismissPlantTip() {
+        _state.update { it.copy(showPlantTip = false) }
+        viewModelScope.launch { repo.dismissPlantTip() }
+    }
+
+    fun dismissStorageTip() {
+        _state.update { it.copy(showStorageTip = false) }
+        viewModelScope.launch { repo.dismissStorageTip() }
     }
 
     // ---- Currency balance ----
@@ -817,10 +835,161 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         actions.putItemInStorage(itemId = petId, storageId = "PetHutch")
     }
 
+    // ---- Public Rooms (Aries API) ----
+
+    fun fetchPublicRooms() {
+        _state.update { it.copy(publicRoomsLoading = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val rooms = AriesApi.fetchRooms()
+            _state.update { it.copy(publicRooms = rooms, publicRoomsLoading = false) }
+        }
+    }
+
+    /** Join a public room: disconnect if connected, change room code, reconnect. */
+    fun joinPublicRoom(sessionId: String, roomId: String) {
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val wasConnected = session.status == SessionStatus.CONNECTED || session.status == SessionStatus.CONNECTING
+        if (wasConnected) disconnect(sessionId)
+        updateSession(sessionId) { it.copy(room = roomId) }
+        viewModelScope.launch { repo.saveSessions(_state.value.sessions) }
+        viewModelScope.launch {
+            if (wasConnected) delay(500)
+            connect(sessionId)
+        }
+    }
+
+    // ---- Favorites (lock/unlock) ----
+
+    /** Toggle lock state of an item with optimistic update. */
+    fun toggleLockItem(sessionId: String, itemId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+
+        // OPTIMISTIC: toggle in the local set
+        updateSession(sessionId) { s ->
+            val newFavs = if (itemId in s.favoritedItemIds) s.favoritedItemIds - itemId
+                else s.favoritedItemIds + itemId
+            s.copy(favoritedItemIds = newFavs)
+        }
+
+        actions.toggleLockItem(itemId = itemId)
+    }
+
+    // ---- Sell pet ----
+
+    /** Sell a pet. If locked, unlock first then sell. */
+    fun sellPet(sessionId: String, itemId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+
+        // If locked, unlock first
+        if (itemId in session.favoritedItemIds) {
+            actions.toggleLockItem(itemId = itemId)
+        }
+        // Also check if locked by species
+        val pet = (session.inventory.pets + session.petHutch).find { it.id == itemId }
+        if (pet != null && pet.petSpecies in session.favoritedItemIds) {
+            actions.toggleLockItem(itemId = pet.petSpecies)
+        }
+
+        actions.sellPet(itemId = itemId)
+    }
+
+    /** Sell all crops at once. */
+    fun sellAllCrops(sessionId: String) {
+        clients[sessionId]?.actions?.sellAllCrops()
+    }
+
+    /** Sell a single crop by temporarily locking all others, selling, then unlocking. */
+    fun sellSingleCrop(sessionId: String, itemId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+
+        // Find all unlocked produces except the target
+        val toTempLock = session.inventory.produce.filter { produce ->
+            produce.id != itemId &&
+                produce.id !in session.favoritedItemIds &&
+                produce.species !in session.favoritedItemIds
+        }
+
+        // If the target itself is locked, unlock it first
+        val targetLocked = itemId in session.favoritedItemIds
+        if (targetLocked) {
+            actions.toggleLockItem(itemId = itemId)
+        }
+        // Also check species lock
+        val targetProduce = session.inventory.produce.find { it.id == itemId }
+        val speciesLocked = targetProduce != null && targetProduce.species in session.favoritedItemIds
+        if (speciesLocked) {
+            actions.toggleLockItem(itemId = targetProduce!!.species)
+        }
+
+        // Lock all other unlocked produces
+        val lockedIds = toTempLock.map { it.id }
+        lockedIds.forEach { id -> actions.toggleLockItem(itemId = id) }
+
+        // Sell (only the target remains unlocked)
+        actions.sellAllCrops()
+
+        // Unlock everything we temporarily locked
+        lockedIds.forEach { id -> actions.toggleLockItem(itemId = id) }
+
+        // Re-lock target if it was locked before
+        if (targetLocked) {
+            // Don't re-lock since we just sold it
+        }
+        // Re-lock species if it was locked
+        if (speciesLocked) {
+            actions.toggleLockItem(itemId = targetProduce!!.species)
+        }
+    }
+
+    /** Sell multiple pets at once (one request per pet). */
+    fun sellAllUnlockedPets(sessionId: String, itemIds: List<String>) {
+        val actions = clients[sessionId]?.actions ?: return
+        itemIds.forEach { itemId ->
+            actions.sellPet(itemId = itemId)
+        }
+    }
+
     // ---- Garden ----
 
     fun harvestCrop(sessionId: String, slot: Int, slotIndex: Int) {
         clients[sessionId]?.actions?.harvestCrop(slot = slot, slotsIndex = slotIndex)
+    }
+
+    private val pendingPotJobs = mutableMapOf<String, Job>()
+
+    /** Pot a plant — moves it from garden to inventory. Requires a PlanterPot tool. */
+    fun potPlant(sessionId: String, slot: Int) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val potCount = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0
+        if (potCount <= 0) return
+
+        // OPTIMISTIC: decrement PlanterPot quantity
+        val previousInventory = session.inventory
+        updateSession(sessionId) { s ->
+            s.copy(
+                inventory = s.inventory.copy(
+                    tools = s.inventory.tools.mapNotNull { tool ->
+                        if (tool.toolId == "PlanterPot") {
+                            if (tool.quantity > 1) tool.copy(quantity = tool.quantity - 1) else null
+                        } else tool
+                    }
+                ),
+            )
+        }
+
+        actions.potPlant(slot = slot)
+
+        // Rollback after 5s if server hasn't confirmed
+        val key = "$sessionId:pot:$slot"
+        pendingPotJobs[key]?.cancel()
+        pendingPotJobs[key] = viewModelScope.launch {
+            delay(5000)
+            updateSession(sessionId) { s -> s.copy(inventory = previousInventory) }
+            pendingPotJobs.remove(key)
+        }
     }
 
     private val pendingWaterJobs = mutableMapOf<String, Job>()
@@ -949,6 +1118,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Clear the last hatched pet result (called from UI after showing the popup). */
     fun clearHatchedPet(sessionId: String) {
         updateSession(sessionId) { it.copy(lastHatchedPet = null, lastHatchedEggId = "") }
+    }
+
+    private val pendingUnpotJobs = mutableMapOf<String, Job>()
+
+    /** Plant a potted plant back into the garden. */
+    fun plantGardenPlant(sessionId: String, itemId: String) {
+        val client = clients[sessionId] ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val freeSlot = findFirstFreePlantTile(client)
+        if (freeSlot == null) {
+            AppLog.w(TAG, "[PlantGardenPlant] No free tile available")
+            return
+        }
+        AppLog.d(TAG, "[PlantGardenPlant] Planting $itemId on tile $freeSlot")
+
+        // OPTIMISTIC: remove plant from inventory + decrement free tiles
+        val previousInventory = session.inventory
+        val previousFreeTiles = session.freePlantTiles
+        updateSession(sessionId) { s ->
+            s.copy(
+                inventory = s.inventory.copy(
+                    plants = s.inventory.plants.filter { it.id != itemId }
+                ),
+                freePlantTiles = (s.freePlantTiles - 1).coerceAtLeast(0),
+            )
+        }
+
+        client.actions.plantGardenPlant(slot = freeSlot, itemId = itemId)
+
+        // Rollback after 5s if server hasn't confirmed
+        val key = "$sessionId:unpot:$itemId"
+        pendingUnpotJobs[key]?.cancel()
+        pendingUnpotJobs[key] = viewModelScope.launch {
+            delay(5000)
+            updateSession(sessionId) { s ->
+                s.copy(inventory = previousInventory, freePlantTiles = previousFreeTiles)
+            }
+            pendingUnpotJobs.remove(key)
+        }
     }
 
     private val pendingPlantJobs = mutableMapOf<String, Job>()
@@ -1365,6 +1573,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingWaterJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingWaterJobs.remove(key)?.cancel()
                 }
+                pendingPotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingPotJobs.remove(key)?.cancel()
+                }
+                pendingUnpotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingUnpotJobs.remove(key)?.cancel()
+                }
                 val freeTiles = clients[sessionId]?.let { computeFreePlantTileCount(it) } ?: 0
                 updateSession(sessionId) { it.copy(garden = newGarden, freePlantTiles = freeTiles) }
             }
@@ -1397,10 +1611,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 ?.filter { it.isNotBlank() } ?: emptyList(),
                         ))
                         "Plant" -> {
-                            val slots = obj["slots"] as? JsonArray
+                            val slotsArray = obj["slots"] as? JsonArray
                             val plantSpecies = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
                             var plantPrice = 0L
-                            slots?.forEach { slotEl ->
+                            val parsedSlots = mutableListOf<com.mgafk.app.data.model.InventoryPlantSlot>()
+                            slotsArray?.forEach { slotEl ->
                                 val slot = slotEl as? JsonObject ?: return@forEach
                                 val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull
                                     ?: plantSpecies
@@ -1409,12 +1624,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                                     ?.filter { it.isNotBlank() } ?: emptyList()
                                 plantPrice += PriceCalculator.calculateCropSellPrice(slotSpecies, scale, muts) ?: 0L
+                                parsedSlots.add(com.mgafk.app.data.model.InventoryPlantSlot(
+                                    species = slotSpecies,
+                                    targetScale = scale,
+                                    mutations = muts,
+                                ))
                             }
                             plants.add(InventoryPlantItem(
                                 id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                                 species = plantSpecies,
-                                growSlots = slots?.size ?: 0,
+                                growSlots = slotsArray?.size ?: 0,
                                 totalPrice = plantPrice,
+                                slots = parsedSlots,
                             ))
                         }
                         "Pet" -> pets.add(InventoryPetItem(
@@ -1500,6 +1721,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingGrowEggJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingGrowEggJobs.remove(key)?.cancel()
                 }
+                pendingPotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingPotJobs.remove(key)?.cancel()
+                }
+                pendingUnpotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingUnpotJobs.remove(key)?.cancel()
+                }
 
                 // Detect newly hatched pet
                 val previousPetIds = preHatchPetIds.remove(sessionId)
@@ -1515,6 +1742,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         decorShed = shedDecors,
                         petHutch = hutchPets,
                         feedingTrough = troughCrops,
+                        favoritedItemIds = event.favoritedItemIds.toSet(),
                         lastHatchedPet = hatchedPet ?: it.lastHatchedPet,
                     )
                 }

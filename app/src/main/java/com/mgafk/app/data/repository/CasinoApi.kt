@@ -250,6 +250,99 @@ data class ForfeitResponse(
     val forfeited: Boolean = true,
 )
 
+// ── Egg Hatch models ──
+
+@Serializable
+data class EggHatchAbility(
+    val key: String,
+    val name: String,
+    val chance: Double = 0.0,
+    val bonus: Double = 0.0,
+)
+
+@Serializable
+data class EggHatchPet(
+    val pet: String,
+    val petSprite: String,
+    val petRarity: String,
+    val abilities: List<EggHatchAbility> = emptyList(),
+    val bonusAbilities: List<EggHatchAbility> = emptyList(),
+    val mutation: String = "Normal",
+    val mutationMultiplier: Int = 1,
+    val maxSTR: Int = 0,
+    val baseSTR: Int = 0,
+    val abilityMult: Double = 0.0,
+    val strFactor: Double = 0.0,
+    val payout: Long = 0,
+)
+
+@Serializable
+data class EggHatchResponse(
+    val game: String,
+    val eggType: String,
+    val eggSprite: String,
+    val eggRarity: String,
+    val eggPrice: Long,
+    val count: Int,
+    val hatches: List<EggHatchPet>,
+    val totalBet: Long,
+    val totalPayout: Long,
+    val newBalance: Long,
+)
+
+@Serializable
+data class EggListAbility(
+    val key: String,
+    val name: String,
+    val chance: Double = 0.0,
+    val bonus: Double = 0.0,
+)
+
+@Serializable
+data class EggListPet(
+    val name: String,
+    val weight: Int = 0,
+    val chance: String = "",
+    val baseMult: Double = 0.0,
+    val rarity: String = "",
+    val sprite: String = "",
+    val abilities: List<EggListAbility> = emptyList(),
+)
+
+@Serializable
+data class EggInfo(
+    val key: String,
+    val name: String,
+    val price: Long,
+    val sprite: String,
+    val rarity: String,
+    val pets: List<EggListPet> = emptyList(),
+)
+
+@Serializable
+data class EggHatchConfig(
+    val goldChance: Double = 0.02,
+    val rainbowChance: Double = 0.002,
+    val goldMultiplier: Int = 50,
+    val rainbowMultiplier: Int = 100,
+    val evMultiplier: Int = 1,
+    val maxHatches: Int = 100,
+    val strRange: EggStrRange = EggStrRange(),
+    val strFactorRange: EggStrFactorRange = EggStrFactorRange(),
+)
+
+@Serializable
+data class EggStrRange(val min: Int = 80, val max: Int = 100)
+
+@Serializable
+data class EggStrFactorRange(val min: Double = 0.95, val max: Double = 1.05)
+
+@Serializable
+data class EggListResponse(
+    val eggs: List<EggInfo>,
+    val config: EggHatchConfig = EggHatchConfig(),
+)
+
 @Serializable
 data class CasinoErrorResponse(val error: String? = null, val balance: Long? = null)
 
@@ -461,6 +554,26 @@ object CasinoApi {
             val request = post("/games/mines/cashout", apiKey, null)
             val body = execute(request)
             json.decodeFromString<MinesCashoutResponse>(body)
+        }
+
+    // ── Egg Hatch ──
+
+    /** Fetch all egg types, their pets, and config (no auth needed) */
+    suspend fun getEggs(): Result<EggListResponse> = try {
+        val request = Request.Builder().url("$BASE_URL/games/egg-hatch/eggs").build()
+        val body = execute(request)
+        Result.success(json.decodeFromString<EggListResponse>(body))
+    } catch (e: Exception) {
+        AppLog.e(TAG, "[getEggs] Error: ${e.message}", e)
+        Result.failure(e)
+    }
+
+    /** Hatch one or more eggs */
+    suspend fun playEggHatch(apiKey: String, eggType: String, count: Int = 1): Result<EggHatchResponse> =
+        safeCall(apiKey, "eggHatch") {
+            val request = post("/games/egg-hatch", apiKey, """{"eggType":"$eggType","count":$count}""")
+            val body = execute(request)
+            json.decodeFromString<EggHatchResponse>(body)
         }
 
     // ── Internal helpers ──

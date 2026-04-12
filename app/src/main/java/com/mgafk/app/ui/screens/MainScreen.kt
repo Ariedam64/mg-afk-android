@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
@@ -90,6 +91,7 @@ import com.mgafk.app.ui.screens.minigames.BlackjackGame
 import com.mgafk.app.ui.screens.minigames.CoinFlipGame
 import com.mgafk.app.ui.screens.minigames.CrashGame
 import com.mgafk.app.ui.screens.minigames.DiceGame
+import com.mgafk.app.ui.screens.minigames.EggHatchGame
 import com.mgafk.app.ui.screens.minigames.MinesGame
 import com.mgafk.app.ui.screens.minigames.SlotsGame
 import com.mgafk.app.ui.screens.minigames.GameConflictDialog
@@ -135,6 +137,7 @@ enum class NavSection(
     STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true),
     GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
     SHOPS("Shops", Icons.Outlined.ShoppingCart, requiresConnection = true),
+    SOCIAL("Social", Icons.Outlined.People),
     MINI_GAMES("Mini Games", Icons.Outlined.SportsEsports),
     ALERTS("Alerts", Icons.Outlined.Notifications),
     SETTINGS("Settings", Icons.Outlined.Settings),
@@ -419,6 +422,13 @@ private fun DrawerContent(
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(4.dp))
         DrawerItem(
+            icon = NavSection.SOCIAL.icon,
+            label = NavSection.SOCIAL.label,
+            selected = selected == NavSection.SOCIAL,
+            enabled = true,
+            onClick = { onSelect(NavSection.SOCIAL) },
+        )
+        DrawerItem(
             icon = NavSection.MINI_GAMES.icon,
             label = NavSection.MINI_GAMES.label,
             selected = selected == NavSection.MINI_GAMES,
@@ -577,14 +587,19 @@ private fun SectionContent(
             )
         }
         NavSection.GARDEN -> {
+            SectionTip(
+                visible = state.showGardenTip,
+                text = "Tap any crop or egg to view its details and perform actions like watering, harvesting, potting and hatching.",
+                onDismiss = { viewModel.dismissGardenTip() },
+            )
             GardenCard(
                 plants = session.garden,
                 apiReady = state.apiReady,
                 onHarvest = { slot, slotIndex -> viewModel.harvestCrop(session.id, slot, slotIndex) },
                 onWater = { slot -> viewModel.waterPlant(session.id, slot) },
+                onPot = { slot -> viewModel.potPlant(session.id, slot) },
                 wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
-                showTip = state.showGardenTip,
-                onDismissTip = { viewModel.dismissGardenTip() },
+                planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
             )
             EggsCard(
                 eggs = session.gardenEggs,
@@ -593,8 +608,6 @@ private fun SectionContent(
                 lastHatchedPet = session.lastHatchedPet,
                 lastHatchedEggId = session.lastHatchedEggId,
                 onDismissHatchedPet = { viewModel.clearHatchedPet(session.id) },
-                showTip = state.showEggTip,
-                onDismissTip = { viewModel.dismissEggTip() },
             )
         }
         NavSection.PETS -> {
@@ -651,18 +664,33 @@ private fun SectionContent(
             )
         }
         NavSection.STORAGE -> {
+            SectionTip(
+                visible = state.showStorageTip,
+                text = "Tap any item to view its details, lock/unlock it, or perform actions like planting, selling and more.",
+                onDismiss = { viewModel.dismissStorageTip() },
+            )
             InventoryCard(
                 inventory = session.inventory,
                 apiReady = state.apiReady,
                 freePlantTiles = session.freePlantTiles,
+                favoritedItemIds = session.favoritedItemIds,
                 onPlantSeed = { species -> viewModel.plantSeed(session.id, species) },
                 onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
-                showSeedTip = state.showSeedTip,
-                onDismissSeedTip = { viewModel.dismissSeedTip() },
+                onPlantGardenPlant = { itemId -> viewModel.plantGardenPlant(session.id, itemId) },
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
+                onSellAllUnlockedPets = { itemIds -> viewModel.sellAllUnlockedPets(session.id, itemIds) },
+                onSellAllCrops = { viewModel.sellAllCrops(session.id) },
+                onSellCrop = { itemId -> viewModel.sellSingleCrop(session.id, itemId) },
+                playerCount = session.players,
             )
-            SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady)
-            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady)
-            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady)
+            SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) })
+            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) })
+            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) })
             FeedingTroughCard(
                 crops = session.feedingTrough,
                 produce = session.inventory.produce,
@@ -675,6 +703,16 @@ private fun SectionContent(
                 onRemoveItem = { itemId ->
                     viewModel.removeItemFromFeedingTrough(session.id, itemId)
                 },
+            )
+        }
+        NavSection.SOCIAL -> {
+            com.mgafk.app.ui.screens.social.PublicRoomsCard(
+                rooms = state.publicRooms,
+                loading = state.publicRoomsLoading,
+                currentRoomId = session.roomId.ifBlank { session.room },
+                isConnected = session.status == SessionStatus.CONNECTED,
+                onRefresh = { viewModel.fetchPublicRooms() },
+                onJoin = { roomId -> viewModel.joinPublicRoom(session.id, roomId) },
             )
         }
         NavSection.MINI_GAMES -> {
@@ -773,6 +811,24 @@ private fun SectionContent(
                             casinoViewModel.fetchCasinoBalance()
                             currentGame = null
                         },
+                    )
+                    "egghatch" -> EggHatchGame(
+                        casinoBalance = casinoState.casinoBalance,
+                        eggs = casinoState.eggs,
+                        eggConfig = casinoState.eggConfig,
+                        eggsLoading = casinoState.eggsLoading,
+                        result = casinoState.eggHatchResult,
+                        loading = casinoState.eggHatchLoading,
+                        error = casinoState.eggHatchError,
+                        onFetchEggs = { casinoViewModel.fetchEggs() },
+                        onPlay = { eggType, count -> casinoViewModel.playEggHatch(eggType, count) },
+                        onReset = { casinoViewModel.resetEggHatch() },
+                        onBack = {
+                            casinoViewModel.resetEggHatch()
+                            casinoViewModel.fetchCasinoBalance()
+                            currentGame = null
+                        },
+                        onResultShown = { casinoViewModel.applyEggHatchResult() },
                     )
                 }
 
@@ -1008,5 +1064,35 @@ private fun RemoveSessionButton(
                 }
             },
         )
+    }
+}
+
+// ── Section tip (dismissable, shown once) ──
+
+@Composable
+private fun SectionTip(visible: Boolean, text: String, onDismiss: () -> Unit) {
+    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Accent.copy(alpha = 0.1f))
+                .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                .clickable { onDismiss() }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text,
+                    fontSize = 11.sp,
+                    color = Accent,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
+                    modifier = Modifier.clickable { onDismiss() })
+            }
+        }
     }
 }

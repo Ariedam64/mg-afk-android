@@ -109,15 +109,44 @@ private fun fmtQty(q: Int): String = when {
 // ── Seed Silo ──
 
 @Composable
-fun SeedSiloCard(seeds: List<InventorySeedItem>, apiReady: Boolean) {
+fun SeedSiloCard(
+    seeds: List<InventorySeedItem>,
+    apiReady: Boolean,
+    favoritedItemIds: Set<String> = emptySet(),
+    onToggleLock: (String) -> Unit = {},
+) {
     val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
+    var selectedSpecies by remember { mutableStateOf<String?>(null) }
+
     AppCard(title = "Seed Silo", collapsible = true, persistKey = "storage.seedSilo", trailing = {
         Text("${seeds.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i -> QtyTile(sorted[i].species, sorted[i].quantity, apiReady) }
+            GridOf(sorted.size) { i ->
+                Box(modifier = Modifier.clickable { selectedSpecies = sorted[i].species }) {
+                    LockOverlay(isLocked = sorted[i].species in favoritedItemIds) {
+                        QtyTile(sorted[i].species, sorted[i].quantity, apiReady)
+                    }
+                }
+            }
+        }
+    }
+
+    selectedSpecies?.let { species ->
+        val liveSeed = seeds.find { it.species == species }
+        if (liveSeed != null) {
+            StorageItemDetailDialog(
+                itemId = species,
+                apiReady = apiReady,
+                quantity = liveSeed.quantity,
+                isLocked = species in favoritedItemIds,
+                onToggleLock = { onToggleLock(species) },
+                onDismiss = { selectedSpecies = null },
+            )
+        } else {
+            selectedSpecies = null
         }
     }
 }
@@ -125,15 +154,44 @@ fun SeedSiloCard(seeds: List<InventorySeedItem>, apiReady: Boolean) {
 // ── Decor Shed ──
 
 @Composable
-fun DecorShedCard(decors: List<InventoryDecorItem>, apiReady: Boolean) {
+fun DecorShedCard(
+    decors: List<InventoryDecorItem>,
+    apiReady: Boolean,
+    favoritedItemIds: Set<String> = emptySet(),
+    onToggleLock: (String) -> Unit = {},
+) {
     val sorted = remember(decors, apiReady) { decors.sortedBy { raritySort(it.decorId) } }
+    var selectedDecorId by remember { mutableStateOf<String?>(null) }
+
     AppCard(title = "Decor Shed", collapsible = true, persistKey = "storage.decorShed", trailing = {
         Text("${decors.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i -> QtyTile(sorted[i].decorId, sorted[i].quantity, apiReady) }
+            GridOf(sorted.size) { i ->
+                Box(modifier = Modifier.clickable { selectedDecorId = sorted[i].decorId }) {
+                    LockOverlay(isLocked = sorted[i].decorId in favoritedItemIds) {
+                        QtyTile(sorted[i].decorId, sorted[i].quantity, apiReady)
+                    }
+                }
+            }
+        }
+    }
+
+    selectedDecorId?.let { decorId ->
+        val liveDecor = decors.find { it.decorId == decorId }
+        if (liveDecor != null) {
+            StorageItemDetailDialog(
+                itemId = decorId,
+                apiReady = apiReady,
+                quantity = liveDecor.quantity,
+                isLocked = decorId in favoritedItemIds,
+                onToggleLock = { onToggleLock(decorId) },
+                onDismiss = { selectedDecorId = null },
+            )
+        } else {
+            selectedDecorId = null
         }
     }
 }
@@ -389,15 +447,280 @@ private fun CropTile(item: InventoryCropsItem, apiReady: Boolean, onClick: () ->
 // ── Pet Hutch ──
 
 @Composable
-fun PetHutchCard(pets: List<InventoryPetItem>, apiReady: Boolean) {
+fun PetHutchCard(
+    pets: List<InventoryPetItem>,
+    apiReady: Boolean,
+    favoritedItemIds: Set<String> = emptySet(),
+    onToggleLock: (String) -> Unit = {},
+    onSellPet: (String) -> Unit = {},
+) {
     val sorted = remember(pets, apiReady) { pets.sortedBy { raritySortPet(it.petSpecies) } }
+    var selectedPetId by remember { mutableStateOf<String?>(null) }
+
     AppCard(title = "Pet Hutch", collapsible = true, persistKey = "storage.petHutch", trailing = {
         Text("${pets.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i -> PetTile(sorted[i], apiReady) }
+            GridOf(sorted.size) { i ->
+                val pet = sorted[i]
+                Box(modifier = Modifier.clickable { selectedPetId = pet.id }) {
+                    LockOverlay(isLocked = pet.id in favoritedItemIds || pet.petSpecies in favoritedItemIds) {
+                        PetTile(pet, apiReady)
+                    }
+                }
+            }
+        }
+    }
+
+    selectedPetId?.let { petId ->
+        val livePet = pets.find { it.id == petId }
+        if (livePet != null) {
+            val petLockId = if (livePet.id in favoritedItemIds) livePet.id
+                else if (livePet.petSpecies in favoritedItemIds) livePet.petSpecies
+                else livePet.id
+            StoragePetDetailDialog(
+                pet = livePet,
+                apiReady = apiReady,
+                isLocked = petLockId in favoritedItemIds,
+                onToggleLock = { onToggleLock(petLockId) },
+                onSell = {
+                    onSellPet(livePet.id)
+                    selectedPetId = null
+                },
+                onDismiss = { selectedPetId = null },
+            )
+        } else {
+            selectedPetId = null
+        }
+    }
+}
+
+// ── Lock badge overlay ──
+
+private const val LOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"
+private const val UNLOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Unlocked.png"
+
+@Composable
+private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
+    Box {
+        content()
+        if (isLocked) {
+            SpriteImage(
+                url = LOCK_SPRITE_URL,
+                size = 12.dp,
+                contentDescription = "Locked",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(3.dp),
+            )
+        }
+    }
+}
+
+// ── Lock toggle icon ──
+
+@Composable
+private fun LockToggleIcon(isLocked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    SpriteImage(
+        url = if (isLocked) LOCK_SPRITE_URL else UNLOCK_SPRITE_URL,
+        size = 28.dp,
+        contentDescription = if (isLocked) "Locked" else "Unlocked",
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable { onClick() }
+            .padding(2.dp),
+    )
+}
+
+// ── Storage item detail dialog ──
+
+@Composable
+private fun StorageItemDetailDialog(
+    itemId: String,
+    apiReady: Boolean,
+    quantity: Int,
+    isLocked: Boolean,
+    onToggleLock: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val entry = remember(itemId, apiReady) { MgApi.findItem(itemId) }
+    val name = entry?.name ?: itemId
+    val color = rarityColor(entry?.rarity)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceCard),
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                SpriteImage(url = entry?.sprite, size = 56.dp, contentDescription = name)
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                if (entry?.rarity != null) {
+                    Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Quantity", fontSize = 12.sp, color = TextSecondary)
+                    Text(fmtQty(quantity), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                }
+            }
+            LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
+        }
+    }
+}
+
+// ── Storage pet detail dialog ──
+
+private const val COIN_BAG_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/CoinBag.png"
+
+@Composable
+private fun StoragePetDetailDialog(
+    pet: InventoryPetItem,
+    apiReady: Boolean,
+    isLocked: Boolean,
+    onToggleLock: () -> Unit,
+    onSell: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
+    val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
+    val color = rarityColor(entry?.rarity)
+    val ms = maxStr(pet.petSpecies, pet.targetScale)
+    val cs = curStr(pet.petSpecies, pet.xp, ms)
+    val sellPrice = remember(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations, apiReady) {
+        PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations)
+    }
+
+    var showConfirm by remember { mutableStateOf(false) }
+
+    if (showConfirm) {
+        Dialog(onDismissRequest = { showConfirm = false }) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SurfaceCard)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (sellPrice != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                        Text(PriceCalculator.formatPrice(sellPrice), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                    }
+                }
+                if (isLocked) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("This pet is locked and will be unlocked before selling.",
+                        fontSize = 10.sp, color = TextSecondary, textAlign = TextAlign.Center)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { showConfirm = false },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
+                    Button(
+                        onClick = { showConfirm = false; onSell() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                }
+            }
+        }
+        return
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceCard),
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies)
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                if (entry?.rarity != null) {
+                    Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (ms > 0) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("STR", fontSize = 12.sp, color = TextSecondary)
+                            val isMax = cs >= ms
+                            Text(if (isMax) "$cs" else "$cs/$ms", fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                color = if (isMax) Color(0xFFFBBF24) else Accent)
+                        }
+                    }
+                    if (sellPrice != null) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("Value", fontSize = 12.sp, color = TextSecondary)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                SpriteImage(url = COIN_BAG_URL, size = 14.dp, contentDescription = "coins")
+                                Text(PriceCalculator.formatPrice(sellPrice), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                            }
+                        }
+                    }
+                    if (pet.mutations.isNotEmpty()) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                sortMutations(pet.mutations).forEach { mutation ->
+                                    SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
+                                }
+                            }
+                        }
+                    }
+                    if (pet.abilities.isNotEmpty()) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("Abilities", fontSize = 12.sp, color = TextSecondary)
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                pet.abilities.forEach { abilityId ->
+                                    Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(abilityColor(abilityId)))
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { showConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(10.dp),
+                ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+            }
+            LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
         }
     }
 }

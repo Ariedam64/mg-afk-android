@@ -35,6 +35,8 @@ class SessionRepository(private val context: Context) {
         private val KEY_GARDEN_TIP = booleanPreferencesKey("mgafk.gardenTipDismissed")
         private val KEY_SEED_TIP = booleanPreferencesKey("mgafk.seedTipDismissed")
         private val KEY_EGG_TIP = booleanPreferencesKey("mgafk.eggTipDismissed")
+        private val KEY_PLANT_TIP = booleanPreferencesKey("mgafk.plantTipDismissed")
+        private val KEY_STORAGE_TIP = booleanPreferencesKey("mgafk.storageTipDismissed")
         private val KEY_NOTIFIED_VERSION = stringPreferencesKey("mgafk.lastNotifiedVersion")
     }
 
@@ -188,6 +190,26 @@ class SessionRepository(private val context: Context) {
     suspend fun dismissEggTip() {
         context.dataStore.edit { prefs ->
             prefs[KEY_EGG_TIP] = true
+        }
+    }
+
+    suspend fun isPlantTipDismissed(): Boolean {
+        return context.dataStore.data.map { it[KEY_PLANT_TIP] ?: false }.first()
+    }
+
+    suspend fun dismissPlantTip() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_PLANT_TIP] = true
+        }
+    }
+
+    suspend fun isStorageTipDismissed(): Boolean {
+        return context.dataStore.data.map { it[KEY_STORAGE_TIP] ?: false }.first()
+    }
+
+    suspend fun dismissStorageTip() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STORAGE_TIP] = true
         }
     }
 

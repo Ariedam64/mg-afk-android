@@ -50,6 +50,7 @@ object MgApi {
         val maxScale: Double? = null,
         val baseSellPrice: Double? = null,
         val hoursToMature: Double? = null,
+        val maturitySellPrice: Double? = null,
         val color: String? = null,
         val diet: List<String> = emptyList(),
     ) {
@@ -241,6 +242,7 @@ object MgApi {
                     rarity = obj?.get("rarity")?.jsonPrimitive?.contentOrNull,
                     maxScale = obj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
                     hoursToMature = obj?.get("hoursToMature")?.jsonPrimitive?.doubleOrNull,
+                    maturitySellPrice = obj?.get("maturitySellPrice")?.jsonPrimitive?.doubleOrNull,
                     color = obj?.get("color")?.jsonPrimitive?.contentOrNull,
                     diet = dietArray,
                 )

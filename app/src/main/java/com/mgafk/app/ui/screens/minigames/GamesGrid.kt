@@ -50,6 +50,7 @@ private val GAMES = listOf(
     GameDef("dice", "Dice", "\uD83C\uDFB2", "Roll over or under", available = true),
     GameDef("crash", "Crash", "\uD83D\uDE80", "Cashout before crash", available = true),
     GameDef("blackjack", "Blackjack", "\uD83C\uDCA1", "Beat the dealer", available = true),
+    GameDef("egghatch", "Egg Hatch", "\uD83E\uDD5A", "Hatch rare pets", available = true),
 )
 
 @Composable

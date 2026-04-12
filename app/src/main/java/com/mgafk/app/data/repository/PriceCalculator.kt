@@ -82,17 +82,64 @@ object PriceCalculator {
      * @param mutations List of mutation names
      * @return Sell price in coins, or null if species data unavailable
      */
+    /** Friends bonus multiplier: 1.0 for 1 player, +0.1 per extra, max 1.5 at 6. */
+    fun friendsMultiplier(playerCount: Int): Double =
+        (1.0 + (playerCount.coerceIn(1, 6) - 1) * 0.1)
+
     fun calculateCropSellPrice(
         species: String,
         targetScale: Double,
         mutations: List<String>,
+        playerCount: Int = 1,
     ): Long? {
         val entry = MgApi.getPlants()[species] ?: return null
         val baseSellPrice = entry.baseSellPrice ?: return null
         if (baseSellPrice <= 0) return null
 
         val mutMultiplier = calculateMutationMultiplier(mutations)
-        return (baseSellPrice * targetScale * mutMultiplier).roundToLong()
+        val friends = friendsMultiplier(playerCount)
+        return (baseSellPrice * targetScale * mutMultiplier * friends).roundToLong()
+    }
+
+    /**
+     * Calculate the sell price of a pet.
+     * Formula: maturitySellPrice × (strength / maxStrength) × targetScale × coinMultiplier
+     */
+    fun calculatePetSellPrice(
+        petSpecies: String,
+        xp: Double,
+        targetScale: Double,
+        mutations: List<String>,
+    ): Long? {
+        val entry = MgApi.findPet(petSpecies) ?: return null
+        val maturitySellPrice = entry.maturitySellPrice ?: return null
+        if (maturitySellPrice <= 0) return null
+
+        val maxScale = entry.maxScale ?: 1.0
+        val hoursToMature = entry.hoursToMature ?: 1.0
+
+        // Max strength (same logic as InventoryCard)
+        val maxStrength = if (maxScale > 1.0 && targetScale > 1.0) {
+            (80.0 + 20.0 * (targetScale - 1.0) / (maxScale - 1.0)).toInt().coerceIn(80, 100)
+        } else 80
+
+        // Current strength
+        val xpRate = xp / (hoursToMature * 3600.0)
+        val xpComponent = minOf((xpRate * 30.0).toInt(), 30)
+        val baseStrength = (maxStrength - 30).coerceAtLeast(0)
+        val strength = minOf(baseStrength + xpComponent, maxStrength).coerceAtLeast(0)
+
+        if (maxStrength <= 0) return null
+
+        // Coin multiplier from mutations
+        val coinMultiplier = mutations.fold(1.0) { acc, mutation ->
+            val mutEntry = MgApi.getMutations()[mutation]
+            val mult = mutEntry?.coinMultiplier ?: 1.0
+            if (mult > 0) acc * mult else acc
+        }
+
+        val raw = maturitySellPrice * (strength.toDouble() / maxStrength) * targetScale * coinMultiplier
+        return if (raw.isFinite()) raw.roundToLong().coerceAtLeast(0) else null
     }
 
     /**

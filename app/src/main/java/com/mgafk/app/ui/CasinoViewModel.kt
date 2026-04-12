@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.repository.CasinoApi
 import com.mgafk.app.data.repository.CasinoApiException
 import com.mgafk.app.data.repository.DepositConfigResponse
+import com.mgafk.app.data.repository.EggHatchConfig
+import com.mgafk.app.data.repository.EggInfo
 import com.mgafk.app.data.repository.Transaction
 import java.time.Instant
 import kotlinx.coroutines.Job
@@ -116,6 +118,13 @@ data class CasinoUiState(
     val blackjack: BlackjackUiState = BlackjackUiState(),
     // Mines
     val mines: MinesUiState = MinesUiState(),
+    // Egg Hatch
+    val eggHatchResult: com.mgafk.app.data.repository.EggHatchResponse? = null,
+    val eggHatchLoading: Boolean = false,
+    val eggHatchError: String? = null,
+    val eggs: List<EggInfo> = emptyList(),
+    val eggConfig: EggHatchConfig = EggHatchConfig(),
+    val eggsLoading: Boolean = false,
     // Active game conflict (409)
     val gameConflict: GameConflict? = null,
 )
@@ -843,5 +852,45 @@ class CasinoViewModel : ViewModel() {
 
     fun resetMines() {
         _state.update { it.copy(mines = MinesUiState()) }
+    }
+
+    // ---- Egg Hatch ----
+
+    fun fetchEggs() {
+        if (_state.value.eggs.isNotEmpty() || _state.value.eggsLoading) return
+        _state.update { it.copy(eggsLoading = true) }
+        viewModelScope.launch {
+            CasinoApi.getEggs()
+                .onSuccess { resp ->
+                    _state.update { it.copy(eggs = resp.eggs, eggConfig = resp.config, eggsLoading = false) }
+                }
+                .onFailure { e ->
+                    AppLog.e(TAG, "[Eggs] Fetch failed: ${e.message}")
+                    _state.update { it.copy(eggsLoading = false) }
+                }
+        }
+    }
+
+    fun playEggHatch(eggType: String, count: Int) {
+        _state.update { it.copy(eggHatchLoading = true, eggHatchError = null, eggHatchResult = null) }
+        viewModelScope.launch {
+            CasinoApi.playEggHatch(apiKey, eggType, count)
+                .onSuccess { resp ->
+                    _state.update { it.copy(eggHatchResult = resp, eggHatchLoading = false) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(eggHatchLoading = false, eggHatchError = e.message) }
+                }
+        }
+    }
+
+    fun applyEggHatchResult() {
+        val result = _state.value.eggHatchResult ?: return
+        _state.update { it.copy(casinoBalance = result.newBalance) }
+        fetchTransactions()
+    }
+
+    fun resetEggHatch() {
+        _state.update { it.copy(eggHatchResult = null, eggHatchError = null, eggHatchLoading = false) }
     }
 }

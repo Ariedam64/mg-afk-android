@@ -38,6 +38,7 @@ data class Session(
     val playersList: List<PlayerSnapshot> = emptyList(),
     val gameVersion: String = "",
     val freePlantTiles: Int = 0,
+    val favoritedItemIds: Set<String> = emptySet(),
     val lastHatchedPet: InventoryPetItem? = null,
     val lastHatchedEggId: String = "",
     val wsLogs: List<WsLog> = emptyList(),
@@ -123,11 +124,19 @@ data class InventoryProduceItem(
 )
 
 @Serializable
+data class InventoryPlantSlot(
+    val species: String = "",
+    val targetScale: Double = 0.0,
+    val mutations: List<String> = emptyList(),
+)
+
+@Serializable
 data class InventoryPlantItem(
     val id: String = "",
     val species: String = "",
     val growSlots: Int = 0,
     val totalPrice: Long = 0,
+    val slots: List<InventoryPlantSlot> = emptyList(),
 )
 
 @Serializable

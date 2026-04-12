@@ -124,6 +124,13 @@ private fun rememberSecondTick(): Long {
     return tick
 }
 
+private fun fmtQty(q: Int): String = when {
+    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0)
+    q >= 10_000 -> "${q / 1000}K"
+    q >= 1_000 -> "%.1fK".format(q / 1000.0)
+    else -> "$q"
+}
+
 private fun computeSizePercent(targetScale: Double, maxScale: Double): Double {
     if (maxScale <= 1.0) return if (targetScale >= 1.0) 100.0 else targetScale * 100.0
     return if (targetScale <= 1.0) {
@@ -175,9 +182,9 @@ fun GardenCard(
     apiReady: Boolean = false,
     onHarvest: (slot: Int, slotIndex: Int) -> Unit = { _, _ -> },
     onWater: (slot: Int) -> Unit = {},
+    onPot: (slot: Int) -> Unit = {},
     wateringCans: Int = 0,
-    showTip: Boolean = false,
-    onDismissTip: () -> Unit = {},
+    planterPots: Int = 0,
 ) {
     var selectedRarity by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMutation by rememberSaveable { mutableStateOf<String?>(null) }
@@ -294,31 +301,6 @@ fun GardenCard(
         collapsible = true,
         persistKey = "garden.plants",
     ) {
-        AnimatedVisibility(visible = showTip, enter = fadeIn(), exit = fadeOut()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                    .clickable { onDismissTip() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Tap a crop to see its details and harvest it.",
-                        fontSize = 11.sp,
-                        color = Accent,
-                        lineHeight = 15.sp,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
-                        modifier = Modifier.clickable { onDismissTip() })
-                }
-            }
-        }
-
         if (plants.isEmpty()) {
             Text("No plants in the garden.", fontSize = 12.sp, color = TextMuted)
         } else {
@@ -427,11 +409,16 @@ fun GardenCard(
             PlantDetailDialog(
                 plant = liveCrop,
                 wateringCans = wateringCans,
+                planterPots = planterPots,
                 onHarvest = {
                     onHarvest(tileId, slotIndex)
                     selectedCropKey = null
                 },
                 onWater = { onWater(tileId) },
+                onPot = {
+                    onPot(tileId)
+                    selectedCropKey = null
+                },
                 onDismiss = { selectedCropKey = null },
             )
         } else {
@@ -446,8 +433,10 @@ fun GardenCard(
             MultiSlotPlantDetailDialog(
                 plant = liveEntry,
                 wateringCans = wateringCans,
+                planterPots = planterPots,
                 onHarvest = { slot, slotIndex -> onHarvest(slot, slotIndex) },
                 onWater = { slot -> onWater(slot) },
+                onPot = { slot -> onPot(slot) },
                 onDismiss = { selectedMultiPlantTileId = null },
             )
         } else {
@@ -614,8 +603,10 @@ private fun MutationIcons(mutations: List<String>) {
 private fun PlantDetailDialog(
     plant: ResolvedPlant,
     wateringCans: Int,
+    planterPots: Int,
     onHarvest: () -> Unit,
     onWater: () -> Unit,
+    onPot: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
@@ -732,6 +723,9 @@ private fun PlantDetailDialog(
                 }
             }
 
+            val canPot = planterPots > 0
+            val potSprite = remember { MgApi.findItem("PlanterPot")?.sprite }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -778,6 +772,28 @@ private fun PlantDetailDialog(
                     )
                 }
             }
+
+            // Pot button (separate row)
+            Button(
+                onClick = onPot,
+                enabled = canPot,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD97706),
+                    disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.2f),
+                    disabledContentColor = Color.White.copy(alpha = 0.4f),
+                ),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    if (canPot) "Pot x${fmtQty(planterPots)}" else "No pots",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (canPot) Color.White else Color.White.copy(alpha = 0.4f),
+                )
+            }
         }
     }
 }
@@ -788,8 +804,10 @@ private fun PlantDetailDialog(
 private fun MultiSlotPlantDetailDialog(
     plant: GardenEntry.MultiSlotPlant,
     wateringCans: Int,
+    planterPots: Int,
     onHarvest: (slot: Int, slotIndex: Int) -> Unit,
     onWater: (slot: Int) -> Unit,
+    onPot: (slot: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
@@ -879,6 +897,32 @@ private fun MultiSlotPlantDetailDialog(
                         onWater = { onWater(crop.snapshot.tileId) },
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Pot button for the whole plant
+            val canPot = planterPots > 0
+            val potSprite = remember { MgApi.findItem("PlanterPot")?.sprite }
+            Button(
+                onClick = { onPot(plant.tileId) },
+                enabled = canPot,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD97706),
+                    disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.2f),
+                    disabledContentColor = Color.White.copy(alpha = 0.4f),
+                ),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    if (canPot) "Pot x${fmtQty(planterPots)}" else "No pots",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (canPot) Color.White else Color.White.copy(alpha = 0.4f),
+                )
             }
         }
     }

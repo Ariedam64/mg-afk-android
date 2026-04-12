@@ -146,8 +146,6 @@ fun EggsCard(
     lastHatchedPet: InventoryPetItem? = null,
     lastHatchedEggId: String = "",
     onDismissHatchedPet: () -> Unit = {},
-    showTip: Boolean = false,
-    onDismissTip: () -> Unit = {},
 ) {
     var selectedEggTileId by remember { mutableStateOf<Int?>(null) }
 
@@ -173,24 +171,6 @@ fun EggsCard(
         collapsible = true,
         persistKey = "garden.eggs",
     ) {
-        AnimatedVisibility(visible = showTip, enter = fadeIn(), exit = fadeOut()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                    .clickable { onDismissTip() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Tap an egg to view details and hatch it when ready.",
-                        fontSize = 11.sp, color = Accent, lineHeight = 15.sp, modifier = Modifier.weight(1f))
-                    Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
-                        modifier = Modifier.clickable { onDismissTip() })
-                }
-            }
-        }
-
         if (eggs.isEmpty()) {
             Text("No eggs in the garden.", fontSize = 12.sp, color = TextMuted)
         } else {
