@@ -10,9 +10,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -37,6 +39,7 @@ object MgApi {
 
     private val cache = ConcurrentHashMap<String, LinkedHashMap<String, GameEntry>>()
     private val mutationsCache = ConcurrentHashMap<String, MutationEntry>()
+    private val plantSpriteMetaCache = ConcurrentHashMap<String, SpriteMetadata>()
 
     /** Rarity tiers in game order (lowest -> highest) */
     val RARITY_ORDER = listOf("Common", "Uncommon", "Rare", "Legendary", "Mythic", "Divine", "Celestial")
@@ -53,9 +56,27 @@ object MgApi {
         val maturitySellPrice: Double? = null,
         val color: String? = null,
         val diet: List<String> = emptyList(),
+        // Plant-only visual data (from `/data/plants`)
+        val plantSprite: String? = null,
+        val plantSlotOffsets: List<SlotOffset> = emptyList(),
+        val plantBaseTileScale: Double? = null,
+        val plantTileTransformOrigin: String? = null,
+        val cropBaseTileScale: Double? = null,
+        val cropTransformOrigin: String? = null,
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
+
+    /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
+    data class SlotOffset(val x: Double, val y: Double, val rotation: Double)
+
+    /** Atlas metadata for a sprite: source canvas size and anchor point (fractions 0..1). */
+    data class SpriteMetadata(
+        val sourceWidth: Int,
+        val sourceHeight: Int,
+        val anchorX: Double,
+        val anchorY: Double,
+    )
 
     data class MutationEntry(
         val name: String,
@@ -112,8 +133,20 @@ object MgApi {
                     }
                 }
             }
+            // Fetch plant sprite metadata (sourceSize + anchor) for accurate crop
+            // placement in PlantCompositeSprite.
+            val spriteMetaJob = async(Dispatchers.IO) {
+                try {
+                    val data = fetchPlantSpriteMetadata()
+                    plantSpriteMetaCache.putAll(data)
+                    AppLog.d(TAG, "Loaded plant sprite metadata: ${data.size} entries")
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to load plant sprite metadata: ${e.message}")
+                }
+            }
             jobs.forEach { it.await() }
             mutJob.await()
+            spriteMetaJob.await()
             isReady = true
             AppLog.d(TAG, "All preloaded. Cache keys: ${cache.keys}")
         }
@@ -128,8 +161,75 @@ object MgApi {
     fun getAbilities(): Map<String, GameEntry> = cache["abilities"] ?: emptyMap()
     fun getMutations(): Map<String, MutationEntry> = mutationsCache
 
+    /** Atlas metadata for a plant sprite (keyed by filename without `.png`). */
+    fun getPlantSpriteMetadata(spriteName: String): SpriteMetadata? =
+        plantSpriteMetaCache[spriteName]
+
     fun spriteUrl(category: String, name: String): String =
         "$BASE_URL/assets/sprites/$category/$name.png"
+
+    /** Shortcut for UI sprites: `sprites/ui/{name}.png`. */
+    fun uiSpriteUrl(name: String): String = spriteUrl("ui", name)
+
+    /** URL for a plant sprite (e.g. "Carrot", "Starweaver"). */
+    fun plantSpriteUrl(name: String): String = spriteUrl("plants", name)
+
+    val coinBagUrl: String get() = uiSpriteUrl("CoinBag")
+    val lockSpriteUrl: String get() = uiSpriteUrl("Locked")
+    val unlockSpriteUrl: String get() = uiSpriteUrl("Unlocked")
+
+    private val MUTATION_SPRITE_ALIAS = mapOf("Ambershine" to "Amberlit")
+
+    /** URL for a mutation sprite (`ui/Mutation{Name}.png`). */
+    fun mutationSpriteUrl(mutation: String): String {
+        val name = MUTATION_SPRITE_ALIAS[mutation] ?: mutation
+        return uiSpriteUrl("Mutation$name")
+    }
+
+    /**
+     * URL for a composed sprite: base sprite + mutation layers rendered server-side.
+     * `key` is the atlas key (e.g. `sprite/pet/Bunny`, `sprite/plant/MoonCelestialCrop`).
+     * Returns `null` if `mutations` is empty — callers should fall back to the plain sprite URL.
+     */
+    fun composedSpriteUrl(key: String, mutations: List<String>): String? {
+        if (mutations.isEmpty()) return null
+        val encodedKey = URLEncoder.encode(key, "UTF-8")
+        val encodedMuts = mutations.joinToString(",") { URLEncoder.encode(it, "UTF-8") }
+        return "$BASE_URL/assets/sprites/composed?key=$encodedKey&mutations=$encodedMuts"
+    }
+
+    /**
+     * URL for a pet sprite. The sprite filename is read from `GameEntry.sprite`
+     * loaded from the API (e.g. `.../pets/Bunny.png` → `Bunny`), so the composed
+     * key matches what the server knows. When mutations are non-empty the composed
+     * endpoint is used, otherwise the plain sprite URL is returned.
+     * Returns `null` if the pet is not in the cache yet.
+     */
+    fun petSpriteUrl(species: String, mutations: List<String> = emptyList()): String? {
+        val baseUrl = getPets()[species]?.sprite ?: return null
+        if (mutations.isEmpty()) return baseUrl
+        val spriteName = spriteNameFromUrl(baseUrl) ?: return baseUrl
+        return composedSpriteUrl("sprite/pet/$spriteName", mutations) ?: baseUrl
+    }
+
+    /**
+     * URL for a crop sprite. Reads the sprite filename from `GameEntry.cropSprite`
+     * (e.g. `.../plants/MoonCelestialCrop.png` → `MoonCelestialCrop`) so the composed
+     * key matches the atlas. Returns `null` if the plant is not in the cache yet.
+     */
+    fun cropSpriteUrl(species: String, mutations: List<String> = emptyList()): String? {
+        val baseUrl = getPlants()[species]?.cropSprite ?: return null
+        if (mutations.isEmpty()) return baseUrl
+        val spriteName = spriteNameFromUrl(baseUrl) ?: return baseUrl
+        return composedSpriteUrl("sprite/plant/$spriteName", mutations) ?: baseUrl
+    }
+
+    /** Extract the sprite filename (without `.png` or query string) from a sprite URL. */
+    private fun spriteNameFromUrl(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        val file = url.substringAfterLast('/').substringBefore('?')
+        return file.removeSuffix(".png").ifBlank { null }
+    }
 
     /** Look up pet entry by species id. */
     fun findPet(speciesId: String): GameEntry? = getPets()[speciesId]
@@ -165,10 +265,45 @@ object MgApi {
     fun clearCache() {
         cache.clear()
         mutationsCache.clear()
+        plantSpriteMetaCache.clear()
         isReady = false
     }
 
     // ---- Internal ----
+
+    private fun fetchPlantSpriteMetadata(): Map<String, SpriteMetadata> {
+        val request = Request.Builder()
+            .url("$BASE_URL/assets/sprite-data?cat=plants&full=1")
+            .header("Accept", "application/json")
+            .build()
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code} for sprite-data?cat=plants")
+        }
+        val body = response.body?.string()
+            ?: throw Exception("Empty body for sprite-data?cat=plants")
+        val root = json.parseToJsonElement(body) as? JsonObject
+            ?: throw Exception("Invalid JSON for sprite-data?cat=plants")
+
+        val categories = root["categories"] as? JsonArray ?: return emptyMap()
+        val result = mutableMapOf<String, SpriteMetadata>()
+        for (catElement in categories) {
+            val catObj = catElement as? JsonObject ?: continue
+            val items = catObj["items"] as? JsonArray ?: continue
+            for (itemElement in items) {
+                val item = itemElement as? JsonObject ?: continue
+                val name = item["name"]?.jsonPrimitive?.contentOrNull ?: continue
+                val sourceSize = item["sourceSize"] as? JsonObject ?: continue
+                val anchor = item["anchor"] as? JsonObject ?: continue
+                val w = sourceSize["w"]?.jsonPrimitive?.intOrNull ?: continue
+                val h = sourceSize["h"]?.jsonPrimitive?.intOrNull ?: continue
+                val ax = anchor["x"]?.jsonPrimitive?.doubleOrNull ?: 0.5
+                val ay = anchor["y"]?.jsonPrimitive?.doubleOrNull ?: 0.5
+                result[name] = SpriteMetadata(w, h, ax, ay)
+            }
+        }
+        return result
+    }
 
     private fun fetchMutations(): Map<String, MutationEntry> {
         val request = Request.Builder()
@@ -220,6 +355,15 @@ object MgApi {
                 val seedObj = obj?.get("seed") as? JsonObject
                 val plantObj = obj?.get("plant") as? JsonObject
                 val cropObj = obj?.get("crop") as? JsonObject
+                val slotOffsets = (plantObj?.get("slotOffsets") as? JsonArray)
+                    ?.mapNotNull { el ->
+                        val o = el as? JsonObject ?: return@mapNotNull null
+                        SlotOffset(
+                            x = o["x"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            y = o["y"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            rotation = o["rotation"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                        )
+                    } ?: emptyList()
                 result[id] = GameEntry(
                     id = id,
                     name = seedObj?.get("name")?.jsonPrimitive?.contentOrNull
@@ -230,6 +374,12 @@ object MgApi {
                     cropSprite = cropObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     maxScale = cropObj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
                     baseSellPrice = cropObj?.get("baseSellPrice")?.jsonPrimitive?.doubleOrNull,
+                    plantSprite = plantObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
+                    plantSlotOffsets = slotOffsets,
+                    plantBaseTileScale = plantObj?.get("baseTileScale")?.jsonPrimitive?.doubleOrNull,
+                    plantTileTransformOrigin = plantObj?.get("tileTransformOrigin")?.jsonPrimitive?.contentOrNull,
+                    cropBaseTileScale = cropObj?.get("baseTileScale")?.jsonPrimitive?.doubleOrNull,
+                    cropTransformOrigin = cropObj?.get("transformOrigin")?.jsonPrimitive?.contentOrNull,
                 )
             } else {
                 val dietArray = (obj?.get("diet") as? JsonArray)

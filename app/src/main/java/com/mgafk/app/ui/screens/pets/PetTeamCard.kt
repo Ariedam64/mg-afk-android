@@ -186,6 +186,11 @@ fun PetTeamCard(
     val allCandidates = remember(activePets, inventoryPets, hutchPets) {
         buildCandidateList(activePets, inventoryPets, hutchPets)
     }
+    // Lookup for current mutations by pet id — used by team rows to render composed
+    // sprites with each pet's actual mutations (the team itself only stores species).
+    val mutationsByPetId = remember(allCandidates) {
+        allCandidates.associate { it.id to it.mutations }
+    }
 
     var editorTeam by remember { mutableStateOf<PetTeam?>(null) }
     var editorIsNew by remember { mutableStateOf(false) }
@@ -262,6 +267,7 @@ fun PetTeamCard(
                     ) {
                         TeamRow(
                             team = team,
+                            mutationsByPetId = mutationsByPetId,
                             isActive = team.id == activeTeamId,
                             onActivate = { onActivate(team) },
                             onEdit = {
@@ -356,6 +362,7 @@ private fun AddTeamTile(onClick: () -> Unit) {
 @Composable
 private fun TeamRow(
     team: PetTeam,
+    mutationsByPetId: Map<String, List<String>>,
     isActive: Boolean,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
@@ -364,7 +371,11 @@ private fun TeamRow(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val borderColor = if (isActive) StatusConnected.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.10f)
-    val filledSpecies = remember(team.petSpecies) { team.petSpecies.filter { it.isNotBlank() } }
+    // Pair each filled species with the pet id at the same slot index so we can look
+    // up the pet's current mutations for composed sprite rendering.
+    val filledSlots = remember(team.petSpecies, team.petIds) {
+        team.petSpecies.zip(team.petIds).filter { (species, _) -> species.isNotBlank() }
+    }
 
     Row(
         modifier = Modifier
@@ -385,10 +396,18 @@ private fun TeamRow(
             modifier = dragModifier.size(20.dp),
         )
 
-        // Pet sprites (only filled slots, with spacing)
+        // Pet sprites (only filled slots, with spacing) — composed with each pet's
+        // current mutations when available.
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            filledSpecies.forEach { species ->
-                SpriteImage(category = "pets", name = species, size = 26.dp, contentDescription = species)
+            filledSlots.forEach { (species, petId) ->
+                val mutations = mutationsByPetId[petId] ?: emptyList()
+                SpriteImage(
+                    category = "pets",
+                    name = species,
+                    size = 26.dp,
+                    contentDescription = species,
+                    mutations = mutations,
+                )
             }
         }
 
@@ -653,7 +672,7 @@ private fun FilledSlotTile(
             modifier = Modifier.align(Alignment.Center).padding(top = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = pet.species, size = 28.dp, contentDescription = pet.species)
+            SpriteImage(category = "pets", name = pet.species, size = 28.dp, contentDescription = pet.species, mutations = pet.mutations)
             Text(
                 displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
@@ -778,7 +797,7 @@ private fun PickerPetTile(
             modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = candidate.species, size = 28.dp, contentDescription = candidate.species)
+            SpriteImage(category = "pets", name = candidate.species, size = 28.dp, contentDescription = candidate.species, mutations = candidate.mutations)
             Text(
                 displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,

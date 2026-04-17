@@ -56,6 +56,8 @@ import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
+import com.mgafk.app.ui.components.PlantCompositeSprite
+import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -568,7 +570,7 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCou
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -597,6 +599,9 @@ private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
     val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
     val color = rarityColor(entry?.rarity)
+    val slots = remember(item.slots) {
+        item.slots.map { PlantSlotRender(it.species, it.mutations, it.targetScale) }
+    }
 
     Column(
         modifier = Modifier
@@ -609,7 +614,7 @@ private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        PlantCompositeSprite(species = item.species, slots = slots, size = 40.dp, contentDescription = name)
         Spacer(modifier = Modifier.height(2.dp))
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
@@ -673,7 +678,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies)
+            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
                 name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
@@ -734,7 +739,7 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
             modifier = Modifier.align(Alignment.Center).padding(top = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 24.dp, contentDescription = pet.petSpecies)
+            SpriteImage(category = "pets", name = pet.petSpecies, size = 24.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
                 name, fontSize = 7.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 9.sp,
@@ -761,7 +766,7 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    SpriteImage(url = COIN_BAG_URL, size = 9.dp, contentDescription = "coins")
+                    SpriteImage(url = MgApi.coinBagUrl, size = 9.dp, contentDescription = "coins")
                     Text(
                         PriceCalculator.formatPrice(price),
                         fontSize = 7.sp,
@@ -829,6 +834,9 @@ private fun PlantUnpotDialog(
     val color = rarityColor(entry?.rarity)
     val maxScale = entry?.maxScale ?: 1.0
     val canPlant = freePlantTiles > 0
+    val headerSlots = remember(plant.slots) {
+        plant.slots.map { PlantSlotRender(it.species, it.mutations, it.targetScale) }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -841,7 +849,7 @@ private fun PlantUnpotDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
             // Header
-            SpriteImage(url = entry?.cropSprite, size = 56.dp, contentDescription = name)
+            PlantCompositeSprite(species = plant.species, slots = headerSlots, size = 80.dp, contentDescription = name)
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -953,51 +961,64 @@ private fun PlantSlotRow(
         PriceCalculator.calculateCropSellPrice(slot.species, slot.targetScale, slot.mutations)
     }
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Slot label + mutations
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        SpriteImage(
+            category = "plants",
+            name = slot.species,
+            size = 32.dp,
+            contentDescription = slot.species,
+            mutations = slot.mutations,
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Text("Slot ${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            if (slot.mutations.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    sortMutations(slot.mutations).forEach { mutation ->
-                        SpriteImage(url = mutationSpriteUrl(mutation), size = 14.dp, contentDescription = mutation)
+            // Slot label + mutations
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Slot ${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                if (slot.mutations.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        sortMutations(slot.mutations).forEach { mutation ->
+                            SpriteImage(url = mutationSpriteUrl(mutation), size = 14.dp, contentDescription = mutation)
+                        }
                     }
                 }
             }
-        }
 
-        // Size bar + price
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("${sizePercent.toInt()}%", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
-            Box(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)).background(color.copy(alpha = 0.15f)),
-                ) {
+            // Size bar + price
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("${sizePercent.toInt()}%", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
+                Box(modifier = Modifier.weight(1f)) {
                     Box(
-                        modifier = Modifier.fillMaxWidth(fraction).height(4.dp)
-                            .background(color.copy(alpha = 0.8f)),
+                        modifier = Modifier.fillMaxWidth().height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)).background(color.copy(alpha = 0.15f)),
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(fraction).height(4.dp)
+                                .background(color.copy(alpha = 0.8f)),
+                        )
+                    }
+                }
+                if (price != null) {
+                    Text(
+                        PriceCalculator.formatPrice(price),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFD700),
                     )
                 }
-            }
-            if (price != null) {
-                Text(
-                    PriceCalculator.formatPrice(price),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFFD700),
-                )
             }
         }
     }
@@ -1250,7 +1271,7 @@ private fun SellAllPetsDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    SpriteImage(url = COIN_BAG_URL, size = 20.dp, contentDescription = "coins")
+                    SpriteImage(url = MgApi.coinBagUrl, size = 20.dp, contentDescription = "coins")
                     Text(
                         PriceCalculator.formatPrice(totalValue),
                         fontSize = 18.sp,
@@ -1316,7 +1337,7 @@ private fun SellAllPetsDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                    SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                     Text(
                         PriceCalculator.formatPrice(totalValue),
                         fontSize = 14.sp,
@@ -1396,7 +1417,7 @@ private fun SellAllCropsDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    SpriteImage(url = COIN_BAG_URL, size = 20.dp, contentDescription = "coins")
+                    SpriteImage(url = MgApi.coinBagUrl, size = 20.dp, contentDescription = "coins")
                     Text(
                         PriceCalculator.formatPrice(totalValue),
                         fontSize = 18.sp,
@@ -1470,7 +1491,7 @@ private fun SellAllCropsDialog(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.weight(1f),
                         ) {
-                            SpriteImage(url = entry?.cropSprite, size = 22.dp, contentDescription = name)
+                            SpriteImage(category = "plants", name = item.species, size = 22.dp, contentDescription = name, mutations = item.mutations)
                             Text(name, fontSize = 10.sp, color = TextPrimary, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis)
                             if (item.mutations.isNotEmpty()) {
@@ -1486,7 +1507,7 @@ private fun SellAllCropsDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                             ) {
-                                SpriteImage(url = COIN_BAG_URL, size = 10.dp, contentDescription = "coins")
+                                SpriteImage(url = MgApi.coinBagUrl, size = 10.dp, contentDescription = "coins")
                                 Text(
                                     PriceCalculator.formatPrice(price),
                                     fontSize = 10.sp,
@@ -1512,7 +1533,7 @@ private fun SellAllCropsDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                    SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                     Text(
                         PriceCalculator.formatPrice(totalValue),
                         fontSize = 14.sp,
@@ -1554,16 +1575,13 @@ private fun SellAllCropsDialog(
 
 // ── Lock badge overlay ──
 
-private const val LOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"
-private const val UNLOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Unlocked.png"
-
 @Composable
 private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
     Box {
         content()
         if (isLocked) {
             SpriteImage(
-                url = LOCK_SPRITE_URL,
+                url = MgApi.lockSpriteUrl,
                 size = 12.dp,
                 contentDescription = "Locked",
                 modifier = Modifier
@@ -1579,7 +1597,7 @@ private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun LockToggleIcon(isLocked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     SpriteImage(
-        url = if (isLocked) LOCK_SPRITE_URL else UNLOCK_SPRITE_URL,
+        url = if (isLocked) MgApi.lockSpriteUrl else MgApi.unlockSpriteUrl,
         size = 28.dp,
         contentDescription = if (isLocked) "Locked" else "Unlocked",
         modifier = modifier
@@ -1657,8 +1675,6 @@ private fun ItemDetailDialog(
 
 // ── Pet detail dialog ──
 
-private const val COIN_BAG_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/CoinBag.png"
-
 @Composable
 private fun PetDetailDialog(
     pet: InventoryPetItem,
@@ -1696,7 +1712,7 @@ private fun PetDetailDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                        SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                         Text(
                             PriceCalculator.formatPrice(sellPrice),
                             fontSize = 14.sp,
@@ -1750,7 +1766,7 @@ private fun PetDetailDialog(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies)
+                SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -1790,7 +1806,7 @@ private fun PetDetailDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
-                                SpriteImage(url = COIN_BAG_URL, size = 14.dp, contentDescription = "coins")
+                                SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
                                 Text(
                                     PriceCalculator.formatPrice(sellPrice),
                                     fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -1894,7 +1910,7 @@ private fun ProduceDetailDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                        SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                         Text(PriceCalculator.formatPrice(price), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                     }
                 }
@@ -1931,7 +1947,7 @@ private fun ProduceDetailDialog(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SpriteImage(url = entry?.cropSprite, size = 56.dp, contentDescription = name)
+                SpriteImage(category = "plants", name = item.species, size = 56.dp, contentDescription = name, mutations = item.mutations)
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -1968,7 +1984,7 @@ private fun ProduceDetailDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
-                                SpriteImage(url = COIN_BAG_URL, size = 14.dp, contentDescription = "coins")
+                                SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
                                 Text(PriceCalculator.formatPrice(price), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                             }
                         }

@@ -166,7 +166,13 @@ private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Bool
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (log.petSpecies.isNotBlank()) {
-            SpriteImage(category = "pets", name = log.petSpecies, size = 36.dp, contentDescription = log.petSpecies)
+            SpriteImage(
+                category = "pets",
+                name = log.petSpecies,
+                size = 36.dp,
+                contentDescription = log.petSpecies,
+                mutations = log.petMutations,
+            )
             Spacer(modifier = Modifier.width(8.dp))
         }
 

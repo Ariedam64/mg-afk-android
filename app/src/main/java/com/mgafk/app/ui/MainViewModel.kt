@@ -1444,12 +1444,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "https://i.imgur.com/HlvVrpI.png",  // bread sprite
             "https://i.imgur.com/yPcQYDB.png",   // coin heads
             "https://i.imgur.com/J2gqn25.png",   // coin tails
-            "https://mg-api.ariedam.fr/assets/sprites/plants/Carrot.png",         // slots - common
-            "https://mg-api.ariedam.fr/assets/sprites/plants/Banana.png",        // slots - common
-            "https://mg-api.ariedam.fr/assets/sprites/plants/Pepper.png",        // slots - medium
-            "https://mg-api.ariedam.fr/assets/sprites/plants/Sunflower.png",     // slots - rare
-            "https://mg-api.ariedam.fr/assets/sprites/plants/Starweaver.png",     // slots - epic / mines gem
-            "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png",         // mines bomb
+            MgApi.plantSpriteUrl("Carrot"),       // slots - common
+            MgApi.plantSpriteUrl("Banana"),       // slots - common
+            MgApi.plantSpriteUrl("Pepper"),       // slots - medium
+            MgApi.plantSpriteUrl("Sunflower"),    // slots - rare
+            MgApi.plantSpriteUrl("Starweaver"),   // slots - epic / mines gem
+            MgApi.lockSpriteUrl,                  // mines bomb
         )
         casinoUrls.forEach { url ->
             loader.enqueue(ImageRequest.Builder(app).data(url).build())

@@ -399,7 +399,7 @@ private fun PickerProduceTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (price != null) {
@@ -433,7 +433,7 @@ private fun CropTile(item: InventoryCropsItem, apiReady: Boolean, onClick: () ->
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (item.mutations.isNotEmpty()) {
@@ -499,16 +499,13 @@ fun PetHutchCard(
 
 // ── Lock badge overlay ──
 
-private const val LOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"
-private const val UNLOCK_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Unlocked.png"
-
 @Composable
 private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
     Box {
         content()
         if (isLocked) {
             SpriteImage(
-                url = LOCK_SPRITE_URL,
+                url = MgApi.lockSpriteUrl,
                 size = 12.dp,
                 contentDescription = "Locked",
                 modifier = Modifier
@@ -524,7 +521,7 @@ private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun LockToggleIcon(isLocked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     SpriteImage(
-        url = if (isLocked) LOCK_SPRITE_URL else UNLOCK_SPRITE_URL,
+        url = if (isLocked) MgApi.lockSpriteUrl else MgApi.unlockSpriteUrl,
         size = 28.dp,
         contentDescription = if (isLocked) "Locked" else "Unlocked",
         modifier = modifier
@@ -582,8 +579,6 @@ private fun StorageItemDetailDialog(
 
 // ── Storage pet detail dialog ──
 
-private const val COIN_BAG_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/CoinBag.png"
-
 @Composable
 private fun StoragePetDetailDialog(
     pet: InventoryPetItem,
@@ -620,7 +615,7 @@ private fun StoragePetDetailDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SpriteImage(url = COIN_BAG_URL, size = 16.dp, contentDescription = "coins")
+                        SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                         Text(PriceCalculator.formatPrice(sellPrice), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                     }
                 }
@@ -659,7 +654,7 @@ private fun StoragePetDetailDialog(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies)
+                SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 if (entry?.rarity != null) {
@@ -683,7 +678,7 @@ private fun StoragePetDetailDialog(
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("Value", fontSize = 12.sp, color = TextSecondary)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                SpriteImage(url = COIN_BAG_URL, size = 14.dp, contentDescription = "coins")
+                                SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
                                 Text(PriceCalculator.formatPrice(sellPrice), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                             }
                         }
@@ -793,7 +788,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies)
+            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
                 name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,

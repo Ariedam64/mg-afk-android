@@ -13,7 +13,16 @@ import com.mgafk.app.data.repository.MgApi
 
 /**
  * Displays a sprite from the MG API.
- * Usage: SpriteImage("pets", "Worm") or SpriteImage(url = "https://mg-api.ariedam.fr/...")
+ *
+ * When `mutations` is non-empty and the category is `"pets"` or `"plants"`, the
+ * composed endpoint is used so mutation overlays are pre-rendered on the base sprite.
+ * Otherwise, the plain sprite from the categorical URL is used.
+ *
+ * Usage:
+ *   SpriteImage("pets", "Worm")
+ *   SpriteImage("pets", "Worm", mutations = pet.mutations)
+ *   SpriteImage("plants", "Carrot", mutations = crop.mutations)
+ *   SpriteImage(url = "https://mg-api.ariedam.fr/...")
  */
 @Composable
 fun SpriteImage(
@@ -22,9 +31,15 @@ fun SpriteImage(
     modifier: Modifier = Modifier,
     size: Dp = 24.dp,
     contentDescription: String? = null,
+    mutations: List<String> = emptyList(),
 ) {
+    val url = when (category) {
+        "pets" -> MgApi.petSpriteUrl(name, mutations)
+        "plants" -> MgApi.cropSpriteUrl(name, mutations)
+        else -> MgApi.spriteUrl(category, name)
+    }
     SpriteImage(
-        url = MgApi.spriteUrl(category, name),
+        url = url,
         modifier = modifier,
         size = size,
         contentDescription = contentDescription,

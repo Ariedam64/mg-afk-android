@@ -575,6 +575,7 @@ private fun HatchedPetDialog(
                             name = pet.petSpecies,
                             size = 64.dp,
                             contentDescription = pet.petSpecies,
+                            mutations = pet.mutations,
                             modifier = Modifier
                                 .scale(petScale.value)
                                 .alpha(petAlpha.value),

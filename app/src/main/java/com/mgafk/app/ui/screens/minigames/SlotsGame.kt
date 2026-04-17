@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SlotsMachineResult
 import com.mgafk.app.data.repository.SlotsResponse
 import com.mgafk.app.ui.components.AppCard
@@ -69,11 +70,11 @@ import kotlinx.coroutines.launch
 private val ALL_SYMBOLS = listOf("\uD83C\uDF52", "\uD83C\uDF4B", "\uD83C\uDF4A", "\uD83C\uDF47", "\uD83D\uDC8E", "7\uFE0F\u20E3")
 
 private val SYMBOL_SPRITES = mapOf(
-    "\uD83C\uDF52" to "https://mg-api.ariedam.fr/assets/sprites/plants/Carrot.png",
-    "\uD83C\uDF4B" to "https://mg-api.ariedam.fr/assets/sprites/plants/Banana.png",
-    "\uD83C\uDF4A" to "https://mg-api.ariedam.fr/assets/sprites/plants/Pepper.png",
-    "\uD83C\uDF47" to "https://mg-api.ariedam.fr/assets/sprites/plants/Sunflower.png",
-    "\uD83D\uDC8E" to "https://mg-api.ariedam.fr/assets/sprites/plants/Starweaver.png",
+    "\uD83C\uDF52" to MgApi.plantSpriteUrl("Carrot"),
+    "\uD83C\uDF4B" to MgApi.plantSpriteUrl("Banana"),
+    "\uD83C\uDF4A" to MgApi.plantSpriteUrl("Pepper"),
+    "\uD83C\uDF47" to MgApi.plantSpriteUrl("Sunflower"),
+    "\uD83D\uDC8E" to MgApi.plantSpriteUrl("Starweaver"),
     "7\uFE0F\u20E3" to BREAD_SPRITE_URL,
 )
 

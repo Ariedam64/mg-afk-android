@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.MinesUiState
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.theme.Accent
@@ -63,8 +64,8 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 
-private const val GEM_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/plants/Starweaver.png"
-private const val MINE_SPRITE_URL = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"
+private val GemSpriteUrl = MgApi.plantSpriteUrl("Starweaver")
+private val MineSpriteUrl = MgApi.lockSpriteUrl
 
 private val GemColor = Color(0xFF22D3EE)
 private val MineColor = StatusError
@@ -528,13 +529,13 @@ private fun MineCell(
                 when {
                     isMine -> {
                         AsyncImage(
-                            model = MINE_SPRITE_URL, contentDescription = "Mine",
+                            model = MineSpriteUrl, contentDescription = "Mine",
                             modifier = Modifier.size(28.dp),
                         )
                     }
                     isRevealed -> {
                         AsyncImage(
-                            model = GEM_SPRITE_URL, contentDescription = "Gem",
+                            model = GemSpriteUrl, contentDescription = "Gem",
                             modifier = Modifier.size(28.dp),
                         )
                     }

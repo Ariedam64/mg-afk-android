@@ -50,6 +50,8 @@ import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
+import com.mgafk.app.ui.components.PlantCompositeSprite
+import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -463,7 +465,13 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        SpriteImage(url = rp.cropSprite, size = 28.dp, contentDescription = rp.displayName)
+        SpriteImage(
+            category = "plants",
+            name = rp.snapshot.species,
+            size = 28.dp,
+            contentDescription = rp.displayName,
+            mutations = rp.snapshot.mutations,
+        )
 
         Text(
             text = rp.displayName,
@@ -499,6 +507,10 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
 @Composable
 private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
     val color = rarityColor(entry.rarity)
+    val species = remember(entry.tileId) { entry.crops.firstOrNull()?.snapshot?.species ?: "" }
+    val slots = remember(entry.crops) {
+        entry.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, it.snapshot.targetScale) }
+    }
 
     Column(
         modifier = Modifier
@@ -511,7 +523,7 @@ private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        SpriteImage(url = entry.cropSprite, size = 28.dp, contentDescription = entry.displayName)
+        PlantCompositeSprite(species = species, slots = slots, size = 40.dp, contentDescription = entry.displayName)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             entry.displayName,
@@ -621,7 +633,13 @@ private fun PlantDetailDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Sprite
-            SpriteImage(url = plant.cropSprite, size = 56.dp, contentDescription = plant.displayName)
+            SpriteImage(
+                category = "plants",
+                name = plant.snapshot.species,
+                size = 56.dp,
+                contentDescription = plant.displayName,
+                mutations = plant.snapshot.mutations,
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -811,6 +829,10 @@ private fun MultiSlotPlantDetailDialog(
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
+    val species = remember(plant.tileId) { plant.crops.firstOrNull()?.snapshot?.species ?: "" }
+    val headerSlots = remember(plant.crops) {
+        plant.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, it.snapshot.targetScale) }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -821,7 +843,7 @@ private fun MultiSlotPlantDetailDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header
-            SpriteImage(url = plant.cropSprite, size = 56.dp, contentDescription = plant.displayName)
+            PlantCompositeSprite(species = species, slots = headerSlots, size = 80.dp, contentDescription = plant.displayName)
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -944,10 +966,22 @@ private fun CropSlotRow(
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        SpriteImage(
+            category = "plants",
+            name = crop.snapshot.species,
+            size = 32.dp,
+            contentDescription = crop.displayName,
+            mutations = crop.snapshot.mutations,
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
         // Slot label + mutations + remaining time
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1038,6 +1072,7 @@ private fun CropSlotRow(
                     color = if (isMature) Color.White else Color.White.copy(alpha = 0.4f),
                 )
             }
+        }
         }
     }
 }

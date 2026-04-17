@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -45,7 +46,7 @@ data class GameDef(
 
 private val GAMES = listOf(
     GameDef("coinflip", "Coin Flip", "\uD83E\uDE99", "Double or nothing", available = true, imageUrl = "https://i.imgur.com/J2gqn25.png"),
-    GameDef("mines", "Mines", "\uD83D\uDCA3", "Avoid the mines", available = true, imageUrl = "https://mg-api.ariedam.fr/assets/sprites/ui/Locked.png"),
+    GameDef("mines", "Mines", "\uD83D\uDCA3", "Avoid the mines", available = true, imageUrl = MgApi.lockSpriteUrl),
     GameDef("slots", "Slots", "\uD83C\uDFB0", "Spin to win", available = true),
     GameDef("dice", "Dice", "\uD83C\uDFB2", "Roll over or under", available = true),
     GameDef("crash", "Crash", "\uD83D\uDE80", "Cashout before crash", available = true),

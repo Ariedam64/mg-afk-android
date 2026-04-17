@@ -308,7 +308,7 @@ private fun ActivePetRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SpriteImage(category = "pets", name = pet.species, size = 36.dp, contentDescription = pet.species)
+                SpriteImage(category = "pets", name = pet.species, size = 36.dp, contentDescription = pet.species, mutations = pet.mutations)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     pet.name.ifBlank { pet.species },
@@ -633,7 +633,7 @@ private fun PetCandidateTile(
             modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies)
+            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
                 name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
@@ -784,7 +784,7 @@ private fun FeedProduceTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        SpriteImage(url = entry?.cropSprite, size = 28.dp, contentDescription = name)
+        SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (price != null) {
