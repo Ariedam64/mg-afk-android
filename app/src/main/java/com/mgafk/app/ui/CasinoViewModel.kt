@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 data class BlackjackUiState(
     val active: Boolean = false,
     val response: com.mgafk.app.data.repository.BlackjackResponse? = null,
+    val initialBet: Long = 0, // Original per-hand bet chosen by the player — unaffected by Double/Split
     val loading: Boolean = false,
     val error: String? = null,
 )
@@ -598,14 +599,14 @@ class CasinoViewModel : ViewModel() {
     // ---- Blackjack ----
 
     fun startBlackjack(amount: Long) {
-        _state.update { it.copy(blackjack = BlackjackUiState(loading = true)) }
+        _state.update { it.copy(blackjack = BlackjackUiState(loading = true, initialBet = amount)) }
         viewModelScope.launch {
             CasinoApi.startBlackjack(apiKey, amount)
                 .onSuccess { resp ->
                     _state.update {
                         it.copy(
                             casinoBalance = resp.newBalance,
-                            blackjack = BlackjackUiState(active = true, response = resp),
+                            blackjack = BlackjackUiState(active = true, response = resp, initialBet = amount),
                         )
                     }
                     if (resp.status == "done") fetchTransactions()
@@ -671,6 +672,33 @@ class CasinoViewModel : ViewModel() {
                     _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, response = resp)) }
                     if (resp.newBalance > 0) _state.update { it.copy(casinoBalance = resp.newBalance) }
                     fetchTransactions()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }
+                }
+        }
+    }
+
+    fun blackjackSplit() {
+        val current = _state.value.blackjack
+        if (!current.active || current.loading) return
+        val previousBet = current.response?.bet ?: 0L
+        _state.update { it.copy(blackjack = current.copy(loading = true)) }
+        viewModelScope.launch {
+            CasinoApi.blackjackSplit(apiKey)
+                .onSuccess { resp ->
+                    _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, response = resp)) }
+                    // Server debits a second bet on split. Reflect it locally if the
+                    // playing response doesn't include newBalance.
+                    if (resp.newBalance > 0) {
+                        _state.update { it.copy(casinoBalance = resp.newBalance) }
+                    } else if (previousBet > 0) {
+                        _state.update { s ->
+                            val bal = s.casinoBalance ?: return@update s
+                            s.copy(casinoBalance = bal - previousBet)
+                        }
+                    }
+                    if (resp.status == "done") fetchTransactions()
                 }
                 .onFailure { e ->
                     _state.update { it.copy(blackjack = it.blackjack.copy(loading = false, error = e.message)) }

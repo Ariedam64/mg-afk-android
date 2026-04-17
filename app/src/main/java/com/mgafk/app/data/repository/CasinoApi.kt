@@ -221,6 +221,10 @@ data class BlackjackPlayerHand(
     val cards: List<BlackjackCard>,
     val value: Int,
     val blackjack: Boolean = false,
+    // Populated per-hand when status=="done" and split==true
+    val result: String? = null,
+    val bet: Long = 0,
+    val payout: Long = 0,
 )
 
 @Serializable
@@ -236,12 +240,19 @@ data class BlackjackResponse(
     val game: String,
     val status: String, // "playing" | "done"
     val result: String? = null, // "blackjack" | "win" | "lose" | "push" | "bust" | "dealer_bust" | "dealer_blackjack"
-    val player: BlackjackPlayerHand,
+    val player: BlackjackPlayerHand? = null, // null when split==true
     val dealer: BlackjackDealerHand,
     val bet: Long = 0,
     val payout: Long = 0,
     val newBalance: Long = 0,
     val canDouble: Boolean = false,
+    val canSplit: Boolean = false,
+    // Split fields
+    val split: Boolean = false,
+    val activeHand: Int = 0,
+    val hand0: BlackjackPlayerHand? = null,
+    val hand1: BlackjackPlayerHand? = null,
+    val totalPayout: Long = 0,
 )
 
 @Serializable
@@ -504,6 +515,14 @@ object CasinoApi {
     suspend fun blackjackDouble(apiKey: String): Result<BlackjackResponse> =
         safeCall(apiKey, "blackjackDouble") {
             val request = post("/games/blackjack/double", apiKey, null)
+            val body = execute(request)
+            json.decodeFromString<BlackjackResponse>(body)
+        }
+
+    /** Blackjack split */
+    suspend fun blackjackSplit(apiKey: String): Result<BlackjackResponse> =
+        safeCall(apiKey, "blackjackSplit") {
+            val request = post("/games/blackjack/split", apiKey, null)
             val body = execute(request)
             json.decodeFromString<BlackjackResponse>(body)
         }

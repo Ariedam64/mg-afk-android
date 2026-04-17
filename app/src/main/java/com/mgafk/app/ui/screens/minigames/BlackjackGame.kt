@@ -93,6 +93,7 @@ fun BlackjackGame(
     onHit: () -> Unit,
     onStand: () -> Unit,
     onDouble: () -> Unit,
+    onSplit: () -> Unit,
     onReset: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -108,26 +109,29 @@ fun BlackjackGame(
     val isDone = resp?.status == "done"
     val isPlaying = resp?.status == "playing"
 
+    val playerCardTotal = (resp?.player?.cards?.size ?: 0) +
+        (resp?.hand0?.cards?.size ?: 0) +
+        (resp?.hand1?.cards?.size ?: 0)
+    val dealerCardTotal = resp?.dealer?.cards?.size ?: 0
+
     // Animate dealing sequence when game first starts or new card arrives
-    LaunchedEffect(resp?.player?.cards?.size, resp?.dealer?.cards?.size) {
+    LaunchedEffect(playerCardTotal, dealerCardTotal) {
         if (resp != null && state.active) {
-            val playerCount = resp.player.cards.size
-            val dealerCount = resp.dealer.cards.size
             // On initial deal (2+2), stagger them
-            if (prevPlayerCount == 0 && playerCount >= 2) {
+            if (prevPlayerCount == 0 && playerCardTotal >= 2) {
                 showActions = false
                 sound.play(Sfx.CARD_DEAL)
                 delay(800) // wait for dealing animation
                 showActions = true
-            } else if (playerCount > prevPlayerCount || dealerCount > prevDealerCount) {
-                // New card drawn
+            } else if (playerCardTotal > prevPlayerCount || dealerCardTotal > prevDealerCount) {
+                // New card drawn (hit / double / split)
                 showActions = false
                 sound.play(Sfx.CARD_FLIP)
                 delay(400)
                 showActions = true
             }
-            prevPlayerCount = playerCount
-            prevDealerCount = dealerCount
+            prevPlayerCount = playerCardTotal
+            prevDealerCount = dealerCardTotal
         }
     }
 
@@ -137,10 +141,18 @@ fun BlackjackGame(
             showActions = false
             sound.play(Sfx.CARD_FLIP)
             delay(600) // let dealer card flip animation play
-            val won = resp?.result in listOf("blackjack", "win", "dealer_bust")
-            val push = resp?.result == "push"
-            if (won) sound.play(if (resp?.result == "blackjack") Sfx.BIG_WIN else Sfx.WIN)
-            else if (!push) sound.play(Sfx.LOSE)
+            val totalBet = blackjackTotalBet(resp)
+            val totalPay = blackjackTotalPayout(resp)
+            val won = totalPay > totalBet
+            val push = totalPay == totalBet && totalBet > 0
+            if (won) {
+                val bigWin = resp?.result == "blackjack" ||
+                    resp?.hand0?.result == "blackjack" ||
+                    resp?.hand1?.result == "blackjack"
+                sound.play(if (bigWin) Sfx.BIG_WIN else Sfx.WIN)
+            } else if (!push) {
+                sound.play(Sfx.LOSE)
+            }
             showResultBanner = true
         } else {
             showResultBanner = false
@@ -204,13 +216,39 @@ fun BlackjackGame(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Player hand
-                    AnimatedHandSection(
-                        label = "You",
-                        cards = resp.player.cards,
-                        value = resp.player.value,
-                        blackjack = resp.player.blackjack,
-                    )
+                    // Player hand(s)
+                    if (resp.split) {
+                        val hand0 = resp.hand0
+                        val hand1 = resp.hand1
+                        if (hand0 != null) {
+                            AnimatedHandSection(
+                                label = "Hand 1",
+                                cards = hand0.cards,
+                                value = hand0.value,
+                                blackjack = hand0.blackjack,
+                                active = isPlaying && resp.activeHand == 0,
+                                resultLabel = if (isDone) hand0.result else null,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                        if (hand1 != null) {
+                            AnimatedHandSection(
+                                label = "Hand 2",
+                                cards = hand1.cards,
+                                value = hand1.value,
+                                blackjack = hand1.blackjack,
+                                active = isPlaying && resp.activeHand == 1,
+                                resultLabel = if (isDone) hand1.result else null,
+                            )
+                        }
+                    } else if (resp.player != null) {
+                        AnimatedHandSection(
+                            label = "You",
+                            cards = resp.player.cards,
+                            value = resp.player.value,
+                            blackjack = resp.player.blackjack,
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -234,6 +272,9 @@ fun BlackjackGame(
                                 if (resp.canDouble) {
                                     ActionButton("Double", StatusConnected, Modifier.weight(1f), onDouble)
                                 }
+                                if (resp.canSplit) {
+                                    ActionButton("Split", Color(0xFFB46DFF), Modifier.weight(1f), onSplit)
+                                }
                             }
                         }
 
@@ -246,7 +287,12 @@ fun BlackjackGame(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(model = BREAD_SPRITE_URL, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Bet: ${numberFormat.format(resp.bet)}", fontSize = 12.sp, color = TextMuted)
+                            val betText = if (resp.split) {
+                                "Bet: ${numberFormat.format(blackjackTotalBet(resp))}"
+                            } else {
+                                "Bet: ${numberFormat.format(resp.bet)}"
+                            }
+                            Text(betText, fontSize = 12.sp, color = TextMuted)
                         }
                     }
 
@@ -331,23 +377,41 @@ fun BlackjackGame(
     }
 
     if (isDone && resp != null) {
-        val resultInfo = getResultInfo(resp.result)
-        val bjWon = resp.result in listOf("blackjack", "win", "dealer_bust")
+        val totalBet = blackjackTotalBet(resp)
+        val totalPayout = blackjackTotalPayout(resp)
+        val bjWon = totalPayout > totalBet
+        val resultInfo = if (resp.split) {
+            getSplitResultInfo(resp.hand0?.result, resp.hand1?.result, totalPayout, totalBet)
+        } else {
+            getResultInfo(resp.result)
+        }
+        // Replay uses the player's original chosen bet — not resp.bet, which reflects Double (×2) or Split (×2 via totalBet).
+        val replayBet = if (state.initialBet > 0) state.initialBet else totalBet
         ResultPopup(
             visible = showResultBanner,
             won = bjWon,
             title = resultInfo.title,
             subtitle = resultInfo.subtitle,
-            bet = resp.bet,
-            payout = resp.payout,
+            bet = totalBet,
+            payout = totalPayout,
+            replayBet = replayBet,
             onReplay = {
-                val lastBet = resp.bet
                 onReset()
-                onStart(lastBet)
+                onStart(replayBet)
             },
             onBack = { onReset() },
         )
     }
+}
+
+private fun blackjackTotalBet(resp: com.mgafk.app.data.repository.BlackjackResponse?): Long {
+    if (resp == null) return 0
+    return if (resp.split) (resp.hand0?.bet ?: 0) + (resp.hand1?.bet ?: 0) else resp.bet
+}
+
+private fun blackjackTotalPayout(resp: com.mgafk.app.data.repository.BlackjackResponse?): Long {
+    if (resp == null) return 0
+    return if (resp.split) resp.totalPayout else resp.payout
 }
 
 // ── Animated hand section ──
@@ -360,9 +424,34 @@ private fun AnimatedHandSection(
     isHidden: Boolean = false,
     blackjack: Boolean = false,
     revealHidden: Boolean = false,
+    active: Boolean = false,
+    resultLabel: String? = null,
 ) {
+    // Pulsing border for the active split hand
+    val activeAlpha = remember { Animatable(0f) }
+    LaunchedEffect(active) {
+        if (active) {
+            while (true) {
+                activeAlpha.animateTo(0.6f, tween(700))
+                activeAlpha.animateTo(0.15f, tween(700))
+            }
+        } else {
+            activeAlpha.snapTo(0f)
+        }
+    }
+
+    val containerModifier = if (active) {
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(2.dp, Accent.copy(alpha = activeAlpha.value), RoundedCornerShape(12.dp))
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(vertical = 2.dp)
+    }
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = containerModifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -389,6 +478,19 @@ private fun AnimatedHandSection(
                     fontFamily = FontFamily.Monospace, color = TextPrimary,
                 )
             }
+            if (resultLabel != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                val (text, color) = resultChipFor(resultLabel)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(color.copy(alpha = 0.2f))
+                        .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -412,6 +514,17 @@ private fun AnimatedHandSection(
             }
         }
     }
+}
+
+private fun resultChipFor(result: String): Pair<String, Color> = when (result) {
+    "blackjack" -> "BJ" to Color(0xFFFFD700)
+    "win" -> "WIN" to StatusConnected
+    "dealer_bust" -> "WIN" to StatusConnected
+    "push" -> "PUSH" to Accent
+    "bust" -> "BUST" to StatusError
+    "lose" -> "LOSE" to StatusError
+    "dealer_blackjack" -> "LOSE" to StatusError
+    else -> result.uppercase() to TextMuted
 }
 
 // ── Animated card with flip + slide-in ──
@@ -601,4 +714,32 @@ private fun getResultInfo(result: String?): ResultInfo = when (result) {
     "lose" -> ResultInfo("You Lost", "Dealer wins", StatusError)
     "dealer_blackjack" -> ResultInfo("Dealer Blackjack", "Dealer had a natural 21", StatusError)
     else -> ResultInfo("Game Over", "", TextMuted)
+}
+
+private fun getSplitResultInfo(
+    hand0Result: String?,
+    hand1Result: String?,
+    totalPayout: Long,
+    totalBet: Long,
+): ResultInfo {
+    val title = when {
+        totalPayout > totalBet -> "Split Win!"
+        totalPayout == totalBet -> "Split Push"
+        totalPayout == 0L -> "Split Lost"
+        else -> "Split Result"
+    }
+    val subtitle = "Hand 1: ${shortResult(hand0Result)} • Hand 2: ${shortResult(hand1Result)}"
+    return ResultInfo(title, subtitle, TextPrimary)
+}
+
+private fun shortResult(result: String?): String = when (result) {
+    "blackjack" -> "Blackjack"
+    "win" -> "Win"
+    "dealer_bust" -> "Win"
+    "push" -> "Push"
+    "bust" -> "Bust"
+    "lose" -> "Lose"
+    "dealer_blackjack" -> "Lose"
+    null -> "—"
+    else -> result.replaceFirstChar { it.uppercase() }
 }

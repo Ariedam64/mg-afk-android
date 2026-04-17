@@ -52,6 +52,7 @@ fun ResultPopup(
     subtitle: String? = null,
     bet: Long,
     payout: Long,
+    replayBet: Long = bet,
     onReplay: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -164,7 +165,7 @@ fun ResultPopup(
                         .padding(vertical = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("Replay ${numberFormat.format(bet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
+                    Text("Replay ${numberFormat.format(replayBet)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = SurfaceDark)
                 }
             }
         }

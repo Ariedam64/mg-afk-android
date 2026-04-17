@@ -792,6 +792,7 @@ private fun SectionContent(
                         onHit = { casinoViewModel.blackjackHit() },
                         onStand = { casinoViewModel.blackjackStand() },
                         onDouble = { casinoViewModel.blackjackDouble() },
+                        onSplit = { casinoViewModel.blackjackSplit() },
                         onReset = { casinoViewModel.resetBlackjack() },
                         onBack = {
                             casinoViewModel.resetBlackjack()
