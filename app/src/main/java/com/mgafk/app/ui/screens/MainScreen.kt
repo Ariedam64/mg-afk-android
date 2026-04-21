@@ -570,6 +570,10 @@ private fun SectionContent(
             )
             PlayInGameCard(
                 canPlay = session.cookie.isNotBlank() && session.room.isNotBlank(),
+                injectGemini = state.settings.injectGeminiMod,
+                onToggleInjectGemini = { enabled ->
+                    viewModel.updateSettings { it.copy(injectGeminiMod = enabled) }
+                },
                 onPlay = {
                     onPlayRequest(session.id, session.cookie, session.room, session.gameUrl)
                 },
@@ -1064,6 +1068,8 @@ private fun SessionChips(
 @Composable
 private fun PlayInGameCard(
     canPlay: Boolean,
+    injectGemini: Boolean,
+    onToggleInjectGemini: (Boolean) -> Unit,
     onPlay: () -> Unit,
 ) {
     com.mgafk.app.ui.components.AppCard(
@@ -1072,11 +1078,46 @@ private fun PlayInGameCard(
         persistKey = "dashboard_play",
     ) {
         Text(
-            "Play in-game with the Gemini mod automatically injected. AFK pauses while you play.",
+            "Open the game in-app with your session cookie. AFK pauses while you play.",
             fontSize = 11.sp,
             color = TextMuted,
             lineHeight = 15.sp,
         )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Inject Gemini toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .clickable { onToggleInjectGemini(!injectGemini) }
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Inject Gemini mod",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary,
+                )
+                Text(
+                    if (injectGemini) "Latest release auto-downloaded from GitHub."
+                    else "Vanilla game, no userscript.",
+                    fontSize = 10.sp,
+                    color = TextMuted,
+                    lineHeight = 13.sp,
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            androidx.compose.material3.Switch(
+                checked = injectGemini,
+                onCheckedChange = onToggleInjectGemini,
+                colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = Accent),
+            )
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -1092,7 +1133,8 @@ private fun PlayInGameCard(
             shape = RoundedCornerShape(10.dp),
         ) {
             Text(
-                if (canPlay) "Play" else "Set cookie & room first",
+                if (canPlay) (if (injectGemini) "Play with Gemini" else "Play vanilla")
+                else "Set cookie & room first",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (canPlay) androidx.compose.ui.graphics.Color.White

@@ -32,6 +32,7 @@ class PlayActivity : Activity() {
         const val EXTRA_COOKIE = "cookie"
         const val EXTRA_ROOM = "room"
         const val EXTRA_GAME_URL = "gameUrl"
+        const val EXTRA_INJECT_GEMINI = "injectGemini"
         private const val TAG = "PlayActivity"
         private val USERSCRIPT_VERSION_REGEX = Regex("""//\s*@version\s+(\S+)""")
     }
@@ -44,6 +45,8 @@ class PlayActivity : Activity() {
     private var fetchJob: Job? = null
     /** Set once the userscript has been injected into the current page load. */
     private var injectedForCurrentLoad = false
+    /** When false, skip both the GM_* polyfills and the userscript injection. */
+    private var injectGemini = true
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +55,7 @@ class PlayActivity : Activity() {
         val cookie = intent.getStringExtra(EXTRA_COOKIE).orEmpty()
         val room = intent.getStringExtra(EXTRA_ROOM).orEmpty()
         val gameUrl = intent.getStringExtra(EXTRA_GAME_URL).orEmpty().ifBlank { "magicgarden.gg" }
+        injectGemini = intent.getBooleanExtra(EXTRA_INJECT_GEMINI, true)
 
         if (cookie.isBlank() || room.isBlank()) {
             AppLog.w(TAG, "Missing cookie or room — finishing")
@@ -97,12 +101,14 @@ class PlayActivity : Activity() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                     super.onPageStarted(view, url, favicon)
                     injectedForCurrentLoad = false
-                    view?.evaluateJavascript(gmPolyfillScript(), null)
+                    if (injectGemini) {
+                        view?.evaluateJavascript(gmPolyfillScript(), null)
+                    }
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    injectGemini(view)
+                    if (injectGemini) injectGeminiScript(view)
                 }
             }
         }
@@ -111,19 +117,22 @@ class PlayActivity : Activity() {
 
         // Kick off a background fetch for the latest Gemini. If we already have
         // it cached that returns immediately; otherwise the WebView will
-        // re-inject as soon as the fetch completes.
-        fetchJob = scope.launch {
-            geminiScript = withContext(Dispatchers.IO) {
-                GeminiFetcher.fetchLatest(this@PlayActivity)
+        // re-inject as soon as the fetch completes. Skipped entirely when the
+        // user opted out of mod injection.
+        if (injectGemini) {
+            fetchJob = scope.launch {
+                geminiScript = withContext(Dispatchers.IO) {
+                    GeminiFetcher.fetchLatest(this@PlayActivity)
+                }
+                // If the page already finished loading, inject now.
+                if (!injectedForCurrentLoad) injectGeminiScript(webView)
             }
-            // If the page already finished loading, inject now.
-            if (!injectedForCurrentLoad) injectGemini(webView)
         }
 
         webView.loadUrl("https://$gameUrl/r/$room")
     }
 
-    private fun injectGemini(view: WebView?) {
+    private fun injectGeminiScript(view: WebView?) {
         val script = geminiScript ?: return
         val target = view ?: return
         if (injectedForCurrentLoad) return

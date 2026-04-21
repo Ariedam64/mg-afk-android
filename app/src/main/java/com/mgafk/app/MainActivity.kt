@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
                             putExtra(PlayActivity.EXTRA_COOKIE, cookie)
                             putExtra(PlayActivity.EXTRA_ROOM, room)
                             putExtra(PlayActivity.EXTRA_GAME_URL, gameUrl)
+                            putExtra(PlayActivity.EXTRA_INJECT_GEMINI, viewModel.state.value.settings.injectGeminiMod)
                         }
                         playLauncher.launch(intent)
                     },

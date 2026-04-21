@@ -765,7 +765,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
 }
 
 @Composable
-private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Long) {
+private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Long, dust: Long = 0L) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
     val rarityId = entry?.rarity
@@ -830,6 +830,21 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
                         fontSize = 7.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
+                        lineHeight = 9.sp,
+                    )
+                }
+            }
+            if (dust > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    SpriteImage(url = MgApi.magicDustUrl, size = 9.dp, contentDescription = "dust")
+                    Text(
+                        PriceCalculator.formatPrice(dust),
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFC084FC),
                         lineHeight = 9.sp,
                     )
                 }
@@ -1336,15 +1351,18 @@ private fun SellAllPetsDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    data class Row4(val pet: InventoryPetItem, val name: String, val price: Long, val dust: Long)
     val petsWithPrices = remember(pets, apiReady) {
         pets.map { pet ->
             val entry = MgApi.findPet(pet.petSpecies)
             val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
             val price = PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations) ?: 0L
-            Triple(pet, name, price)
+            val dust = PriceCalculator.calculatePetDustValue(pet.petSpecies, pet.sourceEggId, pet.xp, pet.targetScale, pet.mutations) ?: 0L
+            Row4(pet, name, price, dust)
         }
     }
-    val totalValue = remember(petsWithPrices) { petsWithPrices.sumOf { it.third } }
+    val totalValue = remember(petsWithPrices) { petsWithPrices.sumOf { it.price } }
+    val totalDust = remember(petsWithPrices) { petsWithPrices.sumOf { it.dust } }
 
     var confirmed by remember { mutableStateOf(false) }
 
@@ -1373,6 +1391,21 @@ private fun SellAllPetsDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
                     )
+                }
+                if (totalDust > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        SpriteImage(url = MgApi.magicDustUrl, size = 18.dp, contentDescription = "dust")
+                        Text(
+                            PriceCalculator.formatFull(totalDust),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFC084FC),
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
@@ -1415,7 +1448,7 @@ private fun SellAllPetsDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 GridOf(pets.size) { i ->
-                    PetTileWithPrice(pets[i], apiReady, petsWithPrices[i].third)
+                    PetTileWithPrice(pets[i], apiReady, petsWithPrices[i].price, petsWithPrices[i].dust)
                 }
             }
 
@@ -1439,6 +1472,28 @@ private fun SellAllPetsDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
                     )
+                }
+            }
+            if (totalDust > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
+                        Text(
+                            PriceCalculator.formatFull(totalDust),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFC084FC),
+                        )
+                    }
                 }
             }
 

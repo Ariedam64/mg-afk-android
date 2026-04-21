@@ -42,6 +42,9 @@ data class AppSettings(
     val autoStockSeedSilo: Boolean = false,
     val autoStockDecorShed: Boolean = false,
 
+    // Play in game — inject the Gemini userscript into the WebView
+    val injectGeminiMod: Boolean = true,
+
     // Developer
     val showDebugMenu: Boolean = false,
 )
