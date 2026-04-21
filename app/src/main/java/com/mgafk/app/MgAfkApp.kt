@@ -10,6 +10,11 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import com.mgafk.app.data.repository.GeminiFetcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class MgAfkApp : Application(), ImageLoaderFactory {
 
@@ -19,9 +24,14 @@ class MgAfkApp : Application(), ImageLoaderFactory {
         const val CHANNEL_ALARMS = "mgafk_alarms"
     }
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // Warm the Gemini userscript cache so the in-app Play WebView has it
+        // ready as soon as the user taps Play.
+        appScope.launch { GeminiFetcher.fetchLatest(this@MgAfkApp) }
     }
 
     override fun newImageLoader(): ImageLoader =

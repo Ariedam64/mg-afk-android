@@ -153,6 +153,7 @@ fun MainScreen(
     casinoViewModel: com.mgafk.app.ui.CasinoViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
     onCasinoLoginRequest: (sessionId: String) -> Unit = {},
+    onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
 ) {
     val state by viewModel.state.collectAsState()
     val casinoState by casinoViewModel.state.collectAsState()
@@ -262,6 +263,7 @@ fun MainScreen(
                                         casinoState = casinoState,
                                         onLoginRequest = onLoginRequest,
                                         onCasinoLoginRequest = onCasinoLoginRequest,
+                                        onPlayRequest = onPlayRequest,
                                     )
                                     Spacer(modifier = Modifier.height(24.dp))
                                 }
@@ -545,6 +547,7 @@ private fun SectionContent(
     casinoState: com.mgafk.app.ui.CasinoUiState,
     onLoginRequest: (sessionId: String) -> Unit,
     onCasinoLoginRequest: (sessionId: String) -> Unit = {},
+    onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
 ) {
     when (section) {
         NavSection.DASHBOARD -> {
@@ -565,6 +568,13 @@ private fun SectionContent(
                 onLogin = { onLoginRequest(session.id) },
                 onLogout = { viewModel.clearToken(session.id) },
             )
+            PlayInGameCard(
+                canPlay = session.cookie.isNotBlank() && session.room.isNotBlank(),
+                onPlay = {
+                    onPlayRequest(session.id, session.cookie, session.room, session.gameUrl)
+                },
+            )
+
             LiveStatusCard(session = session)
 
             // ── Remove session ──
@@ -1044,6 +1054,49 @@ private fun SessionChips(
                 contentDescription = "Add session",
                 tint = Accent,
                 modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+// ── Play in game (opens WebView with cookie + Gemini userscript injected) ──
+
+@Composable
+private fun PlayInGameCard(
+    canPlay: Boolean,
+    onPlay: () -> Unit,
+) {
+    com.mgafk.app.ui.components.AppCard(
+        title = "Play in game",
+        collapsible = true,
+        persistKey = "dashboard_play",
+    ) {
+        Text(
+            "Play in-game with the Gemini mod automatically injected. AFK pauses while you play.",
+            fontSize = 11.sp,
+            color = TextMuted,
+            lineHeight = 15.sp,
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        androidx.compose.material3.Button(
+            onClick = onPlay,
+            enabled = canPlay,
+            modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = StatusConnected,
+                disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
+                disabledContentColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f),
+            ),
+            shape = RoundedCornerShape(10.dp),
+        ) {
+            Text(
+                if (canPlay) "Play" else "Set cookie & room first",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (canPlay) androidx.compose.ui.graphics.Color.White
+                else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f),
             )
         }
     }
