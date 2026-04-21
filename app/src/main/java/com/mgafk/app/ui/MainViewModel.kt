@@ -1081,6 +1081,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         clients[sessionId]?.actions?.harvestCrop(slot = slot, slotsIndex = slotIndex)
     }
 
+    private val pendingCleanseJobs = mutableMapOf<String, Job>()
+
+    /** Cleanse one mutation from a crop slot. Requires a CropCleanser tool. */
+    fun cropCleanse(sessionId: String, tileObjectIdx: Int, growSlotIdx: Int) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val count = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0
+        if (count <= 0) return
+
+        // OPTIMISTIC: decrement CropCleanser quantity
+        val previousInventory = session.inventory
+        updateSession(sessionId) { s ->
+            s.copy(
+                inventory = s.inventory.copy(
+                    tools = s.inventory.tools.mapNotNull { tool ->
+                        if (tool.toolId == "CropCleanser") {
+                            if (tool.quantity > 1) tool.copy(quantity = tool.quantity - 1) else null
+                        } else tool
+                    }
+                ),
+            )
+        }
+
+        actions.cropCleanser(tileObjectIdx = tileObjectIdx, growSlotIdx = growSlotIdx)
+
+        // Rollback after 5s if server hasn't confirmed
+        val key = "$sessionId:cleanse:$tileObjectIdx:$growSlotIdx"
+        pendingCleanseJobs[key]?.cancel()
+        pendingCleanseJobs[key] = viewModelScope.launch {
+            delay(5000)
+            updateSession(sessionId) { s -> s.copy(inventory = previousInventory) }
+            pendingCleanseJobs.remove(key)
+        }
+    }
+
     private val pendingPotJobs = mutableMapOf<String, Job>()
 
     /** Pot a plant — moves it from garden to inventory. Requires a PlanterPot tool. */

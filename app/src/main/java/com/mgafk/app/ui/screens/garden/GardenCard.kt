@@ -187,8 +187,10 @@ fun GardenCard(
     onHarvest: (slot: Int, slotIndex: Int) -> Unit = { _, _ -> },
     onWater: (slot: Int) -> Unit = {},
     onPot: (slot: Int) -> Unit = {},
+    onCleanse: (tileId: Int, slotIndex: Int) -> Unit = { _, _ -> },
     wateringCans: Int = 0,
     planterPots: Int = 0,
+    cropCleansers: Int = 0,
 ) {
     var selectedRarity by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMutation by rememberSaveable { mutableStateOf<String?>(null) }
@@ -414,6 +416,7 @@ fun GardenCard(
                 plant = liveCrop,
                 wateringCans = wateringCans,
                 planterPots = planterPots,
+                cropCleansers = cropCleansers,
                 onHarvest = {
                     onHarvest(tileId, slotIndex)
                     selectedCropKey = null
@@ -423,6 +426,7 @@ fun GardenCard(
                     onPot(tileId)
                     selectedCropKey = null
                 },
+                onCleanse = { onCleanse(tileId, slotIndex) },
                 onDismiss = { selectedCropKey = null },
             )
         } else {
@@ -438,9 +442,11 @@ fun GardenCard(
                 plant = liveEntry,
                 wateringCans = wateringCans,
                 planterPots = planterPots,
+                cropCleansers = cropCleansers,
                 onHarvest = { slot, slotIndex -> onHarvest(slot, slotIndex) },
                 onWater = { slot -> onWater(slot) },
                 onPot = { slot -> onPot(slot) },
+                onCleanse = { slot, slotIndex -> onCleanse(slot, slotIndex) },
                 onDismiss = { selectedMultiPlantTileId = null },
             )
         } else {
@@ -618,9 +624,11 @@ private fun PlantDetailDialog(
     plant: ResolvedPlant,
     wateringCans: Int,
     planterPots: Int,
+    cropCleansers: Int,
     onHarvest: () -> Unit,
     onWater: () -> Unit,
     onPot: () -> Unit,
+    onCleanse: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
@@ -745,6 +753,8 @@ private fun PlantDetailDialog(
 
             val canPot = planterPots > 0
             val potSprite = remember { MgApi.findItem("PlanterPot")?.sprite }
+            val canCleanse = cropCleansers > 0 && plant.snapshot.mutations.isNotEmpty()
+            val cleanserSprite = remember { MgApi.findItem("CropCleanser")?.sprite }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -793,6 +803,33 @@ private fun PlantDetailDialog(
                 }
             }
 
+            // Cleanse button (separate row)
+            Button(
+                onClick = onCleanse,
+                enabled = canCleanse,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF8B5CF6),
+                    disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
+                    disabledContentColor = Color.White.copy(alpha = 0.4f),
+                ),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                SpriteImage(url = cleanserSprite, size = 18.dp, contentDescription = "cleanser")
+                Spacer(modifier = Modifier.size(6.dp))
+                val cleanseLabel = when {
+                    plant.snapshot.mutations.isEmpty() -> "No mutations"
+                    cropCleansers <= 0 -> "No cleansers"
+                    else -> "Cleanse x${fmtQty(cropCleansers)}"
+                }
+                Text(
+                    cleanseLabel,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
+                )
+            }
+
             // Pot button (separate row)
             Button(
                 onClick = onPot,
@@ -825,9 +862,11 @@ private fun MultiSlotPlantDetailDialog(
     plant: GardenEntry.MultiSlotPlant,
     wateringCans: Int,
     planterPots: Int,
+    cropCleansers: Int,
     onHarvest: (slot: Int, slotIndex: Int) -> Unit,
     onWater: (slot: Int) -> Unit,
     onPot: (slot: Int) -> Unit,
+    onCleanse: (slot: Int, slotIndex: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
@@ -918,9 +957,11 @@ private fun MultiSlotPlantDetailDialog(
                         slotLabel = "Slot ${crop.snapshot.slotIndex + 1}",
                         color = color,
                         wateringCans = wateringCans,
+                        cropCleansers = cropCleansers,
                         now = now,
                         onHarvest = { onHarvest(crop.snapshot.tileId, crop.snapshot.slotIndex) },
                         onWater = { onWater(crop.snapshot.tileId) },
+                        onCleanse = { onCleanse(crop.snapshot.tileId, crop.snapshot.slotIndex) },
                     )
                 }
             }
@@ -962,13 +1003,16 @@ private fun CropSlotRow(
     slotLabel: String,
     color: Color,
     wateringCans: Int,
+    cropCleansers: Int,
     now: Long,
     onHarvest: () -> Unit,
     onWater: () -> Unit,
+    onCleanse: () -> Unit,
 ) {
     val sizePercent = computeSizePercent(crop.snapshot.targetScale, crop.maxScale)
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
+    val canCleanse = cropCleansers > 0 && crop.snapshot.mutations.isNotEmpty()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1074,6 +1118,30 @@ private fun CropSlotRow(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isMature) Color.White else Color.White.copy(alpha = 0.4f),
+                )
+            }
+            Button(
+                onClick = onCleanse,
+                enabled = canCleanse,
+                modifier = Modifier.weight(1f).height(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF8B5CF6),
+                    disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
+                    disabledContentColor = Color.White.copy(alpha = 0.4f),
+                ),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            ) {
+                val label = when {
+                    crop.snapshot.mutations.isEmpty() -> "No muts"
+                    cropCleansers <= 0 -> "No tool"
+                    else -> "Cleanse"
+                }
+                Text(
+                    label,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
                 )
             }
         }

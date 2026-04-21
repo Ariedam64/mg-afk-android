@@ -599,8 +599,10 @@ private fun SectionContent(
                 onHarvest = { slot, slotIndex -> viewModel.harvestCrop(session.id, slot, slotIndex) },
                 onWater = { slot -> viewModel.waterPlant(session.id, slot) },
                 onPot = { slot -> viewModel.potPlant(session.id, slot) },
+                onCleanse = { tileId, slotIdx -> viewModel.cropCleanse(session.id, tileId, slotIdx) },
                 wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
                 planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
+                cropCleansers = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0,
             )
             EggsCard(
                 eggs = session.gardenEggs,
