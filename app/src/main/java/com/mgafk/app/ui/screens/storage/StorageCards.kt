@@ -52,6 +52,7 @@ import com.mgafk.app.data.model.InventoryPlantItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.repository.PriceCalculator
+import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
@@ -62,6 +63,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
@@ -117,13 +119,16 @@ fun SeedSiloCard(
     seeds: List<InventorySeedItem>,
     apiReady: Boolean,
     favoritedItemIds: Set<String> = emptySet(),
+    inventorySeedSpecies: Set<String> = emptySet(),
+    inventoryItemCount: Int = 0,
     onToggleLock: (String) -> Unit = {},
+    onMoveToInventory: (String) -> Unit = {},
 ) {
     val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
     var selectedSpecies by remember { mutableStateOf<String?>(null) }
 
     AppCard(title = "Seed Silo", collapsible = true, persistKey = "storage.seedSilo", trailing = {
-        Text("${seeds.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${seeds.size}/${StorageCapacity.SEED_SILO_LIMIT}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
@@ -141,12 +146,22 @@ fun SeedSiloCard(
     selectedSpecies?.let { species ->
         val liveSeed = seeds.find { it.species == species }
         if (liveSeed != null) {
+            val canMoveBack = StorageCapacity.canAddStackable(
+                currentCount = inventoryItemCount,
+                max = StorageCapacity.INVENTORY_LIMIT,
+                stackExists = species in inventorySeedSpecies,
+            )
             StorageItemDetailDialog(
                 itemId = species,
                 apiReady = apiReady,
                 quantity = liveSeed.quantity,
                 isLocked = species in favoritedItemIds,
+                canMoveToInventory = canMoveBack,
                 onToggleLock = { onToggleLock(species) },
+                onMoveToInventory = {
+                    onMoveToInventory(species)
+                    selectedSpecies = null
+                },
                 onDismiss = { selectedSpecies = null },
             )
         } else {
@@ -162,13 +177,16 @@ fun DecorShedCard(
     decors: List<InventoryDecorItem>,
     apiReady: Boolean,
     favoritedItemIds: Set<String> = emptySet(),
+    inventoryDecorIds: Set<String> = emptySet(),
+    inventoryItemCount: Int = 0,
     onToggleLock: (String) -> Unit = {},
+    onMoveToInventory: (String) -> Unit = {},
 ) {
     val sorted = remember(decors, apiReady) { decors.sortedBy { raritySort(it.decorId) } }
     var selectedDecorId by remember { mutableStateOf<String?>(null) }
 
     AppCard(title = "Decor Shed", collapsible = true, persistKey = "storage.decorShed", trailing = {
-        Text("${decors.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${decors.size}/${StorageCapacity.DECOR_SHED_LIMIT}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
@@ -186,12 +204,22 @@ fun DecorShedCard(
     selectedDecorId?.let { decorId ->
         val liveDecor = decors.find { it.decorId == decorId }
         if (liveDecor != null) {
+            val canMoveBack = StorageCapacity.canAddStackable(
+                currentCount = inventoryItemCount,
+                max = StorageCapacity.INVENTORY_LIMIT,
+                stackExists = decorId in inventoryDecorIds,
+            )
             StorageItemDetailDialog(
                 itemId = decorId,
                 apiReady = apiReady,
                 quantity = liveDecor.quantity,
                 isLocked = decorId in favoritedItemIds,
+                canMoveToInventory = canMoveBack,
                 onToggleLock = { onToggleLock(decorId) },
+                onMoveToInventory = {
+                    onMoveToInventory(decorId)
+                    selectedDecorId = null
+                },
                 onDismiss = { selectedDecorId = null },
             )
         } else {
@@ -430,7 +458,7 @@ private fun CropTile(item: InventoryCropsItem, apiReady: Boolean, onClick: () ->
     Column(
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick)
             .padding(4.dp),
@@ -455,15 +483,30 @@ fun PetHutchCard(
     pets: List<InventoryPetItem>,
     apiReady: Boolean,
     favoritedItemIds: Set<String> = emptySet(),
+    magicDust: Double = 0.0,
+    capacityLevel: Int = 0,
+    inventoryItemCount: Int = 0,
     onToggleLock: (String) -> Unit = {},
     onSellPet: (String) -> Unit = {},
+    onUpgrade: () -> Unit = {},
+    onMoveToInventory: (String) -> Unit = {},
 ) {
     val sorted = remember(pets, apiReady) { pets.sortedBy { raritySortPet(it.petSpecies) } }
     var selectedPetId by remember { mutableStateOf<String?>(null) }
+    val maxItems = remember(capacityLevel, apiReady) { PriceCalculator.calculateHutchCapacity(capacityLevel) }
+    val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextHutchUpgrade(capacityLevel) }
 
     AppCard(title = "Pet Hutch", collapsible = true, persistKey = "storage.petHutch", trailing = {
-        Text("${pets.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${pets.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
+        HutchUpgradePanel(
+            magicDust = magicDust,
+            capacityLevel = capacityLevel,
+            currentCapacity = maxItems,
+            nextUpgrade = nextUpgrade,
+            onUpgrade = onUpgrade,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
@@ -488,15 +531,130 @@ fun PetHutchCard(
                 pet = livePet,
                 apiReady = apiReady,
                 isLocked = petLockId in favoritedItemIds,
+                canMoveToInventory = StorageCapacity.hasFreeSlot(inventoryItemCount, StorageCapacity.INVENTORY_LIMIT),
                 onToggleLock = { onToggleLock(petLockId) },
                 onSell = {
                     onSellPet(livePet.id)
+                    selectedPetId = null
+                },
+                onMoveToInventory = {
+                    onMoveToInventory(livePet.id)
                     selectedPetId = null
                 },
                 onDismiss = { selectedPetId = null },
             )
         } else {
             selectedPetId = null
+        }
+    }
+}
+
+// ── Hutch upgrade panel (current capacity, dust balance, next upgrade button) ──
+
+@Composable
+private fun HutchUpgradePanel(
+    magicDust: Double,
+    capacityLevel: Int,
+    currentCapacity: Int,
+    nextUpgrade: PriceCalculator.HutchNextUpgrade?,
+    onUpgrade: () -> Unit,
+) {
+    var showConfirm by remember { mutableStateOf(false) }
+    val dustLong = magicDust.toLong()
+    val canAfford = nextUpgrade != null && dustLong >= nextUpgrade.dustCost
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(SurfaceDark)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Level $capacityLevel / ${PriceCalculator.HUTCH_MAX_LEVEL}",
+                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
+                Text(PriceCalculator.formatPrice(dustLong),
+                    fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC084FC))
+            }
+        }
+
+        if (nextUpgrade == null) {
+            Text("Hutch maxed out — capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Next: $currentCapacity → ${nextUpgrade.capacityAfter}",
+                    fontSize = 11.sp, color = TextSecondary)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    SpriteImage(url = MgApi.magicDustUrl, size = 12.dp, contentDescription = "cost")
+                    Text(PriceCalculator.formatPrice(nextUpgrade.dustCost),
+                        fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = if (canAfford) Color(0xFFC084FC) else Color(0xFFEF4444))
+                }
+            }
+            Button(
+                onClick = { if (canAfford) showConfirm = true },
+                enabled = canAfford,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF7C3AED),
+                    disabledContainerColor = SurfaceCard,
+                ),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(
+                    if (canAfford) "Upgrade to level ${nextUpgrade.targetLevel}"
+                    else "Need ${PriceCalculator.formatPrice(nextUpgrade.dustCost - dustLong)} more dust",
+                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    color = if (canAfford) Color.White else TextMuted,
+                )
+            }
+        }
+    }
+
+    if (showConfirm && nextUpgrade != null) {
+        Dialog(onDismissRequest = { showConfirm = false }) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SurfaceCard)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Upgrade Pet Hutch?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("Level $capacityLevel → ${nextUpgrade.targetLevel}",
+                    fontSize = 12.sp, color = TextSecondary)
+                Text("Capacity $currentCapacity → ${nextUpgrade.capacityAfter}",
+                    fontSize = 12.sp, color = TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Cost", fontSize = 12.sp, color = TextSecondary)
+                    SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
+                    Text(PriceCalculator.formatFull(nextUpgrade.dustCost), fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold, color = Color(0xFFC084FC))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { showConfirm = false },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
+                    Button(
+                        onClick = { showConfirm = false; onUpgrade() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Upgrade", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                }
+            }
         }
     }
 }
@@ -543,7 +701,9 @@ private fun StorageItemDetailDialog(
     apiReady: Boolean,
     quantity: Int,
     isLocked: Boolean,
+    canMoveToInventory: Boolean,
     onToggleLock: () -> Unit,
+    onMoveToInventory: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val entry = remember(itemId, apiReady) { MgApi.findItem(itemId) }
@@ -572,7 +732,24 @@ private fun StorageItemDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                    Text(fmtQty(quantity), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onMoveToInventory,
+                    enabled = canMoveToInventory,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Accent,
+                        disabledContainerColor = SurfaceDark,
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        if (canMoveToInventory) "Move to Inventory" else "Inventory full",
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = if (canMoveToInventory) Color.White else TextMuted,
+                    )
                 }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
@@ -589,8 +766,10 @@ private fun StoragePetDetailDialog(
     pet: InventoryPetItem,
     apiReady: Boolean,
     isLocked: Boolean,
+    canMoveToInventory: Boolean,
     onToggleLock: () -> Unit,
     onSell: () -> Unit,
+    onMoveToInventory: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
@@ -600,6 +779,9 @@ private fun StoragePetDetailDialog(
     val cs = curStr(pet.petSpecies, pet.xp, ms)
     val sellPrice = remember(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations, apiReady) {
         PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations)
+    }
+    val dustValue = remember(pet.petSpecies, pet.sourceEggId, pet.xp, pet.targetScale, pet.mutations, apiReady) {
+        PriceCalculator.calculatePetDustValue(pet.petSpecies, pet.sourceEggId, pet.xp, pet.targetScale, pet.mutations)
     }
 
     var showConfirm by remember { mutableStateOf(false) }
@@ -621,7 +803,7 @@ private fun StoragePetDetailDialog(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
-                        Text(PriceCalculator.formatPrice(sellPrice), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                        Text(PriceCalculator.formatFull(sellPrice), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                     }
                 }
                 if (isLocked) {
@@ -684,7 +866,17 @@ private fun StoragePetDetailDialog(
                             Text("Value", fontSize = 12.sp, color = TextSecondary)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                 SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
-                                Text(PriceCalculator.formatPrice(sellPrice), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                                Text(PriceCalculator.formatFull(sellPrice), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                            }
+                        }
+                    }
+                    if (dustValue != null) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
+                                Text(PriceCalculator.formatFull(dustValue), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC084FC))
                             }
                         }
                     }
@@ -732,6 +924,23 @@ private fun StoragePetDetailDialog(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
+                    onClick = onMoveToInventory,
+                    enabled = canMoveToInventory,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Accent,
+                        disabledContainerColor = SurfaceDark,
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        if (canMoveToInventory) "Move to Inventory" else "Inventory full",
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = if (canMoveToInventory) Color.White else TextMuted,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
@@ -755,7 +964,7 @@ private fun QtyTile(itemId: String, quantity: Int, apiReady: Boolean) {
     Column(
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark).padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -773,7 +982,7 @@ private fun QtyTile(itemId: String, quantity: Int, apiReady: Boolean) {
 private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val borderColor = rarityColor(entry?.rarity).copy(alpha = 0.5f)
+    val rarityId = entry?.rarity
     val ms = maxStr(pet.petSpecies, pet.targetScale)
     val cs = curStr(pet.petSpecies, pet.xp, ms)
     val isMax = cs >= ms
@@ -783,7 +992,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left

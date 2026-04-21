@@ -38,6 +38,10 @@ data class AppSettings(
     // Shops
     val purchaseMode: PurchaseMode = PurchaseMode.HYBRID,
 
+    // Storages — auto-consolidate inventory stacks into matching storage slots
+    val autoStockSeedSilo: Boolean = false,
+    val autoStockDecorShed: Boolean = false,
+
     // Developer
     val showDebugMenu: Boolean = false,
 )

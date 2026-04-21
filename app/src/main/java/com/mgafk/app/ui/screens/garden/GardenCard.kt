@@ -62,6 +62,7 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.StatusConnected
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import androidx.compose.ui.window.Dialog
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -460,7 +461,7 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
             .fillMaxWidth()
             .aspectRatio(0.85f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rp.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -518,7 +519,7 @@ private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
             .fillMaxWidth()
             .aspectRatio(if (entry.totalValue > 0) 0.85f else 1f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -687,7 +688,7 @@ private fun PlantDetailDialog(
                     ) {
                         Text("Sell price", fontSize = 12.sp, color = TextSecondary)
                         Text(
-                            PriceCalculator.formatPrice(plant.sellPrice),
+                            PriceCalculator.formatFull(plant.sellPrice),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFFFD700),
@@ -882,7 +883,7 @@ private fun MultiSlotPlantDetailDialog(
                 )
                 if (plant.totalValue > 0) {
                     Text(
-                        PriceCalculator.formatPrice(plant.totalValue),
+                        PriceCalculator.formatFull(plant.totalValue),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1024,7 +1025,7 @@ private fun CropSlotRow(
             }
             if (crop.sellPrice != null) {
                 Text(
-                    PriceCalculator.formatPrice(crop.sellPrice),
+                    PriceCalculator.formatFull(crop.sellPrice),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFFFD700),

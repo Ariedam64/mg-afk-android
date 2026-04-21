@@ -64,6 +64,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -252,7 +253,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
             .fillMaxWidth()
             .aspectRatio(0.85f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

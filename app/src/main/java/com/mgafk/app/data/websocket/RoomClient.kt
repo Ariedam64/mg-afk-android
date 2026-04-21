@@ -63,7 +63,7 @@ sealed class ClientEvent {
     data class ShopsChanged(val shops: List<ShopModel>, val shopPurchases: JsonObject? = null) : ClientEvent()
     data class GardenChanged(val plants: List<GardenTile>) : ClientEvent()
     data class EggsChanged(val eggs: List<GardenTile>) : ClientEvent()
-    data class InventoryChanged(val items: JsonArray, val storages: JsonArray, val favoritedItemIds: List<String> = emptyList()) : ClientEvent()
+    data class InventoryChanged(val items: JsonArray, val storages: JsonArray, val favoritedItemIds: List<String> = emptyList(), val magicDust: Double = 0.0) : ClientEvent()
     data class ChatChanged(val messages: List<ChatMessage>) : ClientEvent()
     data class PlayersListChanged(val players: List<PlayerSnapshot>) : ClientEvent()
     data class DebugLog(val level: String, val message: String, val detail: String = "") : ClientEvent()
@@ -676,7 +676,7 @@ class RoomClient {
 
     private fun emitInventory() {
         val me = gameState.getPlayer(playerId) ?: return
-        val payload = ClientEvent.InventoryChanged(me.inventory, me.storages, me.favoritedItemIds)
+        val payload = ClientEvent.InventoryChanged(me.inventory, me.storages, me.favoritedItemIds, me.magicDust)
         if (payload == lastInventoryPayload) return
         lastInventoryPayload = payload
         emit(payload)

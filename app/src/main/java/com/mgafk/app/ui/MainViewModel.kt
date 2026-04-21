@@ -894,6 +894,130 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         actions.sellPet(itemId = itemId)
     }
 
+    /** Upgrade the pet hutch capacity by one level (server uses caller's dust). */
+    fun upgradePetHutch(sessionId: String) {
+        clients[sessionId]?.actions?.upgradePetHutch()
+    }
+
+    // ─── Move items between inventory and dedicated storages ────────────────
+
+    /** Move a pet from inventory into the Pet Hutch. */
+    fun movePetToHutch(sessionId: String, petId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.putItemInStorage(
+            itemId = petId,
+            storageId = "PetHutch",
+            toStorageIndex = session.petHutch.size,
+        )
+    }
+
+    /** Move a pet from the Pet Hutch back to the inventory. */
+    fun movePetFromHutch(sessionId: String, petId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.retrieveItemFromStorage(
+            itemId = petId,
+            storageId = "PetHutch",
+            toInventoryIndex = totalInventoryCount(session),
+        )
+    }
+
+    /** Move a seed (whole stack) from inventory into the Seed Silo. */
+    fun moveSeedToSilo(sessionId: String, species: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.putItemInStorage(
+            itemId = species,
+            storageId = "SeedSilo",
+            toStorageIndex = session.seedSilo.size,
+        )
+    }
+
+    /** Move a seed (whole stack) from the Seed Silo back to inventory. */
+    fun moveSeedFromSilo(sessionId: String, species: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.retrieveItemFromStorage(
+            itemId = species,
+            storageId = "SeedSilo",
+            toInventoryIndex = totalInventoryCount(session),
+        )
+    }
+
+    /** Move a decor (whole stack) from inventory into the Decor Shed. */
+    fun moveDecorToShed(sessionId: String, decorId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.putItemInStorage(
+            itemId = decorId,
+            storageId = "DecorShed",
+            toStorageIndex = session.decorShed.size,
+        )
+    }
+
+    /** Move a decor (whole stack) from the Decor Shed back to inventory. */
+    fun moveDecorFromShed(sessionId: String, decorId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.retrieveItemFromStorage(
+            itemId = decorId,
+            storageId = "DecorShed",
+            toInventoryIndex = totalInventoryCount(session),
+        )
+    }
+
+    private fun totalInventoryCount(session: Session): Int {
+        val inv = session.inventory
+        return inv.seeds.size + inv.eggs.size + inv.produce.size + inv.plants.size +
+            inv.pets.size + inv.tools.size + inv.decors.size
+    }
+
+    /**
+     * Auto-consolidate inventory stacks into matching storage slots when the
+     * corresponding setting is on AND the player owns the storage.
+     *
+     * For each inventory item whose species/decorId already has a slot in the
+     * storage, fire a single PutItemInStorage. Stacks merge server-side, so the
+     * `toStorageIndex` here is irrelevant for the merge but must still be valid;
+     * we just point at the current end of the storage.
+     */
+    private fun runAutoStock(
+        sessionId: String,
+        invSeeds: List<InventorySeedItem>,
+        invDecors: List<InventoryDecorItem>,
+        siloSeeds: List<InventorySeedItem>,
+        shedDecors: List<InventoryDecorItem>,
+        availableStorages: Set<String>,
+    ) {
+        val actions = clients[sessionId]?.actions ?: return
+        val settings = _state.value.settings
+
+        if (settings.autoStockSeedSilo && "SeedSilo" in availableStorages) {
+            val siloSpecies = siloSeeds.map { it.species }.toSet()
+            val toMove = invSeeds.filter { it.species in siloSpecies }
+            for (seed in toMove) {
+                actions.putItemInStorage(
+                    itemId = seed.species,
+                    storageId = "SeedSilo",
+                    toStorageIndex = siloSeeds.size,
+                )
+            }
+        }
+
+        if (settings.autoStockDecorShed && "DecorShed" in availableStorages) {
+            val shedIds = shedDecors.map { it.decorId }.toSet()
+            val toMove = invDecors.filter { it.decorId in shedIds }
+            for (decor in toMove) {
+                actions.putItemInStorage(
+                    itemId = decor.decorId,
+                    storageId = "DecorShed",
+                    toStorageIndex = shedDecors.size,
+                )
+            }
+        }
+    }
+
     /** Sell all crops at once. */
     fun sellAllCrops(sessionId: String) {
         clients[sessionId]?.actions?.sellAllCrops()
@@ -1649,6 +1773,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 ?.filter { it.isNotBlank() } ?: emptyList(),
                             abilities = (obj["abilities"] as? JsonArray)
                                 ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                            sourceEggId = obj["sourceEggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                         ))
                         "Tool" -> tools.add(InventoryToolItem(
                             toolId = obj["toolId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -1665,10 +1790,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val shedDecors = mutableListOf<InventoryDecorItem>()
                 val hutchPets = mutableListOf<InventoryPetItem>()
                 val troughCrops = mutableListOf<InventoryCropsItem>()
+                var hutchCapacityLevel = 0
+                val availableStorages = mutableSetOf<String>()
 
                 for (storageEl in event.storages) {
                     val storage = storageEl as? JsonObject ?: continue
                     val storageId = storage["decorId"]?.jsonPrimitive?.contentOrNull ?: continue
+                    availableStorages.add(storageId)
+                    if (storageId == "PetHutch") {
+                        hutchCapacityLevel = storage["capacityLevel"]?.jsonPrimitive?.intOrNull ?: 0
+                    }
                     val storageItems = storage["items"] as? JsonArray ?: continue
                     for (el in storageItems) {
                         val obj = el as? JsonObject ?: continue
@@ -1692,6 +1823,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     ?.filter { it.isNotBlank() } ?: emptyList(),
                                 abilities = (obj["abilities"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                                sourceEggId = obj["sourceEggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                             ))
                             "FeedingTrough" -> troughCrops.add(InventoryCropsItem(
                                 id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -1744,9 +1876,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         feedingTrough = troughCrops,
                         favoritedItemIds = event.favoritedItemIds.toSet(),
                         lastHatchedPet = hatchedPet ?: it.lastHatchedPet,
+                        magicDust = event.magicDust,
+                        hutchCapacityLevel = hutchCapacityLevel,
+                        availableStorages = availableStorages,
                     )
                 }
                 alertNotifier.checkFeedingTrough(troughCrops, _state.value.alerts)
+                runAutoStock(sessionId, seeds, decors, siloSeeds, shedDecors, availableStorages)
             }
             is ClientEvent.EggsChanged -> {
                 val newEggs = event.eggs.map { tile ->

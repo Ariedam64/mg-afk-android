@@ -354,6 +354,7 @@ data class EggListResponse(
     val config: EggHatchConfig = EggHatchConfig(),
 )
 
+
 @Serializable
 data class CasinoErrorResponse(val error: String? = null, val balance: Long? = null)
 

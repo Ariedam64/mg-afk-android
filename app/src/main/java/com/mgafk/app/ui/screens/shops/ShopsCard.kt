@@ -51,6 +51,7 @@ import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
+import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.delay
 
 private val StatusError = Color(0xFFF87171)
@@ -243,7 +244,7 @@ private fun ShopItemTile(
     val rarity = entry?.rarity
     val color = rarityColor(rarity)
     val tileAlpha = if (soldOut) 0.35f else 1f
-    val borderColor = if (inShop) color.copy(alpha = if (soldOut) 0.3f else 0.5f) else TextMuted.copy(alpha = 0.3f)
+    val borderAlpha = if (soldOut) 0.3f else 0.5f
 
     Box(
         modifier = Modifier.size(76.dp),
@@ -252,7 +253,10 @@ private fun ShopItemTile(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(10.dp))
-                .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+                .then(
+                    if (inShop) Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = borderAlpha)
+                    else Modifier.border(1.5.dp, TextMuted.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                )
                 .background(SurfaceDark)
                 .then(
                     if (!soldOut) when (purchaseMode) {

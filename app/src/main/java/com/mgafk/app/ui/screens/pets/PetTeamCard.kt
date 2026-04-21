@@ -74,6 +74,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import kotlin.math.roundToInt
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -630,7 +631,7 @@ private fun FilledSlotTile(
 ) {
     val entry = remember(pet.species, apiReady) { MgApi.findPet(pet.species) }
     val displayName = pet.name.ifBlank { entry?.name ?: pet.species }
-    val borderColor = rarityColor(entry?.rarity).copy(alpha = 0.5f)
+    val rarityId = entry?.rarity
     val ms = maxStr(pet.species, pet.targetScale)
     val cs = curStr(pet.species, pet.xp, ms)
     val isMax = cs >= ms
@@ -640,7 +641,7 @@ private fun FilledSlotTile(
             .fillMaxWidth()
             .aspectRatio(0.75f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Remove button top-right
@@ -762,7 +763,7 @@ private fun PickerPetTile(
 ) {
     val entry = remember(candidate.species, apiReady) { MgApi.findPet(candidate.species) }
     val displayName = candidate.name.ifBlank { entry?.name ?: candidate.species }
-    val borderColor = rarityColor(entry?.rarity).copy(alpha = 0.5f)
+    val rarityId = entry?.rarity
     val ms = maxStr(candidate.species, candidate.targetScale)
     val cs = curStr(candidate.species, candidate.xp, ms)
     val isMax = cs >= ms
@@ -772,7 +773,7 @@ private fun PickerPetTile(
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
     ) {

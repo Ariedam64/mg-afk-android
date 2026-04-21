@@ -49,6 +49,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 
 // Game-authentic rarity colors
 private val RarityCommon = Color(0xFFE7E7E7)
@@ -544,7 +545,6 @@ private fun AlertItemTile(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val borderColor = if (enabled) Accent else rarityColor(rarity).copy(alpha = 0.5f)
     val bgColor = if (enabled) Accent.copy(alpha = 0.1f) else SurfaceDark
 
     Box(modifier = Modifier.size(76.dp)) {
@@ -552,7 +552,10 @@ private fun AlertItemTile(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(10.dp))
-                .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+                .then(
+                    if (enabled) Modifier.border(1.5.dp, Accent, RoundedCornerShape(10.dp))
+                    else Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+                )
                 .background(bgColor)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 4.dp, vertical = 6.dp),

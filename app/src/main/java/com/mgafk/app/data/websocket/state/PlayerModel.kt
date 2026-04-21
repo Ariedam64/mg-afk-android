@@ -42,6 +42,7 @@ data class PlayerModel(
 
     // Slot data
     val coins: Double = 0.0,
+    val magicDust: Double = 0.0,
     val schemaVersion: String? = null,
     val inventory: JsonArray = EMPTY_ARRAY,
     val storages: JsonArray = EMPTY_ARRAY,
@@ -163,6 +164,7 @@ data class PlayerModel(
                 // Slot data fields
                 schemaVersion = data?.get("schemaVersion")?.jsonPrimitive?.contentOrNull,
                 coins = data?.get("coinsCount")?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                magicDust = data?.get("magicDustCount")?.jsonPrimitive?.doubleOrNull ?: 0.0,
                 inventory = inv?.get("items") as? JsonArray ?: EMPTY_ARRAY,
                 storages = inv?.get("storages") as? JsonArray ?: EMPTY_ARRAY,
                 favoritedItemIds = (inv?.get("favoritedItemIds") as? JsonArray)

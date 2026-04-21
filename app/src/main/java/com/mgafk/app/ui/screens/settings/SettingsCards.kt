@@ -59,10 +59,12 @@ import com.mgafk.app.ui.theme.TextSecondary
 @Composable
 fun SettingsCards(
     settings: AppSettings,
+    availableStorages: Set<String> = emptySet(),
     onUpdate: (AppSettings) -> Unit,
 ) {
     BackgroundCard(settings = settings, onUpdate = onUpdate)
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
+    StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
     ReconnectionCard(settings = settings, onUpdate = onUpdate)
     DeveloperCard(settings = settings, onUpdate = onUpdate)
 }
@@ -392,6 +394,50 @@ private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> 
             PurchaseMode.HYBRID -> "Tap buys x1, hold buys all remaining stock."
         }
         Text(hint, fontSize = 10.sp, color = TextMuted)
+    }
+}
+
+// ── Storages ──
+
+@Composable
+private fun StoragesCard(
+    settings: AppSettings,
+    availableStorages: Set<String>,
+    onUpdate: (AppSettings) -> Unit,
+) {
+    val hasSilo = "SeedSilo" in availableStorages
+    val hasShed = "DecorShed" in availableStorages
+
+    AppCard(title = "Storages", collapsible = true, persistKey = "settings_storages") {
+        if (!hasSilo && !hasShed) {
+            Text(
+                "Place a Seed Silo or Decor Shed in your garden to enable auto-stock features.",
+                fontSize = 11.sp,
+                color = TextMuted,
+                lineHeight = 15.sp,
+            )
+            return@AppCard
+        }
+
+        if (hasSilo) {
+            ToggleRow(
+                title = "Auto-stock Seed Silo",
+                description = "Whenever a seed in your inventory matches a species already in the silo, move it in automatically.",
+                checked = settings.autoStockSeedSilo,
+                onCheckedChange = { onUpdate(settings.copy(autoStockSeedSilo = it)) },
+            )
+        }
+
+        if (hasSilo && hasShed) Spacer(modifier = Modifier.height(10.dp))
+
+        if (hasShed) {
+            ToggleRow(
+                title = "Auto-stock Decor Shed",
+                description = "Whenever a decor in your inventory matches a decor already in the shed, move it in automatically.",
+                checked = settings.autoStockDecorShed,
+                onCheckedChange = { onUpdate(settings.copy(autoStockDecorShed = it)) },
+            )
+        }
     }
 }
 

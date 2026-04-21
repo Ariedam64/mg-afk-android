@@ -63,6 +63,7 @@ import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
@@ -591,7 +592,6 @@ private fun PetCandidateTile(
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
     val rarity = entry?.rarity
-    val borderColor = rarityColor(rarity).copy(alpha = 0.5f)
     val str = remember(pet.petSpecies, pet.xp, pet.targetScale, apiReady) {
         calculatePetStrength(pet.petSpecies, pet.xp, pet.targetScale)
     }
@@ -605,7 +605,7 @@ private fun PetCandidateTile(
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
     ) {

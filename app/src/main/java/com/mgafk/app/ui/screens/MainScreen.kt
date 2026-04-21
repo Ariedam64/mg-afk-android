@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mgafk.app.data.repository.PriceCalculator
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
@@ -669,11 +670,26 @@ private fun SectionContent(
                 text = "Tap any item to view its details, lock/unlock it, or perform actions like planting, selling and more.",
                 onDismiss = { viewModel.dismissStorageTip() },
             )
+            val inv = session.inventory
+            val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
+                inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
+            val hutchMax = PriceCalculator.calculateHutchCapacity(session.hutchCapacityLevel)
+            val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
+            val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
+            val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
+            val invDecorIds = remember(inv.decors) { inv.decors.map { it.decorId }.toSet() }
+
             InventoryCard(
                 inventory = session.inventory,
                 apiReady = state.apiReady,
                 freePlantTiles = session.freePlantTiles,
                 favoritedItemIds = session.favoritedItemIds,
+                petHutchCount = session.petHutch.size,
+                petHutchMax = hutchMax,
+                seedSiloCount = session.seedSilo.size,
+                seedSiloSpecies = seedSiloSpecies,
+                decorShedCount = session.decorShed.size,
+                decorShedDecorIds = decorShedIds,
                 onPlantSeed = { species -> viewModel.plantSeed(session.id, species) },
                 onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
                 onPlantGardenPlant = { itemId -> viewModel.plantGardenPlant(session.id, itemId) },
@@ -682,15 +698,29 @@ private fun SectionContent(
                 onSellAllUnlockedPets = { itemIds -> viewModel.sellAllUnlockedPets(session.id, itemIds) },
                 onSellAllCrops = { viewModel.sellAllCrops(session.id) },
                 onSellCrop = { itemId -> viewModel.sellSingleCrop(session.id, itemId) },
+                onMovePetToHutch = { petId -> viewModel.movePetToHutch(session.id, petId) },
+                onMoveSeedToSilo = { species -> viewModel.moveSeedToSilo(session.id, species) },
+                onMoveDecorToShed = { decorId -> viewModel.moveDecorToShed(session.id, decorId) },
                 playerCount = session.players,
             )
             SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) })
-            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) })
-            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                inventorySeedSpecies = invSeedSpecies,
+                inventoryItemCount = totalInventoryItems,
                 onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) })
+                onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) })
+            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                inventoryDecorIds = invDecorIds,
+                inventoryItemCount = totalInventoryItems,
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) })
+            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                magicDust = session.magicDust,
+                capacityLevel = session.hutchCapacityLevel,
+                inventoryItemCount = totalInventoryItems,
+                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
+                onUpgrade = { viewModel.upgradePetHutch(session.id) },
+                onMoveToInventory = { petId -> viewModel.movePetFromHutch(session.id, petId) })
             FeedingTroughCard(
                 crops = session.feedingTrough,
                 produce = session.inventory.produce,
@@ -926,6 +956,7 @@ private fun SectionContent(
         NavSection.SETTINGS -> {
             SettingsCards(
                 settings = state.settings,
+                availableStorages = session.availableStorages,
                 onUpdate = { newSettings -> viewModel.updateSettings { newSettings } },
             )
         }

@@ -60,6 +60,7 @@ import com.mgafk.app.data.model.InventorySnapshot
 import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
+import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
@@ -72,6 +73,7 @@ import com.mgafk.app.ui.theme.StatusConnected
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
@@ -156,6 +158,12 @@ fun InventoryCard(
     apiReady: Boolean = false,
     freePlantTiles: Int = 0,
     favoritedItemIds: Set<String> = emptySet(),
+    petHutchCount: Int = 0,
+    petHutchMax: Int = 25,
+    seedSiloCount: Int = 0,
+    seedSiloSpecies: Set<String> = emptySet(),
+    decorShedCount: Int = 0,
+    decorShedDecorIds: Set<String> = emptySet(),
     onPlantSeed: (species: String) -> Unit = {},
     onGrowEgg: (eggId: String) -> Unit = {},
     onPlantGardenPlant: (itemId: String) -> Unit = {},
@@ -164,6 +172,9 @@ fun InventoryCard(
     onSellAllUnlockedPets: (itemIds: List<String>) -> Unit = {},
     onSellAllCrops: () -> Unit = {},
     onSellCrop: (itemId: String) -> Unit = {},
+    onMovePetToHutch: (petId: String) -> Unit = {},
+    onMoveSeedToSilo: (species: String) -> Unit = {},
+    onMoveDecorToShed: (decorId: String) -> Unit = {},
     playerCount: Int = 1,
 ) {
     val totalItems = inventory.seeds.size + inventory.eggs.size + inventory.produce.size +
@@ -316,8 +327,17 @@ fun InventoryCard(
                 apiReady = apiReady,
                 freePlantTiles = freePlantTiles,
                 isLocked = species in favoritedItemIds,
+                canMoveToSilo = StorageCapacity.canAddStackable(
+                    currentCount = seedSiloCount,
+                    max = StorageCapacity.SEED_SILO_LIMIT,
+                    stackExists = species in seedSiloSpecies,
+                ),
                 onPlantSeed = { onPlantSeed(species) },
                 onToggleLock = { onToggleLock(species) },
+                onMoveToSilo = {
+                    onMoveSeedToSilo(species)
+                    selectedSeedSpecies = null
+                },
                 onDismiss = { selectedSeedSpecies = null },
             )
         } else {
@@ -413,6 +433,11 @@ fun InventoryCard(
     selectedDecorId?.let { decorId ->
         val liveDecor = inventory.decors.find { it.decorId == decorId }
         if (liveDecor != null) {
+            val canMoveToShed = StorageCapacity.canAddStackable(
+                currentCount = decorShedCount,
+                max = StorageCapacity.DECOR_SHED_LIMIT,
+                stackExists = decorId in decorShedDecorIds,
+            )
             ItemDetailDialog(
                 itemId = decorId,
                 apiReady = apiReady,
@@ -420,6 +445,27 @@ fun InventoryCard(
                 isLocked = decorId in favoritedItemIds,
                 onToggleLock = { onToggleLock(decorId) },
                 onDismiss = { selectedDecorId = null },
+                extraContent = {
+                    Button(
+                        onClick = {
+                            onMoveDecorToShed(decorId)
+                            selectedDecorId = null
+                        },
+                        enabled = canMoveToShed,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Accent,
+                            disabledContainerColor = SurfaceDark,
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            if (canMoveToShed) "Move to Decor Shed" else "Decor Shed full",
+                            fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            color = if (canMoveToShed) Color.White else TextMuted,
+                        )
+                    }
+                },
             )
         } else {
             selectedDecorId = null
@@ -437,9 +483,14 @@ fun InventoryCard(
                 pet = livePet,
                 apiReady = apiReady,
                 isLocked = petLockId in favoritedItemIds,
+                canMoveToHutch = StorageCapacity.hasFreeSlot(petHutchCount, petHutchMax),
                 onToggleLock = { onToggleLock(petLockId) },
                 onSell = {
                     onSellPet(petId)
+                    selectedPetId = null
+                },
+                onMoveToHutch = {
+                    onMovePetToHutch(petId)
                     selectedPetId = null
                 },
                 onDismiss = { selectedPetId = null },
@@ -537,7 +588,7 @@ private fun QuantityTile(itemId: String, quantity: Int, apiReady: Boolean) {
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -569,7 +620,7 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCou
         modifier = Modifier
             .fillMaxWidth().aspectRatio(0.85f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -613,7 +664,7 @@ private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
             .fillMaxWidth()
             .aspectRatio(if (item.totalPrice > 0) 0.85f else 1f)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -654,7 +705,7 @@ private fun PetsList(
 private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val borderColor = rarityColor(entry?.rarity).copy(alpha = 0.5f)
+    val rarityId = entry?.rarity
     val ms = maxStr(pet.petSpecies, pet.targetScale)
     val cs = curStr(pet.petSpecies, pet.xp, ms)
     val isMax = cs >= ms
@@ -664,7 +715,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left
@@ -717,7 +768,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
 private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Long) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val borderColor = rarityColor(entry?.rarity).copy(alpha = 0.5f)
+    val rarityId = entry?.rarity
     val ms = maxStr(pet.petSpecies, pet.targetScale)
     val cs = curStr(pet.petSpecies, pet.xp, ms)
     val isMax = cs >= ms
@@ -727,7 +778,7 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
             .fillMaxWidth()
             .height(82.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left
@@ -893,7 +944,7 @@ private fun PlantUnpotDialog(
                 )
                 if (plant.totalPrice > 0) {
                     Text(
-                        PriceCalculator.formatPrice(plant.totalPrice),
+                        PriceCalculator.formatFull(plant.totalPrice),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1036,7 +1087,7 @@ private fun PlantSlotRow(
                 }
                 if (price != null) {
                     Text(
-                        PriceCalculator.formatPrice(price),
+                        PriceCalculator.formatFull(price),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1095,7 +1146,7 @@ private fun EggGrowDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                    Text(fmtQty(egg.quantity), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(PriceCalculator.formatFull(egg.quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
 
                 Row(
@@ -1148,8 +1199,10 @@ private fun SeedDetailDialog(
     apiReady: Boolean,
     freePlantTiles: Int,
     isLocked: Boolean,
+    canMoveToSilo: Boolean,
     onPlantSeed: () -> Unit,
     onToggleLock: () -> Unit,
+    onMoveToSilo: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val entry = remember(seed.species, apiReady) { MgApi.findItem(seed.species) }
@@ -1204,7 +1257,7 @@ private fun SeedDetailDialog(
                 ) {
                     Text("Quantity", fontSize = 12.sp, color = TextSecondary)
                     Text(
-                        fmtQty(seed.quantity),
+                        PriceCalculator.formatFull(seed.quantity.toLong()),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
@@ -1245,6 +1298,25 @@ private fun SeedDetailDialog(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (canPlant) Color.White else Color.White.copy(alpha = 0.4f),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onMoveToSilo,
+                enabled = canMoveToSilo,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Accent,
+                    disabledContainerColor = SurfaceDark,
+                ),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                Text(
+                    if (canMoveToSilo) "Move to Seed Silo" else "Seed Silo full",
+                    fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                    color = if (canMoveToSilo) Color.White else TextMuted,
                 )
             }
 
@@ -1296,7 +1368,7 @@ private fun SellAllPetsDialog(
                 ) {
                     SpriteImage(url = MgApi.coinBagUrl, size = 20.dp, contentDescription = "coins")
                     Text(
-                        PriceCalculator.formatPrice(totalValue),
+                        PriceCalculator.formatFull(totalValue),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1362,7 +1434,7 @@ private fun SellAllPetsDialog(
                 ) {
                     SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                     Text(
-                        PriceCalculator.formatPrice(totalValue),
+                        PriceCalculator.formatFull(totalValue),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1442,7 +1514,7 @@ private fun SellAllCropsDialog(
                 ) {
                     SpriteImage(url = MgApi.coinBagUrl, size = 20.dp, contentDescription = "coins")
                     Text(
-                        PriceCalculator.formatPrice(totalValue),
+                        PriceCalculator.formatFull(totalValue),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1532,7 +1604,7 @@ private fun SellAllCropsDialog(
                             ) {
                                 SpriteImage(url = MgApi.coinBagUrl, size = 10.dp, contentDescription = "coins")
                                 Text(
-                                    PriceCalculator.formatPrice(price),
+                                    PriceCalculator.formatFull(price),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFFD700),
@@ -1558,7 +1630,7 @@ private fun SellAllCropsDialog(
                 ) {
                     SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                     Text(
-                        PriceCalculator.formatPrice(totalValue),
+                        PriceCalculator.formatFull(totalValue),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700),
@@ -1679,7 +1751,7 @@ private fun ItemDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                        Text(fmtQty(quantity), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     }
                 }
             }
@@ -1704,8 +1776,10 @@ private fun PetDetailDialog(
     pet: InventoryPetItem,
     apiReady: Boolean,
     isLocked: Boolean,
+    canMoveToHutch: Boolean,
     onToggleLock: () -> Unit,
     onSell: () -> Unit,
+    onMoveToHutch: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
@@ -1715,6 +1789,9 @@ private fun PetDetailDialog(
     val cs = curStr(pet.petSpecies, pet.xp, ms)
     val sellPrice = remember(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations, apiReady) {
         PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations)
+    }
+    val dustValue = remember(pet.petSpecies, pet.sourceEggId, pet.xp, pet.targetScale, pet.mutations, apiReady) {
+        PriceCalculator.calculatePetDustValue(pet.petSpecies, pet.sourceEggId, pet.xp, pet.targetScale, pet.mutations)
     }
 
     var showConfirm by remember { mutableStateOf(false) }
@@ -1738,7 +1815,7 @@ private fun PetDetailDialog(
                     ) {
                         SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
                         Text(
-                            PriceCalculator.formatPrice(sellPrice),
+                            PriceCalculator.formatFull(sellPrice),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFFFD700),
@@ -1832,9 +1909,31 @@ private fun PetDetailDialog(
                             ) {
                                 SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
                                 Text(
-                                    PriceCalculator.formatPrice(sellPrice),
+                                    PriceCalculator.formatFull(sellPrice),
                                     fontSize = 12.sp, fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFFD700),
+                                )
+                            }
+                        }
+                    }
+
+                    // Dust value
+                    if (dustValue != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
+                                Text(
+                                    PriceCalculator.formatFull(dustValue),
+                                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFC084FC),
                                 )
                             }
                         }
@@ -1888,6 +1987,26 @@ private fun PetDetailDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Move to hutch button
+                Button(
+                    onClick = onMoveToHutch,
+                    enabled = canMoveToHutch,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Accent,
+                        disabledContainerColor = SurfaceDark,
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        if (canMoveToHutch) "Move to Pet Hutch" else "Pet Hutch full",
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = if (canMoveToHutch) Color.White else TextMuted,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Sell button
                 Button(
@@ -1946,7 +2065,7 @@ private fun ProduceDetailDialog(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         SpriteImage(url = MgApi.coinBagUrl, size = 16.dp, contentDescription = "coins")
-                        Text(PriceCalculator.formatPrice(price), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                        Text(PriceCalculator.formatFull(price), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -2020,7 +2139,7 @@ private fun ProduceDetailDialog(
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
                                 SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
-                                Text(PriceCalculator.formatPrice(price), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                                Text(PriceCalculator.formatFull(price), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
                             }
                         }
                     }

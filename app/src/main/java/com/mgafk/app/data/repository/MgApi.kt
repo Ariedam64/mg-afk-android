@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -63,12 +64,23 @@ object MgApi {
         val plantTileTransformOrigin: String? = null,
         val cropBaseTileScale: Double? = null,
         val cropTransformOrigin: String? = null,
+        // Egg-only: weight of each pet species that can hatch from this egg
+        val faunaSpawnWeights: Map<String, Double> = emptyMap(),
+        // Decor-only (PetHutch): capacity upgrade tiers
+        val upgrades: List<DecorUpgrade> = emptyList(),
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
 
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
     data class SlotOffset(val x: Double, val y: Double, val rotation: Double)
+
+    /** Decor upgrade tier (used by PetHutch). */
+    data class DecorUpgrade(
+        val targetLevel: Int,
+        val dustCost: Long,
+        val capacityBonus: Int,
+    )
 
     /** Atlas metadata for a sprite: source canvas size and anchor point (fractions 0..1). */
     data class SpriteMetadata(
@@ -177,6 +189,7 @@ object MgApi {
     val coinBagUrl: String get() = uiSpriteUrl("CoinBag")
     val lockSpriteUrl: String get() = uiSpriteUrl("Locked")
     val unlockSpriteUrl: String get() = uiSpriteUrl("Unlocked")
+    val magicDustUrl: String get() = spriteUrl("items", "MagicDust")
 
     private val MUTATION_SPRITE_ALIAS = mapOf("Ambershine" to "Amberlit")
 
@@ -385,6 +398,22 @@ object MgApi {
                 val dietArray = (obj?.get("diet") as? JsonArray)
                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                     ?: emptyList()
+                val faunaWeights = if (category == "eggs") {
+                    (obj?.get("faunaSpawnWeights") as? JsonObject)
+                        ?.mapValues { (it.value as? JsonPrimitive)?.doubleOrNull ?: 0.0 }
+                        ?: emptyMap()
+                } else emptyMap()
+                val upgrades = if (category == "decors") {
+                    (obj?.get("upgrades") as? JsonArray)
+                        ?.mapNotNull { el ->
+                            val o = el as? JsonObject ?: return@mapNotNull null
+                            val level = o["targetLevel"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+                            val cost = (o["cost"] as? JsonObject)
+                                ?.get("dustQuantity")?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0L
+                            val bonus = o["capacityBonus"]?.jsonPrimitive?.intOrNull ?: 0
+                            DecorUpgrade(level, cost, bonus)
+                        } ?: emptyList()
+                } else emptyList()
                 result[id] = GameEntry(
                     id = id,
                     name = obj?.get("name")?.jsonPrimitive?.contentOrNull ?: id,
@@ -395,6 +424,8 @@ object MgApi {
                     maturitySellPrice = obj?.get("maturitySellPrice")?.jsonPrimitive?.doubleOrNull,
                     color = obj?.get("color")?.jsonPrimitive?.contentOrNull,
                     diet = dietArray,
+                    faunaSpawnWeights = faunaWeights,
+                    upgrades = upgrades,
                 )
             }
         }

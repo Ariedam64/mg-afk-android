@@ -42,6 +42,10 @@ data class Session(
     val lastHatchedPet: InventoryPetItem? = null,
     val lastHatchedEggId: String = "",
     val wsLogs: List<WsLog> = emptyList(),
+    val magicDust: Double = 0.0,
+    val hutchCapacityLevel: Int = 0,
+    /** Storage decor ids the player currently owns (e.g. "SeedSilo", "DecorShed", "PetHutch"). */
+    val availableStorages: Set<String> = emptySet(),
 )
 
 @Serializable
@@ -156,6 +160,7 @@ data class InventoryPetItem(
     val targetScale: Double = 0.0,
     val mutations: List<String> = emptyList(),
     val abilities: List<String> = emptyList(),
+    val sourceEggId: String = "",
 )
 
 @Serializable
