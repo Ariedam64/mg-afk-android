@@ -6,7 +6,9 @@ pet ability logs, shop inventory, weather and more while minimizing battery
 usage. You can also interact directly from the app: plant seeds and grow
 eggs, water and harvest your garden, buy items from shops, chat with other
 players, feed and swap your pets, sell crops and pets, lock items, play
-casino mini-games, and browse public rooms.
+casino mini-games, browse public rooms — and when you actually want to
+play, hit **Play in game** to launch the game in-app with the Gemini
+userscript automatically injected.
 
 ## How it works
 
@@ -30,16 +32,16 @@ drawer. Sections:
 
 | Section     | Content                                                                         |
 |-------------|---------------------------------------------------------------------------------|
-| Dashboard   | Connection setup + live status                                                  |
+| Dashboard   | Connection setup, live status, **Play in game** (in-app WebView with Gemini)    |
 | Room        | Chat with players in the room                                                   |
 | Pets        | Active pets, pet teams, ability logs                                            |
-| Storage     | Seed silo, inventory (crops, plants, pets, tools, decors), feeding trough, pet hutch |
-| Garden      | Plant seeds, water, harvest, pot plants, grow/hatch eggs                        |
-| Shops       | Buy seeds / tools / eggs / decors (single, bulk, hybrid modes) + autobuy        |
+| Storage     | Seed silo, inventory, feeding trough, pet hutch (with Magic Dust upgrades), decor shed |
+| Garden      | Plant seeds, water, harvest, pot plants, cleanse mutations, grow/hatch eggs     |
+| Shops       | Buy seeds / tools / eggs / decors (single, bulk, hybrid modes)                  |
 | Social      | Browse and join public rooms                                                    |
 | Mini Games  | Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg Hatcher (casino wallet, deposit / withdraw) |
 | Alerts      | Notification config (shops, weather, pets, feeding trough)                      |
-| Settings    | Background & battery, reconnection, purchase mode, developer options            |
+| Settings    | Background & battery, reconnection, purchase mode, storages auto-stock, developer options |
 | Debug       | WebSocket logs, service logs, alert testing                                     |
 
 Sections that require an active connection are greyed out when offline.
@@ -89,6 +91,9 @@ The Garden section mirrors your in-game plot. You can:
 - Water growing plants to speed up growth.
 - Harvest mature crops from single-slot and multi-slot plants.
 - Pot a grown plant back into your inventory using Planter Pots.
+- **Cleanse mutations** off a crop with a Crop Cleanser tool — available
+  on both single-crop and multi-slot plant dialogs (per-slot for the
+  latter), disabled when the crop has no mutation or you have no Cleanser.
 - Grow and hatch eggs into pets.
 
 Multi-slot plants (Moonbinder, trees, Camellia…) are rendered like in the
@@ -98,10 +103,13 @@ position, sized by its `targetScale` and composited with its own mutations.
 ## Storage
 
 Inventory, feeding trough, seed silo, pet hutch, and decor shed — each
-category shows its contents with rarity borders and quantity badges.
+category shows its contents with rarity borders and quantity badges. The
+Celestial border is animated with the same blue → violet → gold gradient
+as the in-game badge.
 
 - **Sell pets**: sell individual pets with a price preview, or bulk-sell
-  all unlocked pets.
+  all unlocked pets. Both the per-pet preview and the totals show the
+  **Magic Dust** value alongside the gold price.
 - **Sell crops**: sell individual produce, or bulk-sell all unlocked crops.
   Prices include the friends-bonus (×1.0 to ×1.5 based on room size).
 - **Lock / unlock items**: tap any item to open its detail popup, then
@@ -109,6 +117,16 @@ category shows its contents with rarity borders and quantity badges.
 - **Multi-slot plants**: the detail dialog shows each crop slot with its
   growth bar, mutations, and individual sell price, plus a Plant in Garden
   button.
+- **Move between inventory and storages**: pet, seed and decor detail
+  popups have **Move to Pet Hutch / Seed Silo / Decor Shed** buttons (and
+  vice-versa from the storage side). Buttons are disabled when the
+  destination is full.
+- **Pet Hutch upgrades**: the hutch panel shows your dust balance, current
+  capacity, and a one-tap **Upgrade** button when you have enough dust to
+  unlock the next capacity tier (max level 10).
+- **Auto-stock**: in Settings → Storages, toggles **Auto-stock Seed Silo**
+  / **Auto-stock Decor Shed** automatically move newly-acquired stackable
+  items into the matching storage slot.
 
 ## Shops
 
@@ -141,6 +159,22 @@ A full casino with a dedicated wallet:
 Games available: **Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg
 Hatcher**. The Egg Hatcher animates the hatch with per-pet mutation (Gold,
 Rainbow) composed directly on the sprite.
+
+## Play in game
+
+When you actually want to play (not just AFK), tap **Play in game** on the
+Dashboard. The app opens a full-screen WebView pre-authenticated with your
+session cookie — no need to log back in.
+
+By default the latest [Gemini userscript](https://github.com/Ariedam64/Gemini)
+is downloaded from the GitHub releases and injected on every launch with
+GM_* polyfills (storage, version detection, and a native HTTP bridge that
+bypasses the WebView's CORS for cross-origin mod requests). You can also
+toggle **Inject Gemini mod** off to play vanilla.
+
+To avoid the game kicking your AFK WebSocket, the AFK session is
+automatically paused when you tap Play and resumes when you close the
+WebView.
 
 ## Alerts
 
