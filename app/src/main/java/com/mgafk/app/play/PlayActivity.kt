@@ -11,6 +11,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.repository.GeminiFetcher
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +64,14 @@ class PlayActivity : Activity() {
             AppLog.w(TAG, "Missing cookie or room — finishing")
             finish()
             return
+        }
+
+        // Immersive mode: hide both status bar and navigation bar so the game
+        // gets the full screen. Swiping from an edge briefly reveals them.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
         // Pre-set mc_jwt cookie for both the requested host and its apex domain
