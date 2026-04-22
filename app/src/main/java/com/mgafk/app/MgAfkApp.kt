@@ -3,8 +3,6 @@ package com.mgafk.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
@@ -21,7 +19,12 @@ class MgAfkApp : Application(), ImageLoaderFactory {
     companion object {
         const val CHANNEL_SERVICE = "mgafk_service"
         const val CHANNEL_ALERTS = "mgafk_alerts"
-        const val CHANNEL_ALARMS = "mgafk_alarms"
+        // Bumped from "mgafk_alarms" to "mgafk_alarms_v2" because the channel now
+        // has no sound/vibration (handled by AlertNotifier so the user-chosen
+        // sound is the only one that plays). Notification channels are immutable
+        // after creation, so a new id is required to change those attributes.
+        const val CHANNEL_ALARMS = "mgafk_alarms_v2"
+        private const val LEGACY_CHANNEL_ALARMS = "mgafk_alarms"
     }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -77,26 +80,24 @@ class MgAfkApp : Application(), ImageLoaderFactory {
             description = "Shop items, pet hunger, weather alerts"
         }
 
-        val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        val alarmAudioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-
+        // No sound or vibration on the channel itself — AlertNotifier owns the
+        // sound (MediaPlayer with the user-chosen URI) and the vibration so
+        // there's a single source of truth and no overlap with the channel.
         val alarmsChannel = NotificationChannel(
             CHANNEL_ALARMS,
             "Game Alarms",
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Loud alarm alerts that bypass silent mode"
-            setSound(alarmSound, alarmAudioAttributes)
-            enableVibration(true)
-            vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
+            setSound(null, null)
+            enableVibration(false)
         }
 
         manager.createNotificationChannel(serviceChannel)
         manager.createNotificationChannel(alertsChannel)
         manager.createNotificationChannel(alarmsChannel)
+
+        // Clean up the v1 alarm channel from older installs.
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_ALARMS)
     }
 }

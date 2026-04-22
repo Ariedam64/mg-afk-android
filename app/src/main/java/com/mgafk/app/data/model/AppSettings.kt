@@ -45,6 +45,9 @@ data class AppSettings(
     // Play in game — inject the Gemini userscript into the WebView
     val injectGeminiMod: Boolean = true,
 
+    // Alarm sound URI (RingtoneManager). Empty = system default alarm.
+    val alarmSoundUri: String = "",
+
     // Developer
     val showDebugMenu: Boolean = false,
 )

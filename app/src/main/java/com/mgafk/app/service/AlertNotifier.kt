@@ -37,6 +37,10 @@ class AlertNotifier(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
     private var notificationId = 1000
 
+    /** User-chosen alarm sound URI from AppSettings. Empty = system default alarm. */
+    @Volatile
+    var alarmSoundUri: String = ""
+
     // Dedup tracking — cleared when the condition goes away
     private val firedShopKeys = mutableSetOf<String>()
     private val firedHungerPets = mutableSetOf<String>()
@@ -351,7 +355,10 @@ class AlertNotifier(private val context: Context) {
     }
 
     private fun playAlarmSound() {
-        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val customUri = alarmSoundUri.takeIf { it.isNotBlank() }
+            ?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() }
+        val alarmUri = customUri
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             ?: return
 

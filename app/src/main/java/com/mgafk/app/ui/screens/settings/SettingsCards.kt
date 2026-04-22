@@ -1,10 +1,14 @@
 package com.mgafk.app.ui.screens.settings
 
+import android.app.Activity
 import android.content.Intent
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +69,7 @@ fun SettingsCards(
     BackgroundCard(settings = settings, onUpdate = onUpdate)
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
     StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
+    AlarmCard(settings = settings, onUpdate = onUpdate)
     ReconnectionCard(settings = settings, onUpdate = onUpdate)
     DeveloperCard(settings = settings, onUpdate = onUpdate)
 }
@@ -437,6 +442,83 @@ private fun StoragesCard(
                 checked = settings.autoStockDecorShed,
                 onCheckedChange = { onUpdate(settings.copy(autoStockDecorShed = it)) },
             )
+        }
+    }
+}
+
+// ── Alarm ──
+
+@Composable
+private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+        }
+        // null = "Silent" picked; we treat that the same as "default" for safety
+        // (an alarm without sound defeats the purpose).
+        onUpdate(settings.copy(alarmSoundUri = uri?.toString().orEmpty()))
+    }
+
+    val currentName = remember(settings.alarmSoundUri) {
+        if (settings.alarmSoundUri.isBlank()) "System default"
+        else runCatching {
+            RingtoneManager.getRingtone(context, Uri.parse(settings.alarmSoundUri))
+                ?.getTitle(context)
+        }.getOrNull() ?: "Custom"
+    }
+
+    AppCard(title = "Alarm", collapsible = true, persistKey = "settings_alarm") {
+        Text(
+            "Sound played when an alert fires in Alarm mode.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .clickable {
+                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                        putExtra(
+                            RingtoneManager.EXTRA_RINGTONE_TYPE,
+                            RingtoneManager.TYPE_ALARM
+                                or RingtoneManager.TYPE_NOTIFICATION
+                                or RingtoneManager.TYPE_RINGTONE,
+                        )
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Pick alarm sound")
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                        putExtra(
+                            RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                        )
+                        if (settings.alarmSoundUri.isNotBlank()) {
+                            putExtra(
+                                RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                                Uri.parse(settings.alarmSoundUri),
+                            )
+                        }
+                    }
+                    launcher.launch(intent)
+                }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(currentName, fontSize = 12.sp, color = TextSecondary)
         }
     }
 }
