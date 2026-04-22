@@ -430,6 +430,10 @@ class RoomClient {
                                 val arr = value as? JsonArray
                                 put("eggsAffectedCount", (arr?.size ?: 0).toString())
                             }
+                            key == "growSlotsAffected" -> {
+                                val arr = value as? JsonArray
+                                put("growSlotsAffectedCount", (arr?.size ?: 0).toString())
+                            }
                             else -> {
                                 // Store primitive values as strings
                                 try {

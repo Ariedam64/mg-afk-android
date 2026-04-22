@@ -54,12 +54,12 @@ object Constants {
 
     fun isAbilityName(action: String?): Boolean {
         if (action.isNullOrBlank()) return false
+        val trimmed = action.trim()
+        // Always exclude blocked actions (MoonKisser/DawnKisser etc.) even when
+        // the API list is loaded.
+        if (trimmed.lowercase() in BLOCKED_ABILITIES) return false
         val abilities = com.mgafk.app.data.repository.MgApi.getAbilities()
-        if (abilities.isEmpty()) {
-            // API pas encore chargée — fallback blocklist
-            return action.trim().lowercase() !in BLOCKED_ABILITIES
-        }
-        return abilities.containsKey(action.trim())
+        return if (abilities.isEmpty()) true else abilities.containsKey(trimmed)
     }
 
     fun fmtDuration(ms: Long): String {

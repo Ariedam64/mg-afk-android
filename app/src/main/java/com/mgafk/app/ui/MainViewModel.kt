@@ -1738,6 +1738,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingUnpotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingUnpotJobs.remove(key)?.cancel()
                 }
+                pendingCleanseJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingCleanseJobs.remove(key)?.cancel()
+                }
                 val freeTiles = clients[sessionId]?.let { computeFreePlantTileCount(it) } ?: 0
                 updateSession(sessionId) { it.copy(garden = newGarden, freePlantTiles = freeTiles) }
             }
@@ -1893,6 +1896,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 pendingUnpotJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingUnpotJobs.remove(key)?.cancel()
+                }
+                pendingCleanseJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
+                    pendingCleanseJobs.remove(key)?.cancel()
                 }
 
                 // Detect newly hatched pet
