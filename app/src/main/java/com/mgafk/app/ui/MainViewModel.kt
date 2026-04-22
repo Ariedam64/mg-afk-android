@@ -325,6 +325,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun disconnect(sessionId: String) {
+        disconnectInternal(sessionId, stopServiceIfIdle = true)
+    }
+
+    /**
+     * Disconnect a session without stopping the foreground service even if
+     * no other sessions remain connected. Used when launching [PlayActivity]
+     * so the notification stays visible and the OS doesn't kill the process
+     * — restarting an FGS after returning from another activity is unreliable
+     * on Android 14+ due to background-start restrictions.
+     */
+    fun disconnectKeepService(sessionId: String) {
+        disconnectInternal(sessionId, stopServiceIfIdle = false)
+    }
+
+    private fun disconnectInternal(sessionId: String, stopServiceIfIdle: Boolean) {
         collectorJobs.remove(sessionId)?.cancel()
         clients[sessionId]?.disconnect()
         updateSession(sessionId) {
@@ -336,7 +351,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 connectedAt = 0,
             )
         }
-        stopAfkServiceIfIdle()
+        if (stopServiceIfIdle) stopAfkServiceIfIdle()
     }
 
     fun setToken(sessionId: String, token: String) {

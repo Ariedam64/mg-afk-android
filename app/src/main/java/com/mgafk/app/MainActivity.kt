@@ -81,10 +81,14 @@ class MainActivity : ComponentActivity() {
                     },
                     onPlayRequest = { sessionId, cookie, room, gameUrl ->
                         // Auto-disconnect AFK so the game doesn't kick our second session.
+                        // Keep the foreground service running so the notification
+                        // stays visible and we don't have to restart an FGS when
+                        // returning from PlayActivity (Android 14+ background-start
+                        // restrictions can make that fail silently).
                         val wasConnected = viewModel.state.value.sessions
                             .find { it.id == sessionId }?.connected == true
                         if (wasConnected) {
-                            viewModel.disconnect(sessionId)
+                            viewModel.disconnectKeepService(sessionId)
                             resumeAfterPlayId = sessionId
                         }
                         val intent = Intent(this, PlayActivity::class.java).apply {
