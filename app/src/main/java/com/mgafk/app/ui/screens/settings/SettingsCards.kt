@@ -77,7 +77,6 @@ fun SettingsCards(
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
     StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
     AlarmCard(settings = settings, onUpdate = onUpdate)
-    AlarmScheduleCard(settings = settings, onUpdate = onUpdate)
     ReconnectionCard(settings = settings, onUpdate = onUpdate)
     DeveloperCard(settings = settings, onUpdate = onUpdate)
 }
@@ -456,9 +455,13 @@ private fun StoragesCard(
 
 // ── Alarm ──
 
+private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
+private val DAY_VALUES = listOf(1, 2, 3, 4, 5, 6, 7) // ISO 1=Mon..7=Sun
+
 @Composable
 private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
     val context = LocalContext.current
+    val schedule = settings.alarmSchedule
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -483,14 +486,29 @@ private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
         }.getOrNull() ?: "Custom"
     }
 
+    // Live "Silenced now" indicator — recompute every 30s.
+    var nowTick by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowTick = LocalDateTime.now()
+            delay(30_000L)
+        }
+    }
+    val silencedNow = schedule.isSilentAt(nowTick)
+
     AppCard(title = "Alarm", collapsible = true, persistKey = "settings_alarm") {
+        // ── Sound subsection ──
+        Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+
+        Spacer(modifier = Modifier.height(4.dp))
+
         Text(
             "Sound played when an alert fires in Alarm mode.",
             fontSize = 11.sp,
             color = TextMuted,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(
             modifier = Modifier
@@ -524,34 +542,18 @@ private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+            Text("Tap to change", fontSize = 12.sp, color = TextMuted)
             Spacer(modifier = Modifier.weight(1f))
             Text(currentName, fontSize = 12.sp, color = TextSecondary)
         }
-    }
-}
 
-// ── Alarm Schedule ──
+        Spacer(modifier = Modifier.height(20.dp))
 
-private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
-private val DAY_VALUES = listOf(1, 2, 3, 4, 5, 6, 7) // ISO 1=Mon..7=Sun
+        // ── Schedule subsection ──
+        Text("Schedule", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
 
-@Composable
-private fun AlarmScheduleCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
-    val context = LocalContext.current
-    val schedule = settings.alarmSchedule
+        Spacer(modifier = Modifier.height(4.dp))
 
-    // Live "Silenced now" indicator — recompute every 30s.
-    var nowTick by remember { mutableStateOf(LocalDateTime.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            nowTick = LocalDateTime.now()
-            delay(30_000L)
-        }
-    }
-    val silencedNow = schedule.isSilentAt(nowTick)
-
-    AppCard(title = "Alarm Schedule", collapsible = true, persistKey = "settings_alarm_schedule") {
         Text(
             "Mute alarms during these hours. Notifications still arrive silently.",
             fontSize = 11.sp,
@@ -559,7 +561,7 @@ private fun AlarmScheduleCard(settings: AppSettings, onUpdate: (AppSettings) -> 
             lineHeight = 15.sp,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         ToggleRow(
             title = "Mute alarms",
@@ -573,7 +575,6 @@ private fun AlarmScheduleCard(settings: AppSettings, onUpdate: (AppSettings) -> 
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Time pickers row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
