@@ -3,6 +3,8 @@ package com.mgafk.app.ui.screens.alerts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -38,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
+import com.mgafk.app.data.model.AlertItem
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.data.repository.MgApi
@@ -59,6 +64,9 @@ private val RarityLegendary = Color(0xFFFFC734)
 private val RarityMythical = Color(0xFF9944A7)
 private val RarityDivine = Color(0xFFFF7835)
 private val RarityCelestial = Color(0xFFFF00FF)
+
+private val CustomModeColor = Color(0xFF8B5CF6) // indigo/violet — distinct from Accent (blue) and Alarm (red)
+private val AlarmModeColor = Color(0xFFF87171) // red — section/item alarm mode
 
 private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
     "common" -> RarityCommon
@@ -99,6 +107,7 @@ fun AlertsCards(
     apiReady: Boolean,
     onToggle: (key: String, enabled: Boolean) -> Unit,
     onSectionModeChange: (AlertSection, AlertMode) -> Unit,
+    onItemModeChange: (key: String, mode: AlertMode) -> Unit,
     onCollapseChange: (key: String, collapsed: Boolean) -> Unit,
     onPetThresholdChange: (Int) -> Unit,
 ) {
@@ -119,10 +128,43 @@ fun AlertsCards(
             }
         }
     } else {
-        ShopAlertsCard(alerts, onToggle, alerts.isExpanded("shop_alerts"), onCollapseChange, alerts.modeFor(AlertSection.SHOP)) { onSectionModeChange(AlertSection.SHOP, it) }
-        WeatherAlertsCard(alerts, onToggle, alerts.isExpanded("weather_alerts"), onCollapseChange, alerts.modeFor(AlertSection.WEATHER)) { onSectionModeChange(AlertSection.WEATHER, it) }
-        PetAlertsCard(alerts, onToggle, alerts.isExpanded("pet_alerts"), onCollapseChange, alerts.modeFor(AlertSection.PET), onPetThresholdChange) { onSectionModeChange(AlertSection.PET, it) }
-        FeedingTroughAlertsCard(alerts, onToggle, alerts.isExpanded("trough_alerts"), onCollapseChange, alerts.modeFor(AlertSection.FEEDING_TROUGH)) { onSectionModeChange(AlertSection.FEEDING_TROUGH, it) }
+        ShopAlertsCard(
+            alerts = alerts,
+            onToggle = onToggle,
+            onItemModeChange = onItemModeChange,
+            expanded = alerts.isExpanded("shop_alerts"),
+            onCollapseChange = onCollapseChange,
+            currentMode = alerts.modeFor(AlertSection.SHOP),
+            onModeChange = { onSectionModeChange(AlertSection.SHOP, it) },
+        )
+        WeatherAlertsCard(
+            alerts = alerts,
+            onToggle = onToggle,
+            onItemModeChange = onItemModeChange,
+            expanded = alerts.isExpanded("weather_alerts"),
+            onCollapseChange = onCollapseChange,
+            currentMode = alerts.modeFor(AlertSection.WEATHER),
+            onModeChange = { onSectionModeChange(AlertSection.WEATHER, it) },
+        )
+        PetAlertsCard(
+            alerts = alerts,
+            onToggle = onToggle,
+            onItemModeChange = onItemModeChange,
+            expanded = alerts.isExpanded("pet_alerts"),
+            onCollapseChange = onCollapseChange,
+            currentMode = alerts.modeFor(AlertSection.PET),
+            onThresholdChange = onPetThresholdChange,
+            onModeChange = { onSectionModeChange(AlertSection.PET, it) },
+        )
+        FeedingTroughAlertsCard(
+            alerts = alerts,
+            onToggle = onToggle,
+            onItemModeChange = onItemModeChange,
+            expanded = alerts.isExpanded("trough_alerts"),
+            onCollapseChange = onCollapseChange,
+            currentMode = alerts.modeFor(AlertSection.FEEDING_TROUGH),
+            onModeChange = { onSectionModeChange(AlertSection.FEEDING_TROUGH, it) },
+        )
     }
 }
 
@@ -144,8 +186,13 @@ private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) 
             val label = when (mode) {
                 AlertMode.NOTIFICATION -> "Notification"
                 AlertMode.ALARM -> "Alarm"
+                AlertMode.CUSTOM -> "Custom"
             }
-            val color = if (mode == AlertMode.ALARM) Color(0xFFF87171) else Accent
+            val color = when (mode) {
+                AlertMode.ALARM -> AlarmModeColor
+                AlertMode.CUSTOM -> CustomModeColor
+                AlertMode.NOTIFICATION -> Accent
+            }
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -168,6 +215,40 @@ private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) 
     }
 }
 
+@Composable
+private fun CustomModeHint() {
+    Text(
+        "Long press an item to switch between notification and alarm.",
+        fontSize = 10.sp,
+        color = CustomModeColor,
+        fontWeight = FontWeight.Medium,
+    )
+}
+
+/** Small inline mode toggle for switch-based items (Weather / Pet / Trough). */
+@Composable
+private fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit) {
+    val isAlarm = currentMode == AlertMode.ALARM
+    val color = if (isAlarm) AlarmModeColor else Accent
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(color.copy(alpha = 0.15f))
+            .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .clickable {
+                onChange(if (isAlarm) AlertMode.NOTIFICATION else AlertMode.ALARM)
+            }
+            .padding(horizontal = 6.dp, vertical = 3.dp),
+    ) {
+        Icon(
+            imageVector = if (isAlarm) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+            contentDescription = if (isAlarm) "Alarm" else "Notification",
+            tint = color,
+            modifier = Modifier.size(14.dp),
+        )
+    }
+}
+
 // ── Shop Alerts ──
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -175,6 +256,7 @@ private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) 
 private fun ShopAlertsCard(
     alerts: AlertConfig,
     onToggle: (String, Boolean) -> Unit,
+    onItemModeChange: (String, AlertMode) -> Unit,
     expanded: Boolean,
     onCollapseChange: (String, Boolean) -> Unit,
     currentMode: AlertMode,
@@ -203,11 +285,15 @@ private fun ShopAlertsCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            "Tap items to get notified when they appear in shop.",
-            fontSize = 11.sp,
-            color = TextMuted,
-        )
+        if (currentMode == AlertMode.CUSTOM) {
+            CustomModeHint()
+        } else {
+            Text(
+                "Tap items to get notified when they appear in shop.",
+                fontSize = 11.sp,
+                color = TextMuted,
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -225,7 +311,6 @@ private fun ShopAlertsCard(
                 alerts.items["shop:$category:${entry.id}"]?.enabled == true
             }
 
-            // Category header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -251,13 +336,23 @@ private fun ShopAlertsCard(
                 ) {
                     items.forEach { entry ->
                         val key = "shop:$category:${entry.id}"
-                        val enabled = alerts.items[key]?.enabled == true
+                        val item = alerts.items[key]
+                        val enabled = item?.enabled == true
+                        val itemMode = item?.mode ?: AlertMode.NOTIFICATION
                         AlertItemTile(
                             spriteUrl = entry.sprite,
                             name = entry.name,
                             rarity = entry.rarity,
                             enabled = enabled,
+                            showModeIndicator = currentMode == AlertMode.CUSTOM && enabled,
+                            itemMode = itemMode,
                             onClick = { onToggle(key, !enabled) },
+                            onLongPress = {
+                                if (currentMode == AlertMode.CUSTOM) {
+                                    val next = if (itemMode == AlertMode.ALARM) AlertMode.NOTIFICATION else AlertMode.ALARM
+                                    onItemModeChange(key, next)
+                                }
+                            },
                         )
                     }
                 }
@@ -276,6 +371,7 @@ private fun ShopAlertsCard(
 private fun WeatherAlertsCard(
     alerts: AlertConfig,
     onToggle: (String, Boolean) -> Unit,
+    onItemModeChange: (String, AlertMode) -> Unit,
     expanded: Boolean,
     onCollapseChange: (String, Boolean) -> Unit,
     currentMode: AlertMode,
@@ -307,18 +403,24 @@ private fun WeatherAlertsCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            "Get notified on weather changes.",
-            fontSize = 11.sp,
-            color = TextMuted,
-        )
+        if (currentMode == AlertMode.CUSTOM) {
+            CustomModeHint()
+        } else {
+            Text(
+                "Get notified on weather changes.",
+                fontSize = 11.sp,
+                color = TextMuted,
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             WEATHER_ITEMS.forEach { (apiKey, displayName) ->
                 val key = "weather:$displayName"
-                val enabled = alerts.items[key]?.enabled == true
+                val item = alerts.items[key]
+                val enabled = item?.enabled == true
+                val itemMode = item?.mode ?: AlertMode.NOTIFICATION
                 val spriteUrl = weatherSprites[apiKey]
 
                 Row(
@@ -334,6 +436,10 @@ private fun WeatherAlertsCard(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(displayName, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                    if (currentMode == AlertMode.CUSTOM && enabled) {
+                        ItemModeToggle(currentMode = itemMode) { onItemModeChange(key, it) }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                         Switch(
                             checked = enabled,
@@ -353,13 +459,16 @@ private fun WeatherAlertsCard(
 private fun PetAlertsCard(
     alerts: AlertConfig,
     onToggle: (String, Boolean) -> Unit,
+    onItemModeChange: (String, AlertMode) -> Unit,
     expanded: Boolean,
     onCollapseChange: (String, Boolean) -> Unit,
     currentMode: AlertMode,
     onThresholdChange: (Int) -> Unit,
     onModeChange: (AlertMode) -> Unit,
 ) {
-    val enabled = alerts.items[HUNGER_KEY]?.enabled == true
+    val item = alerts.items[HUNGER_KEY]
+    val enabled = item?.enabled == true
+    val itemMode = item?.mode ?: AlertMode.NOTIFICATION
     val threshold = alerts.petHungerThreshold
 
     AppCard(
@@ -381,6 +490,11 @@ private fun PetAlertsCard(
     ) {
         SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
 
+        if (currentMode == AlertMode.CUSTOM) {
+            Spacer(modifier = Modifier.height(6.dp))
+            CustomModeHint()
+        }
+
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(
@@ -398,6 +512,10 @@ private fun PetAlertsCard(
                 color = TextPrimary,
                 modifier = Modifier.weight(1f),
             )
+            if (currentMode == AlertMode.CUSTOM && enabled) {
+                ItemModeToggle(currentMode = itemMode) { onItemModeChange(HUNGER_KEY, it) }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Switch(
                     checked = enabled,
@@ -433,12 +551,15 @@ private fun PetAlertsCard(
 private fun FeedingTroughAlertsCard(
     alerts: AlertConfig,
     onToggle: (String, Boolean) -> Unit,
+    onItemModeChange: (String, AlertMode) -> Unit,
     expanded: Boolean,
     onCollapseChange: (String, Boolean) -> Unit,
     currentMode: AlertMode,
     onModeChange: (AlertMode) -> Unit,
 ) {
-    val enabled = alerts.items[TROUGH_KEY]?.enabled == true
+    val item = alerts.items[TROUGH_KEY]
+    val enabled = item?.enabled == true
+    val itemMode = item?.mode ?: AlertMode.NOTIFICATION
 
     AppCard(
         title = "Feeding Trough Alerts",
@@ -459,6 +580,11 @@ private fun FeedingTroughAlertsCard(
     ) {
         SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
 
+        if (currentMode == AlertMode.CUSTOM) {
+            Spacer(modifier = Modifier.height(6.dp))
+            CustomModeHint()
+        }
+
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(
@@ -476,6 +602,10 @@ private fun FeedingTroughAlertsCard(
                 color = TextPrimary,
                 modifier = Modifier.weight(1f),
             )
+            if (currentMode == AlertMode.CUSTOM && enabled) {
+                ItemModeToggle(currentMode = itemMode) { onItemModeChange(TROUGH_KEY, it) }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Switch(
                     checked = enabled,
@@ -537,13 +667,17 @@ private fun ThresholdPicker(
 
 // ── Alert item tile (tappable grid item) ──
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AlertItemTile(
     spriteUrl: String?,
     name: String,
     rarity: String?,
     enabled: Boolean,
+    showModeIndicator: Boolean,
+    itemMode: AlertMode,
     onClick: () -> Unit,
+    onLongPress: () -> Unit,
 ) {
     val bgColor = if (enabled) Accent.copy(alpha = 0.1f) else SurfaceDark
 
@@ -557,7 +691,7 @@ private fun AlertItemTile(
                     else Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
                 )
                 .background(bgColor)
-                .clickable(onClick = onClick)
+                .combinedClickable(onClick = onClick, onLongClick = onLongPress)
                 .padding(horizontal = 4.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -578,7 +712,6 @@ private fun AlertItemTile(
             )
         }
 
-        // Checkmark badge
         if (enabled) {
             Box(
                 modifier = Modifier
@@ -594,6 +727,27 @@ private fun AlertItemTile(
                     contentDescription = "Active",
                     tint = SurfaceDark,
                     modifier = Modifier.size(12.dp),
+                )
+            }
+        }
+
+        if (showModeIndicator) {
+            val isAlarm = itemMode == AlertMode.ALARM
+            val color = if (isAlarm) AlarmModeColor else Accent
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 4.dp, y = 4.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(color),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (isAlarm) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+                    contentDescription = if (isAlarm) "Alarm mode" else "Notification mode",
+                    tint = SurfaceDark,
+                    modifier = Modifier.size(11.dp),
                 )
             }
         }

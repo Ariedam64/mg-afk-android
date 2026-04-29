@@ -18,15 +18,18 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import com.mgafk.app.MainActivity
 import com.mgafk.app.MgAfkApp
+import com.mgafk.app.data.model.AlarmSchedule
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.ShopSnapshot
+import com.mgafk.app.data.model.isSilentAt
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.websocket.Constants
 import java.lang.ref.WeakReference
+import java.time.LocalDateTime
 import java.util.concurrent.Executors
 
 /**
@@ -41,6 +44,10 @@ class AlertNotifier(private val context: Context) {
     @Volatile
     var alarmSoundUri: String = ""
 
+    /** Active alarm silence schedule. Updated from AppSettings. */
+    @Volatile
+    var alarmSchedule: AlarmSchedule = AlarmSchedule()
+
     // Dedup tracking — cleared when the condition goes away
     private val firedShopKeys = mutableSetOf<String>()
     private val firedHungerPets = mutableSetOf<String>()
@@ -50,7 +57,8 @@ class AlertNotifier(private val context: Context) {
     // ── Public check methods ──
 
     fun checkPetHunger(pets: List<PetSnapshot>, alerts: AlertConfig) {
-        val hungerAlert = alerts.items["hunger<5"] ?: return
+        val hungerKey = "hunger<5"
+        val hungerAlert = alerts.items[hungerKey] ?: return
         if (!hungerAlert.enabled) return
 
         val threshold = alerts.petHungerThreshold
@@ -75,7 +83,7 @@ class AlertNotifier(private val context: Context) {
         firedHungerPets.retainAll(currentLowPets)
 
         if (items.isNotEmpty()) {
-            dispatchAlert("Pet Hunger", items, alerts.modeFor(AlertSection.PET))
+            dispatchAlert("Pet Hunger", items, alerts.resolveMode(AlertSection.PET, hungerKey))
         }
     }
 
@@ -91,13 +99,15 @@ class AlertNotifier(private val context: Context) {
         dispatchAlert(
             title = "Weather Change",
             items = listOf(DisplayItem(label = weather, spriteUrl = weatherEntry?.sprite)),
-            mode = alerts.modeFor(AlertSection.WEATHER),
+            mode = alerts.resolveMode(AlertSection.WEATHER, key),
         )
     }
 
     fun checkShopItems(shops: List<ShopSnapshot>, alerts: AlertConfig) {
         val currentKeys = mutableSetOf<String>()
-        val items = mutableListOf<DisplayItem>()
+        // Group fired items by their resolved mode so a CUSTOM section can mix
+        // notification + alarm items within the same batch.
+        val itemsByMode = mutableMapOf<AlertMode, MutableList<DisplayItem>>()
 
         for (shop in shops) {
             for (itemName in shop.itemNames) {
@@ -109,21 +119,26 @@ class AlertNotifier(private val context: Context) {
                 firedShopKeys.add(key)
 
                 val entry = resolveShopEntry(shop.type, itemName)
-                items.add(DisplayItem(
+                val display = DisplayItem(
                     label = entry?.name ?: itemName,
                     spriteUrl = entry?.sprite,
-                ))
+                )
+                val mode = alerts.resolveMode(AlertSection.SHOP, key)
+                itemsByMode.getOrPut(mode) { mutableListOf() }.add(display)
             }
         }
         firedShopKeys.retainAll(currentKeys)
 
-        if (items.isNotEmpty()) {
-            dispatchAlert("Shop Alert", items, alerts.modeFor(AlertSection.SHOP))
+        for ((mode, group) in itemsByMode) {
+            if (group.isNotEmpty()) {
+                dispatchAlert("Shop Alert", group, mode)
+            }
         }
     }
 
     fun checkFeedingTrough(trough: List<InventoryCropsItem>, alerts: AlertConfig) {
-        val troughAlert = alerts.items["trough_low"] ?: return
+        val troughKey = "trough_low"
+        val troughAlert = alerts.items[troughKey] ?: return
         if (!troughAlert.enabled) return
 
         val isLow = trough.size <= 1
@@ -133,7 +148,7 @@ class AlertNotifier(private val context: Context) {
             dispatchAlert(
                 title = "Feeding Trough",
                 items = listOf(DisplayItem(label = "Only ${trough.size} item(s) left in trough")),
-                mode = alerts.modeFor(AlertSection.FEEDING_TROUGH),
+                mode = alerts.resolveMode(AlertSection.FEEDING_TROUGH, troughKey),
             )
         } else if (!isLow) {
             firedTroughLow = false
@@ -216,13 +231,19 @@ class AlertNotifier(private val context: Context) {
     }
 
     private fun dispatchAlert(title: String, items: List<DisplayItem>, mode: AlertMode) {
-        when (mode) {
+        // Downgrade ALARM → silent NOTIFICATION when the silence window is active.
+        val effectiveMode = if (mode == AlertMode.ALARM && alarmSchedule.isSilentAt(LocalDateTime.now()))
+            AlertMode.NOTIFICATION
+        else mode
+
+        when (effectiveMode) {
             AlertMode.NOTIFICATION -> sendGroupedNotification(title, items)
             AlertMode.ALARM -> {
                 pendingAlarmItems.addAll(items)
                 handler.removeCallbacks(flushAlarm)
                 handler.postDelayed(flushAlarm, 300)
             }
+            AlertMode.CUSTOM -> sendGroupedNotification(title, items) // safety fallback; should never reach here
         }
     }
 

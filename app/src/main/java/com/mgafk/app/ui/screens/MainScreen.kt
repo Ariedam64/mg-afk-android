@@ -950,13 +950,23 @@ private fun SectionContent(
                 onToggle = { key, enabled ->
                     viewModel.updateAlerts { config ->
                         val items = config.items.toMutableMap()
-                        items[key] = AlertItem(enabled = enabled)
+                        // Preserve any existing mode — only flip the enabled flag.
+                        val current = items[key] ?: AlertItem()
+                        items[key] = current.copy(enabled = enabled)
                         config.copy(items = items)
                     }
                 },
                 onSectionModeChange = { section, mode ->
                     viewModel.updateAlerts { config ->
                         config.copy(sectionModes = config.sectionModes + (section.key to mode))
+                    }
+                },
+                onItemModeChange = { key, mode ->
+                    viewModel.updateAlerts { config ->
+                        val items = config.items.toMutableMap()
+                        val current = items[key] ?: AlertItem()
+                        items[key] = current.copy(mode = mode)
+                        config.copy(items = items)
                     }
                 },
                 onCollapseChange = { key, collapsed ->

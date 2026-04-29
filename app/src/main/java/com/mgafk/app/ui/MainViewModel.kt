@@ -138,6 +138,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val petTipDismissed = repo.isPetTipDismissed()
             val settings = repo.loadSettings()
             alertNotifier.alarmSoundUri = settings.alarmSoundUri
+            alertNotifier.alarmSchedule = settings.alarmSchedule
             val petTeams = repo.loadPetTeams()
             val teamTipDismissed = repo.isTeamTipDismissed()
             val gardenTipDismissed = repo.isGardenTipDismissed()
@@ -1568,6 +1569,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun applySettings(settings: AppSettings) {
         // Push the chosen alarm sound URI to the notifier so the next alarm uses it.
         alertNotifier.alarmSoundUri = settings.alarmSoundUri
+        alertNotifier.alarmSchedule = settings.alarmSchedule
         // Update AfkService locks if service is running
         if (serviceRunning) {
             val app = getApplication<Application>()

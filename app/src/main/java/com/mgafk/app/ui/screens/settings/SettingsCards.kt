@@ -1,6 +1,7 @@
 package com.mgafk.app.ui.screens.settings
 
 import android.app.Activity
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,9 +53,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.mgafk.app.data.model.AlarmSchedule
 import com.mgafk.app.data.model.AppSettings
 import com.mgafk.app.data.model.PurchaseMode
 import com.mgafk.app.data.model.WakeLockMode
+import com.mgafk.app.data.model.isSilentAt
+import java.time.LocalDateTime
+import kotlinx.coroutines.delay
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -70,6 +77,7 @@ fun SettingsCards(
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
     StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
     AlarmCard(settings = settings, onUpdate = onUpdate)
+    AlarmScheduleCard(settings = settings, onUpdate = onUpdate)
     ReconnectionCard(settings = settings, onUpdate = onUpdate)
     DeveloperCard(settings = settings, onUpdate = onUpdate)
 }
@@ -519,6 +527,178 @@ private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
             Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
             Spacer(modifier = Modifier.weight(1f))
             Text(currentName, fontSize = 12.sp, color = TextSecondary)
+        }
+    }
+}
+
+// ── Alarm Schedule ──
+
+private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
+private val DAY_VALUES = listOf(1, 2, 3, 4, 5, 6, 7) // ISO 1=Mon..7=Sun
+
+@Composable
+private fun AlarmScheduleCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
+    val context = LocalContext.current
+    val schedule = settings.alarmSchedule
+
+    // Live "Silenced now" indicator — recompute every 30s.
+    var nowTick by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowTick = LocalDateTime.now()
+            delay(30_000L)
+        }
+    }
+    val silencedNow = schedule.isSilentAt(nowTick)
+
+    AppCard(title = "Alarm Schedule", collapsible = true, persistKey = "settings_alarm_schedule") {
+        Text(
+            "Mute alarms during these hours. Notifications still arrive silently.",
+            fontSize = 11.sp,
+            color = TextMuted,
+            lineHeight = 15.sp,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ToggleRow(
+            title = "Mute alarms",
+            description = if (silencedNow) "Currently muted." else "Will mute when active.",
+            checked = schedule.enabled,
+            onCheckedChange = { onUpdate(settings.copy(alarmSchedule = schedule.copy(enabled = it))) },
+        )
+
+        // Greyed-out controls when the toggle is off
+        val controlsAlpha = if (schedule.enabled) 1f else 0.4f
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Time pickers row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TimePickerBox(
+                label = "From",
+                minutes = schedule.startMinute,
+                enabled = schedule.enabled,
+                alpha = controlsAlpha,
+                modifier = Modifier.weight(1f),
+                onPick = { picked ->
+                    onUpdate(settings.copy(alarmSchedule = schedule.copy(startMinute = picked)))
+                },
+                context = context,
+            )
+            TimePickerBox(
+                label = "To",
+                minutes = schedule.endMinute,
+                enabled = schedule.enabled,
+                alpha = controlsAlpha,
+                modifier = Modifier.weight(1f),
+                suffix = if (schedule.startMinute > schedule.endMinute) " (overnight)" else null,
+                onPick = { picked ->
+                    onUpdate(settings.copy(alarmSchedule = schedule.copy(endMinute = picked)))
+                },
+                context = context,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text("Active days", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            DAY_VALUES.forEachIndexed { index, dayValue ->
+                val isSelected = dayValue in schedule.activeDays
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSelected) Accent.copy(alpha = 0.12f * controlsAlpha)
+                            else SurfaceBorder.copy(alpha = 0.2f * controlsAlpha)
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) Accent.copy(alpha = 0.5f * controlsAlpha)
+                            else SurfaceBorder.copy(alpha = 0.4f * controlsAlpha),
+                            RoundedCornerShape(8.dp),
+                        )
+                        .clickable(enabled = schedule.enabled) {
+                            val newDays = if (isSelected) schedule.activeDays - dayValue
+                            else schedule.activeDays + dayValue
+                            onUpdate(settings.copy(alarmSchedule = schedule.copy(activeDays = newDays)))
+                        }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = DAY_LABELS[index],
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) Accent.copy(alpha = controlsAlpha)
+                                else TextSecondary.copy(alpha = controlsAlpha),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (silencedNow) "Silenced now: yes" else "Silenced now: no",
+            fontSize = 11.sp,
+            color = if (silencedNow) Accent else TextMuted,
+        )
+    }
+}
+
+@Composable
+private fun TimePickerBox(
+    label: String,
+    minutes: Int,
+    enabled: Boolean,
+    alpha: Float,
+    modifier: Modifier = Modifier,
+    suffix: String? = null,
+    onPick: (Int) -> Unit,
+    context: android.content.Context,
+) {
+    val hour = minutes / 60
+    val minute = minutes % 60
+    val timeText = "%02d:%02d".format(hour, minute)
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(SurfaceBorder.copy(alpha = 0.2f * alpha))
+            .clickable(enabled = enabled) {
+                TimePickerDialog(
+                    context,
+                    { _, h, m -> onPick(h * 60 + m) },
+                    hour, minute, true,
+                ).show()
+            }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 12.sp, color = TextMuted.copy(alpha = alpha))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            timeText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary.copy(alpha = alpha),
+        )
+        if (suffix != null) {
+            Text(suffix, fontSize = 10.sp, color = TextMuted.copy(alpha = alpha))
         }
     }
 }
