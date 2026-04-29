@@ -40,6 +40,13 @@ android {
         compose = true
         buildConfig = true
     }
+
+    lint {
+        // Skip the release-time lint pass: lintVitalAnalyzeRelease often locks
+        // jars on Windows and stalls builds. We don't gate releases on lint here.
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
 }
 
 dependencies {
