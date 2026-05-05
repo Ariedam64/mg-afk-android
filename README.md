@@ -66,6 +66,19 @@ If the WebSocket disconnects, the app retries indefinitely with exponential
 backoff and reconnects immediately when the network comes back. An optional
 notification can alert you when a session loses connection.
 
+The Settings → Background & Battery section also includes a **Battery
+Optimization** shortcut: it shows whether the app is currently "Optimized"
+(the system can pause it in the background) or "Unrestricted", and tapping
+either button opens the corresponding Android system settings page so you
+can flip it.
+
+## Updates
+
+MG AFK checks GitHub Releases every hour and posts a system notification
+when a new version is available. A green **Update vX.Y.Z** button also
+appears at the top of the navigation drawer — tap it to download and
+install the new APK directly from the app, no Play Store required.
+
 ## Pets
 
 The Pets section shows your active pets with hunger bars, STR stats, and
@@ -181,7 +194,8 @@ toggle **Inject Gemini mod** off to play vanilla.
 
 To avoid the game kicking your AFK WebSocket, the AFK session is
 automatically paused when you tap Play and resumes when you close the
-WebView.
+WebView. Play opens in immersive mode (status and navigation bars hidden)
+for a true full-screen experience.
 
 ## Alerts
 
