@@ -139,6 +139,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val settings = repo.loadSettings()
             alertNotifier.alarmSoundUri = settings.alarmSoundUri
             alertNotifier.alarmSchedule = settings.alarmSchedule
+            alertNotifier.alarmVolume = settings.alarmVolume
             val petTeams = repo.loadPetTeams()
             val teamTipDismissed = repo.isTeamTipDismissed()
             val gardenTipDismissed = repo.isGardenTipDismissed()
@@ -1575,6 +1576,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Push the chosen alarm sound URI to the notifier so the next alarm uses it.
         alertNotifier.alarmSoundUri = settings.alarmSoundUri
         alertNotifier.alarmSchedule = settings.alarmSchedule
+        alertNotifier.alarmVolume = settings.alarmVolume
         // Update AfkService locks if service is running
         if (serviceRunning) {
             val app = getApplication<Application>()
@@ -1601,6 +1603,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun testAlert(mode: AlertMode) {
         alertNotifier.testAlert(mode)
+    }
+
+    /** Plays the configured alarm sound at the configured volume (preview from Settings). */
+    fun previewAlarmSound() {
+        alertNotifier.previewAlarmSound()
+    }
+
+    /** Stops the volume preview. */
+    fun stopPreviewAlarmSound() {
+        alertNotifier.stopPreviewSound()
     }
 
     // ---- Preloading ----

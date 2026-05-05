@@ -82,6 +82,9 @@ data class AppSettings(
     // Alarm sound URI (RingtoneManager). Empty = system default alarm.
     val alarmSoundUri: String = "",
 
+    // App-side alarm volume multiplier (0..1). Multiplied on top of the system alarm stream volume.
+    val alarmVolume: Float = 1f,
+
     // Alarm silence schedule (alarms downgraded to silent notifications during the window)
     val alarmSchedule: AlarmSchedule = AlarmSchedule(),
 

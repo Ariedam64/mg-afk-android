@@ -48,6 +48,13 @@ class AlertNotifier(private val context: Context) {
     @Volatile
     var alarmSchedule: AlarmSchedule = AlarmSchedule()
 
+    /** App-side volume multiplier for the alarm sound (0..1). */
+    @Volatile
+    var alarmVolume: Float = 1f
+
+    /** Dedicated player for the in-Settings volume preview. Independent of the real alarm. */
+    private var previewPlayer: MediaPlayer? = null
+
     // Dedup tracking — cleared when the condition goes away
     private val firedShopKeys = mutableSetOf<String>()
     private val firedHungerPets = mutableSetOf<String>()
@@ -201,6 +208,7 @@ class AlertNotifier(private val context: Context) {
         handler.removeCallbacksAndMessages(null)
         pendingAlarmItems.clear()
         stopGlobalAlarm()
+        stopPreviewSound()
     }
 
     /** Fire a fake alert for testing. Bypasses all dedup logic. */
@@ -384,6 +392,7 @@ class AlertNotifier(private val context: Context) {
             ?: return
 
         try {
+            val volume = alarmVolume.coerceIn(0f, 1f)
             val player = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -394,6 +403,7 @@ class AlertNotifier(private val context: Context) {
                 setDataSource(context, alarmUri)
                 isLooping = true
                 prepare()
+                setVolume(volume, volume)
                 start()
             }
             synchronized(lock) {
@@ -401,6 +411,54 @@ class AlertNotifier(private val context: Context) {
                 activeContextRef = WeakReference(context)
             }
         } catch (_: Exception) { }
+    }
+
+    // ── Volume preview (Settings) ──
+
+    /**
+     * Plays the configured alarm sound once at the configured volume, for the
+     * Settings "Test" button. Stops any previous preview. Auto-releases on
+     * completion.
+     */
+    fun previewAlarmSound() {
+        stopPreviewSound()
+        val customUri = alarmSoundUri.takeIf { it.isNotBlank() }
+            ?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() }
+        val alarmUri = customUri
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            ?: return
+
+        try {
+            val volume = alarmVolume.coerceIn(0f, 1f)
+            val player = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                setDataSource(context, alarmUri)
+                isLooping = false
+                prepare()
+                setVolume(volume, volume)
+                setOnCompletionListener {
+                    runCatching { it.release() }
+                    if (previewPlayer === it) previewPlayer = null
+                }
+                start()
+            }
+            previewPlayer = player
+        } catch (_: Exception) { }
+    }
+
+    /** Stop the volume-preview sound if it's still playing. */
+    fun stopPreviewSound() {
+        previewPlayer?.let { p ->
+            runCatching { if (p.isPlaying) p.stop() }
+            runCatching { p.release() }
+        }
+        previewPlayer = null
     }
 
     private fun vibrate() {

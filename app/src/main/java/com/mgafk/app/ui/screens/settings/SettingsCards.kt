@@ -32,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -72,11 +74,18 @@ fun SettingsCards(
     settings: AppSettings,
     availableStorages: Set<String> = emptySet(),
     onUpdate: (AppSettings) -> Unit,
+    onPreviewAlarm: () -> Unit = {},
+    onStopPreviewAlarm: () -> Unit = {},
 ) {
     BackgroundCard(settings = settings, onUpdate = onUpdate)
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
     StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
-    AlarmCard(settings = settings, onUpdate = onUpdate)
+    AlarmCard(
+        settings = settings,
+        onUpdate = onUpdate,
+        onPreviewAlarm = onPreviewAlarm,
+        onStopPreviewAlarm = onStopPreviewAlarm,
+    )
     ReconnectionCard(settings = settings, onUpdate = onUpdate)
     DeveloperCard(settings = settings, onUpdate = onUpdate)
 }
@@ -459,7 +468,12 @@ private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 private val DAY_VALUES = listOf(1, 2, 3, 4, 5, 6, 7) // ISO 1=Mon..7=Sun
 
 @Composable
-private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
+private fun AlarmCard(
+    settings: AppSettings,
+    onUpdate: (AppSettings) -> Unit,
+    onPreviewAlarm: () -> Unit,
+    onStopPreviewAlarm: () -> Unit,
+) {
     val context = LocalContext.current
     val schedule = settings.alarmSchedule
 
@@ -545,6 +559,51 @@ private fun AlarmCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
             Text("Tap to change", fontSize = 12.sp, color = TextMuted)
             Spacer(modifier = Modifier.weight(1f))
             Text(currentName, fontSize = 12.sp, color = TextSecondary)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Volume slider + Test button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Volume", fontSize = 12.sp, color = TextPrimary)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${(settings.alarmVolume * 100).toInt()}%",
+                fontSize = 11.sp,
+                color = TextMuted,
+            )
+        }
+
+        Slider(
+            value = settings.alarmVolume,
+            onValueChange = { onUpdate(settings.copy(alarmVolume = it.coerceIn(0f, 1f))) },
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = Accent,
+                activeTrackColor = Accent,
+                inactiveTrackColor = SurfaceBorder.copy(alpha = 0.5f),
+            ),
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Accent.copy(alpha = 0.12f))
+                .border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable { onPreviewAlarm() }
+                .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Test sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+        }
+
+        // Stop preview when this composable leaves composition (e.g., user navigates away).
+        DisposableEffect(Unit) {
+            onDispose { onStopPreviewAlarm() }
         }
 
         Spacer(modifier = Modifier.height(20.dp))

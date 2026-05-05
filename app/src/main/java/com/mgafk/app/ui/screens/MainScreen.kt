@@ -990,6 +990,8 @@ private fun SectionContent(
                 settings = state.settings,
                 availableStorages = session.availableStorages,
                 onUpdate = { newSettings -> viewModel.updateSettings { newSettings } },
+                onPreviewAlarm = { viewModel.previewAlarmSound() },
+                onStopPreviewAlarm = { viewModel.stopPreviewAlarmSound() },
             )
         }
         NavSection.DEBUG -> {
