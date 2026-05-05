@@ -70,7 +70,7 @@ data class AppSettings(
     val notifyOnDisconnect: Boolean = false,
 
     // Shops
-    val purchaseMode: PurchaseMode = PurchaseMode.HYBRID,
+    val purchaseMode: PurchaseMode = PurchaseMode.BULK,
 
     // Storages — auto-consolidate inventory stacks into matching storage slots
     val autoStockSeedSilo: Boolean = false,
