@@ -155,9 +155,6 @@ Crop Cleanser at 99) and one-time-purchase items (Shovel, mutation
 potions, Seed Silo / Decor Shed / Pet Hutch you already placed) — are
 greyed out with an **OWNED** or **MAX** badge so you don't waste taps.
 
-**Autobuy** lets you queue specific items to be purchased automatically on
-each shop restock.
-
 ## Social
 
 Browse public rooms fetched from the Aries Mod API. Each entry shows the
