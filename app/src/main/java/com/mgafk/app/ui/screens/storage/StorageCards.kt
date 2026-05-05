@@ -121,15 +121,30 @@ fun SeedSiloCard(
     favoritedItemIds: Set<String> = emptySet(),
     inventorySeedSpecies: Set<String> = emptySet(),
     inventoryItemCount: Int = 0,
+    magicDust: Double = 0.0,
+    capacityLevel: Int = 0,
     onToggleLock: (String) -> Unit = {},
     onMoveToInventory: (String) -> Unit = {},
+    onUpgrade: () -> Unit = {},
 ) {
     val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
     var selectedSpecies by remember { mutableStateOf<String?>(null) }
+    val maxItems = remember(capacityLevel, apiReady) { PriceCalculator.calculateSiloCapacity(capacityLevel) }
+    val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextSiloUpgrade(capacityLevel) }
 
     AppCard(title = "Seed Silo", collapsible = true, persistKey = "storage.seedSilo", trailing = {
-        Text("${seeds.size}/${StorageCapacity.SEED_SILO_LIMIT}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${seeds.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
+        StorageUpgradePanel(
+            entityLabel = "Seed Silo",
+            magicDust = magicDust,
+            capacityLevel = capacityLevel,
+            maxLevel = PriceCalculator.SILO_MAX_LEVEL,
+            currentCapacity = maxItems,
+            nextUpgrade = nextUpgrade,
+            onUpgrade = onUpgrade,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
@@ -499,9 +514,11 @@ fun PetHutchCard(
     AppCard(title = "Pet Hutch", collapsible = true, persistKey = "storage.petHutch", trailing = {
         Text("${pets.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
-        HutchUpgradePanel(
+        StorageUpgradePanel(
+            entityLabel = "Pet Hutch",
             magicDust = magicDust,
             capacityLevel = capacityLevel,
+            maxLevel = PriceCalculator.HUTCH_MAX_LEVEL,
             currentCapacity = maxItems,
             nextUpgrade = nextUpgrade,
             onUpgrade = onUpgrade,
@@ -549,14 +566,16 @@ fun PetHutchCard(
     }
 }
 
-// ── Hutch upgrade panel (current capacity, dust balance, next upgrade button) ──
+// ── Storage upgrade panel (PetHutch / SeedSilo — same upgrade pattern) ──
 
 @Composable
-private fun HutchUpgradePanel(
+private fun StorageUpgradePanel(
+    entityLabel: String,
     magicDust: Double,
     capacityLevel: Int,
+    maxLevel: Int,
     currentCapacity: Int,
-    nextUpgrade: PriceCalculator.HutchNextUpgrade?,
+    nextUpgrade: PriceCalculator.StorageUpgradeInfo?,
     onUpgrade: () -> Unit,
 ) {
     var showConfirm by remember { mutableStateOf(false) }
@@ -573,7 +592,7 @@ private fun HutchUpgradePanel(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-            Text("Level $capacityLevel / ${PriceCalculator.HUTCH_MAX_LEVEL}",
+            Text("Level $capacityLevel / $maxLevel",
                 fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
@@ -583,7 +602,7 @@ private fun HutchUpgradePanel(
         }
 
         if (nextUpgrade == null) {
-            Text("Hutch maxed out — capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
+            Text("$entityLabel maxed out — capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         } else {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
@@ -626,7 +645,7 @@ private fun HutchUpgradePanel(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Upgrade Pet Hutch?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Upgrade $entityLabel?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("Level $capacityLevel → ${nextUpgrade.targetLevel}",
                     fontSize = 12.sp, color = TextSecondary)

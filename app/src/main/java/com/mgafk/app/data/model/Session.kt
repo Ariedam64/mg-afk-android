@@ -44,6 +44,7 @@ data class Session(
     val wsLogs: List<WsLog> = emptyList(),
     val magicDust: Double = 0.0,
     val hutchCapacityLevel: Int = 0,
+    val siloCapacityLevel: Int = 0,
     /** Storage decor ids the player currently owns (e.g. "SeedSilo", "DecorShed", "PetHutch"). */
     val availableStorages: Set<String> = emptySet(),
 )

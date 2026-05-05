@@ -219,14 +219,17 @@ object PriceCalculator {
         return if (raw.isFinite()) floor(raw).toLong().coerceAtLeast(0) else null
     }
 
-    // ── Pet Hutch capacity ──
+    // ── Storage upgrade tiers (PetHutch, SeedSilo) ──
     // Port of Gemini's modules/calculators/logic/petHutch.ts
-    // Formula (game's Qs): base 25 + sum(upgrade.capacityBonus for targetLevel <= level)
+    // Formula: base + sum(upgrade.capacityBonus for targetLevel <= level)
 
     private const val HUTCH_BASE_CAPACITY = 25
     const val HUTCH_MAX_LEVEL = 10
+    private const val SILO_BASE_CAPACITY = 25
+    const val SILO_MAX_LEVEL = 5
 
-    data class HutchNextUpgrade(
+    /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo). */
+    data class StorageUpgradeInfo(
         val targetLevel: Int,
         val dustCost: Long,
         val capacityAfter: Int,
@@ -235,20 +238,40 @@ object PriceCalculator {
     private fun hutchUpgrades(): List<MgApi.DecorUpgrade> =
         MgApi.getDecors()["PetHutch"]?.upgrades ?: emptyList()
 
+    private fun siloUpgrades(): List<MgApi.DecorUpgrade> =
+        MgApi.getDecors()["SeedSilo"]?.upgrades ?: emptyList()
+
     /** Current max capacity of the hutch for the given capacityLevel. */
     fun calculateHutchCapacity(capacityLevel: Int): Int =
         HUTCH_BASE_CAPACITY + hutchUpgrades()
             .filter { it.targetLevel <= capacityLevel }
             .sumOf { it.capacityBonus }
 
-    /** Info about the next upgrade tier, or null if maxed. */
-    fun getNextHutchUpgrade(capacityLevel: Int): HutchNextUpgrade? {
+    /** Current max capacity of the silo for the given capacityLevel. */
+    fun calculateSiloCapacity(capacityLevel: Int): Int =
+        SILO_BASE_CAPACITY + siloUpgrades()
+            .filter { it.targetLevel <= capacityLevel }
+            .sumOf { it.capacityBonus }
+
+    /** Info about the next hutch upgrade tier, or null if maxed. */
+    fun getNextHutchUpgrade(capacityLevel: Int): StorageUpgradeInfo? {
         val next = hutchUpgrades().firstOrNull { it.targetLevel == capacityLevel + 1 }
             ?: return null
-        return HutchNextUpgrade(
+        return StorageUpgradeInfo(
             targetLevel = next.targetLevel,
             dustCost = next.dustCost,
             capacityAfter = calculateHutchCapacity(next.targetLevel),
+        )
+    }
+
+    /** Info about the next silo upgrade tier, or null if maxed. */
+    fun getNextSiloUpgrade(capacityLevel: Int): StorageUpgradeInfo? {
+        val next = siloUpgrades().firstOrNull { it.targetLevel == capacityLevel + 1 }
+            ?: return null
+        return StorageUpgradeInfo(
+            targetLevel = next.targetLevel,
+            dustCost = next.dustCost,
+            capacityAfter = calculateSiloCapacity(next.targetLevel),
         )
     }
 

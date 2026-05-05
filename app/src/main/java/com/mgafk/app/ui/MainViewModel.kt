@@ -916,6 +916,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         clients[sessionId]?.actions?.upgradePetHutch()
     }
 
+    /** Upgrade the seed silo capacity by one level (server uses caller's dust). */
+    fun upgradeSeedSilo(sessionId: String) {
+        clients[sessionId]?.actions?.upgradeSeedSilo()
+    }
+
     // ─── Move items between inventory and dedicated storages ────────────────
 
     /** Move a pet from inventory into the Pet Hutch. */
@@ -1849,14 +1854,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val hutchPets = mutableListOf<InventoryPetItem>()
                 val troughCrops = mutableListOf<InventoryCropsItem>()
                 var hutchCapacityLevel = 0
+                var siloCapacityLevel = 0
                 val availableStorages = mutableSetOf<String>()
 
                 for (storageEl in event.storages) {
                     val storage = storageEl as? JsonObject ?: continue
                     val storageId = storage["decorId"]?.jsonPrimitive?.contentOrNull ?: continue
                     availableStorages.add(storageId)
-                    if (storageId == "PetHutch") {
-                        hutchCapacityLevel = storage["capacityLevel"]?.jsonPrimitive?.intOrNull ?: 0
+                    val level = storage["capacityLevel"]?.jsonPrimitive?.intOrNull ?: 0
+                    when (storageId) {
+                        "PetHutch" -> hutchCapacityLevel = level
+                        "SeedSilo" -> siloCapacityLevel = level
                     }
                     val storageItems = storage["items"] as? JsonArray ?: continue
                     for (el in storageItems) {
@@ -1939,6 +1947,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastHatchedPet = hatchedPet ?: it.lastHatchedPet,
                         magicDust = event.magicDust,
                         hutchCapacityLevel = hutchCapacityLevel,
+                        siloCapacityLevel = siloCapacityLevel,
                         availableStorages = availableStorages,
                     )
                 }

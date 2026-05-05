@@ -725,8 +725,11 @@ private fun SectionContent(
             SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
                 inventorySeedSpecies = invSeedSpecies,
                 inventoryItemCount = totalInventoryItems,
+                magicDust = session.magicDust,
+                capacityLevel = session.siloCapacityLevel,
                 onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) })
+                onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
+                onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
             DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
                 inventoryDecorIds = invDecorIds,
                 inventoryItemCount = totalInventoryItems,
