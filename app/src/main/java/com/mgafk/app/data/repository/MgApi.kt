@@ -9,6 +9,7 @@ import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -68,6 +69,10 @@ object MgApi {
         val faunaSpawnWeights: Map<String, Double> = emptyMap(),
         // Decor-only (PetHutch): capacity upgrade tiers
         val upgrades: List<DecorUpgrade> = emptyList(),
+        // Shop buyability — owning >= 1 of a one-time-purchase item blocks further buys.
+        val isOneTimePurchase: Boolean = false,
+        // Shop buyability — null means no per-item stack cap.
+        val maxInventoryQuantity: Int? = null,
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
@@ -426,6 +431,8 @@ object MgApi {
                     diet = dietArray,
                     faunaSpawnWeights = faunaWeights,
                     upgrades = upgrades,
+                    isOneTimePurchase = obj?.get("isOneTimePurchase")?.jsonPrimitive?.booleanOrNull == true,
+                    maxInventoryQuantity = obj?.get("maxInventoryQuantity")?.jsonPrimitive?.intOrNull,
                 )
             }
         }

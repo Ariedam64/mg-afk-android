@@ -673,6 +673,7 @@ private fun SectionContent(
         NavSection.SHOPS -> {
             ShopsCards(
                 shops = session.shops,
+                session = session,
                 apiReady = state.apiReady,
                 purchaseMode = state.settings.purchaseMode,
                 purchaseError = state.purchaseError,

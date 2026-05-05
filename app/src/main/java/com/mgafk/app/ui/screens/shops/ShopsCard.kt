@@ -43,8 +43,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.PurchaseMode
+import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.ShopItemBuyState
+import com.mgafk.app.data.repository.buyState
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -87,6 +90,7 @@ private val SHOP_SECTIONS = listOf(
 @Composable
 fun ShopsCards(
     shops: List<ShopSnapshot>,
+    session: Session,
     apiReady: Boolean = false,
     purchaseMode: PurchaseMode = PurchaseMode.HYBRID,
     purchaseError: String = "",
@@ -173,6 +177,7 @@ fun ShopsCards(
         ShopCategoryCard(
             label = label,
             shop = shop,
+            session = session,
             apiReady = apiReady,
             purchaseMode = purchaseMode,
             onBuy = { itemName -> onBuy(key, itemName) },
@@ -186,6 +191,7 @@ fun ShopsCards(
 private fun ShopCategoryCard(
     label: String,
     shop: ShopSnapshot?,
+    session: Session,
     apiReady: Boolean,
     purchaseMode: PurchaseMode,
     onBuy: (itemName: String) -> Unit,
@@ -193,6 +199,7 @@ private fun ShopCategoryCard(
 ) {
     val items = shop?.itemNames ?: emptyList()
     val restockSec = shop?.secondsUntilRestock ?: 0
+    val shopType = shop?.type ?: ""
 
     AppCard(
         title = label,
@@ -211,11 +218,15 @@ private fun ShopCategoryCard(
                 items.forEach { itemName ->
                     val initialStock = shop?.initialStocks?.get(itemName) ?: 0
                     val remaining = shop?.itemStocks?.get(itemName) ?: 0
+                    val buyState = remember(itemName, shopType, session.inventory, session.availableStorages, apiReady) {
+                        if (apiReady) session.buyState(itemName, shopType) else ShopItemBuyState.Buyable
+                    }
                     ShopItemTile(
                         itemName = itemName,
                         stock = remaining,
                         inShop = initialStock > 0,
                         soldOut = remaining <= 0,
+                        buyState = buyState,
                         apiReady = apiReady,
                         purchaseMode = purchaseMode,
                         onBuy = { onBuy(itemName) },
@@ -233,6 +244,7 @@ private fun ShopItemTile(
     stock: Int,
     inShop: Boolean,
     soldOut: Boolean,
+    buyState: ShopItemBuyState,
     apiReady: Boolean,
     purchaseMode: PurchaseMode,
     onBuy: () -> Unit,
@@ -243,8 +255,10 @@ private fun ShopItemTile(
     val spriteUrl = entry?.sprite
     val rarity = entry?.rarity
     val color = rarityColor(rarity)
-    val tileAlpha = if (soldOut) 0.35f else 1f
-    val borderAlpha = if (soldOut) 0.3f else 0.5f
+    val notBuyable = buyState != ShopItemBuyState.Buyable
+    val dimmed = soldOut || notBuyable
+    val tileAlpha = if (dimmed) 0.35f else 1f
+    val borderAlpha = if (dimmed) 0.3f else 0.5f
 
     Box(
         modifier = Modifier.size(76.dp),
@@ -259,7 +273,7 @@ private fun ShopItemTile(
                 )
                 .background(SurfaceDark)
                 .then(
-                    if (!soldOut) when (purchaseMode) {
+                    if (!soldOut && !notBuyable) when (purchaseMode) {
                         PurchaseMode.SINGLE -> Modifier.pointerInput(Unit) {
                             detectTapGestures(onTap = { onBuy() })
                         }
@@ -287,7 +301,7 @@ private fun ShopItemTile(
                 text = displayName,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (soldOut) TextMuted else TextPrimary,
+                color = if (dimmed) TextMuted else TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -295,8 +309,9 @@ private fun ShopItemTile(
             )
         }
 
-        // Stock badge — notification style, overlapping top-end corner
-        if (stock > 0) {
+        // Stock badge — notification style, overlapping top-end corner.
+        // Hidden when the item is unbuyable (the stock is irrelevant then).
+        if (stock > 0 && !notBuyable) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -313,6 +328,31 @@ private fun ShopItemTile(
                     color = SurfaceDark,
                     textAlign = TextAlign.Center,
                     lineHeight = 9.sp,
+                )
+            }
+        }
+
+        // "Owned" / "Max" pill — bottom-center overlay when item can't be bought.
+        if (notBuyable) {
+            val label = when (buyState) {
+                ShopItemBuyState.Owned -> "OWNED"
+                ShopItemBuyState.MaxReached -> "MAX"
+                ShopItemBuyState.Buyable -> ""
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = (-4).dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .padding(horizontal = 6.dp, vertical = 1.dp),
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    lineHeight = 10.sp,
                 )
             }
         }
