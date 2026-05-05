@@ -40,8 +40,8 @@ drawer. Sections:
 | Shops       | Buy seeds / tools / eggs / decors (single, bulk, hybrid modes)                  |
 | Social      | Browse and join public rooms                                                    |
 | Mini Games  | Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg Hatcher (casino wallet, deposit / withdraw) |
-| Alerts      | Notification config (shops, weather, pets, feeding trough)                      |
-| Settings    | Background & battery, reconnection, purchase mode, storages auto-stock, developer options |
+| Alerts      | Per-section or per-item notification / alarm config (shops, weather, pets, trough) |
+| Settings    | Background & battery, reconnection, purchase mode, storages auto-stock, alarm (sound, volume, schedule), developer options |
 | Debug       | WebSocket logs, service logs, alert testing                                     |
 
 Sections that require an active connection are greyed out when offline.
@@ -124,6 +124,8 @@ as the in-game badge.
 - **Pet Hutch upgrades**: the hutch panel shows your dust balance, current
   capacity, and a one-tap **Upgrade** button when you have enough dust to
   unlock the next capacity tier (max level 10).
+- **Seed Silo upgrades**: same panel pattern in the Seed Silo card — 5
+  tiers add +5 capacity each (25 → 50) for a Magic Dust cost per tier.
 - **Auto-stock**: in Settings → Storages, toggles **Auto-stock Seed Silo**
   / **Auto-stock Decor Shed** automatically move newly-acquired stackable
   items into the matching storage slot.
@@ -131,9 +133,14 @@ as the in-game badge.
 ## Shops
 
 Three purchase modes are available (configurable in Settings):
-- **Hybrid** (default): tap to buy x1, long-press to buy all remaining stock.
+- **Bulk** (default): tap buys all remaining stock at once.
+- **Hybrid**: tap to buy x1, long-press to buy all remaining stock.
 - **Single**: tap always buys x1.
-- **Bulk**: tap buys all remaining stock at once.
+
+Items you already own at max — tools at their stack cap (Watering Can,
+Crop Cleanser at 99) and one-time-purchase items (Shovel, mutation
+potions, Seed Silo / Decor Shed / Pet Hutch you already placed) — are
+greyed out with an **OWNED** or **MAX** badge so you don't waste taps.
 
 **Autobuy** lets you queue specific items to be purchased automatically on
 each shop restock.
@@ -179,9 +186,23 @@ WebView.
 ## Alerts
 
 MG AFK can notify you about shop restocks, weather changes, low pet hunger,
-and feeding trough levels. Configure thresholds for pet hunger and feeding
-trough in the Alerts section. Alerts work in the background and when the
-phone is locked.
+and feeding trough levels. Each section (Shop / Weather / Pet / Trough) has
+three modes:
+
+- **Notification**: silent system notification when the alert fires.
+- **Alarm**: full-screen alarm with looping sound and vibration until
+  dismissed — useful when you're not looking at the phone.
+- **Custom**: pick the mode per item. Long-press a shop tile to flip it
+  between notification and alarm; switch-based items (Weather, Pet, Trough)
+  get an inline bell/alarm toggle next to their switch.
+
+Alerts work in the background and when the phone is locked.
+
+**Alarm settings** (Settings → Alarm) let you choose a custom ringtone,
+adjust the alarm volume with a live test button, and define a silence
+schedule with day-of-week selection — alarms are downgraded to silent
+notifications during the configured hours, perfect for muting at night
+or during recurring meetings.
 
 ## Sprite cache
 
