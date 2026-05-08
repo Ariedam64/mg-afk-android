@@ -1,5 +1,6 @@
 package com.mgafk.app.data.websocket
 
+import com.mgafk.app.data.repository.MgApi
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -99,15 +100,27 @@ class GameActions(private val sendFn: (String) -> Unit) {
      * PurchaseEgg / PurchaseDecor messages with the unified PurchaseShopItem
      * the game now uses since the v2.x server update.
      *
-     * `shop` is the lowercase shop key ("seed", "tool", "egg", "decor"); the
-     * matching itemType / id-field names are derived from it.
+     * `shop` is the lowercase shop key from the ShopSnapshot ("seed", "tool",
+     * "egg", "decor", "dawn", …) — passed through as-is.
+     *
+     * The item's `itemType` is derived from where the id appears in MgApi
+     * data, NOT from the shop key. The "tool" shop now mixes Tool entries
+     * (WateringCan, Shovel) with Decor entries (SeedSilo, FeedingTrough),
+     * so we can't infer itemType from the shop name anymore.
      */
     fun purchaseShopItem(shop: String, itemId: String) {
-        val (itemType, idField) = when (shop) {
-            "seed"  -> "Seed"  to "species"
-            "tool"  -> "Tool"  to "toolId"
-            "egg"   -> "Egg"   to "eggId"
-            "decor" -> "Decor" to "decorId"
+        val itemType = when {
+            MgApi.getPlants().containsKey(itemId) -> "Seed"
+            MgApi.getItems().containsKey(itemId) -> "Tool"
+            MgApi.getEggs().containsKey(itemId) -> "Egg"
+            MgApi.getDecors().containsKey(itemId) -> "Decor"
+            else -> return
+        }
+        val idField = when (itemType) {
+            "Seed" -> "species"
+            "Tool" -> "toolId"
+            "Egg" -> "eggId"
+            "Decor" -> "decorId"
             else -> return
         }
         val params = buildJsonObject {

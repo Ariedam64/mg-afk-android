@@ -31,27 +31,33 @@ data class ShopModel(
             if (stock == 0) obj else null
         }
 
-    /** Get item name from the appropriate key for this shop type */
-    fun getItemNames(): List<String> {
-        val key = itemNameKey() ?: return emptyList()
-        return getAvailable().mapNotNull { it[key]?.jsonPrimitive?.contentOrNull }
-    }
+    /**
+     * Item name list. Reads each entry's `itemType` to pick the right id field
+     * — necessary since the `tool` shop now mixes Tool and Decor entries
+     * (FeedingTrough, SeedSilo, etc. are itemType=Decor but live under tool shop).
+     */
+    fun getItemNames(): List<String> =
+        getAvailable().mapNotNull { obj ->
+            val itemType = obj["itemType"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            val key = keyForItemType(itemType) ?: return@mapNotNull null
+            obj[key]?.jsonPrimitive?.contentOrNull
+        }
 
     /** Get item name → initialStock mapping */
-    fun getItemStocks(): Map<String, Int> {
-        val key = itemNameKey() ?: return emptyMap()
-        return getAvailable().mapNotNull { obj ->
+    fun getItemStocks(): Map<String, Int> =
+        getAvailable().mapNotNull { obj ->
+            val itemType = obj["itemType"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            val key = keyForItemType(itemType) ?: return@mapNotNull null
             val name = obj[key]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
             val stock = obj["initialStock"]?.jsonPrimitive?.intOrNull ?: 0
             name to stock
         }.toMap()
-    }
 
-    private fun itemNameKey(): String? = when (type) {
-        "seed" -> "species"
-        "tool" -> "toolId"
-        "egg" -> "eggId"
-        "decor" -> "decorId"
+    private fun keyForItemType(itemType: String): String? = when (itemType) {
+        "Seed" -> "species"
+        "Tool" -> "toolId"
+        "Egg" -> "eggId"
+        "Decor" -> "decorId"
         else -> null
     }
 
