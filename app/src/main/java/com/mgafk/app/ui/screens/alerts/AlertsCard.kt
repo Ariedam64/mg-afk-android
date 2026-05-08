@@ -98,6 +98,7 @@ private val SHOP_CATEGORIES = listOf(
     "Tools" to "tool",
     "Eggs" to "egg",
     "Decors" to "decor",
+    "Dawn Shop" to "dawn",
 )
 
 /** Emits 4 separate collapsible cards with per-section mode. */
@@ -300,12 +301,18 @@ private fun ShopAlertsCard(
         SHOP_CATEGORIES.forEachIndexed { index, (label, category) ->
             val items = remember(category, MgApi.isReady) {
                 when (category) {
-                    "seed" -> MgApi.getPlants()
-                    "tool" -> MgApi.getItems()
-                    "egg" -> MgApi.getEggs()
-                    "decor" -> MgApi.getDecors()
-                    else -> emptyMap()
-                }.values.toList()
+                    "seed" -> MgApi.getPlants().values.filter {
+                        it.eligibleShops.isEmpty() || "Seed" in it.eligibleShops
+                    }
+                    "tool" -> MgApi.getItems().values.toList()
+                    "egg" -> MgApi.getEggs().values.filter {
+                        it.eligibleShops.isEmpty() || "Egg" in it.eligibleShops
+                    }
+                    "decor" -> MgApi.getDecors().values.toList()
+                    "dawn" -> (MgApi.getPlants().values + MgApi.getEggs().values)
+                        .filter { "Dawn" in it.eligibleShops }
+                    else -> emptyList()
+                }
             }
             val activeCount = items.count { entry ->
                 alerts.items["shop:$category:${entry.id}"]?.enabled == true

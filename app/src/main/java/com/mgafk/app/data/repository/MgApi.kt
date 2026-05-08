@@ -73,6 +73,10 @@ object MgApi {
         val isOneTimePurchase: Boolean = false,
         // Shop buyability — null means no per-item stack cap.
         val maxInventoryQuantity: Int? = null,
+        // Which shops the item is eligible to spawn in. Capitalized values
+        // ("Seed", "Dawn", "Egg"...). Empty when the API doesn't expose it
+        // (older entries) — treat as the default shop for the category.
+        val eligibleShops: List<String> = emptyList(),
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
     }
@@ -382,6 +386,9 @@ object MgApi {
                             rotation = o["rotation"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
                         )
                     } ?: emptyList()
+                val plantEligibleShops = (seedObj?.get("eligibleShops") as? JsonArray)
+                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                    ?: emptyList()
                 result[id] = GameEntry(
                     id = id,
                     name = seedObj?.get("name")?.jsonPrimitive?.contentOrNull
@@ -398,6 +405,7 @@ object MgApi {
                     plantTileTransformOrigin = plantObj?.get("tileTransformOrigin")?.jsonPrimitive?.contentOrNull,
                     cropBaseTileScale = cropObj?.get("baseTileScale")?.jsonPrimitive?.doubleOrNull,
                     cropTransformOrigin = cropObj?.get("transformOrigin")?.jsonPrimitive?.contentOrNull,
+                    eligibleShops = plantEligibleShops,
                 )
             } else {
                 val dietArray = (obj?.get("diet") as? JsonArray)
@@ -419,6 +427,9 @@ object MgApi {
                             DecorUpgrade(level, cost, bonus)
                         } ?: emptyList()
                 } else emptyList()
+                val eligibleShops = (obj?.get("eligibleShops") as? JsonArray)
+                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                    ?: emptyList()
                 result[id] = GameEntry(
                     id = id,
                     name = obj?.get("name")?.jsonPrimitive?.contentOrNull ?: id,
@@ -433,6 +444,7 @@ object MgApi {
                     upgrades = upgrades,
                     isOneTimePurchase = obj?.get("isOneTimePurchase")?.jsonPrimitive?.booleanOrNull == true,
                     maxInventoryQuantity = obj?.get("maxInventoryQuantity")?.jsonPrimitive?.intOrNull,
+                    eligibleShops = eligibleShops,
                 )
             }
         }
