@@ -94,17 +94,31 @@ class GameActions(private val sendFn: (String) -> Unit) {
     // Shop / Purchases
     // =====================
 
-    fun purchaseSeed(species: String) =
-        game("PurchaseSeed", obj("species" to JsonPrimitive(species)))
-
-    fun purchaseTool(toolId: String) =
-        game("PurchaseTool", obj("toolId" to JsonPrimitive(toolId)))
-
-    fun purchaseEgg(eggId: String) =
-        game("PurchaseEgg", obj("eggId" to JsonPrimitive(eggId)))
-
-    fun purchaseDecor(decorId: String) =
-        game("PurchaseDecor", obj("decorId" to JsonPrimitive(decorId)))
+    /**
+     * Buy one shop item. Replaces the old PurchaseSeed / PurchaseTool /
+     * PurchaseEgg / PurchaseDecor messages with the unified PurchaseShopItem
+     * the game now uses since the v2.x server update.
+     *
+     * `shop` is the lowercase shop key ("seed", "tool", "egg", "decor"); the
+     * matching itemType / id-field names are derived from it.
+     */
+    fun purchaseShopItem(shop: String, itemId: String) {
+        val (itemType, idField) = when (shop) {
+            "seed"  -> "Seed"  to "species"
+            "tool"  -> "Tool"  to "toolId"
+            "egg"   -> "Egg"   to "eggId"
+            "decor" -> "Decor" to "decorId"
+            else -> return
+        }
+        val params = buildJsonObject {
+            put("shop", JsonPrimitive(shop))
+            put("item", buildJsonObject {
+                put("itemType", JsonPrimitive(itemType))
+                put(idField, JsonPrimitive(itemId))
+            })
+        }
+        game("PurchaseShopItem", params)
+    }
 
     // =====================
     // Garden / Crops

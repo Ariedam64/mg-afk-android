@@ -506,12 +506,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Send to server
-        when (shopType) {
-            "seed" -> actions.purchaseSeed(itemName)
-            "tool" -> actions.purchaseTool(itemName)
-            "egg" -> actions.purchaseEgg(itemName)
-            "decor" -> actions.purchaseDecor(itemName)
-        }
+        actions.purchaseShopItem(shopType, itemName)
 
         // Rollback after 5s if server hasn't confirmed (ShopsChanged would overwrite first)
         val key = "$sessionId:$shopType:$itemName"
@@ -551,14 +546,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Send N purchase commands to server
-        val purchaseFn: (String) -> Unit = when (shopType) {
-            "seed" -> actions::purchaseSeed
-            "tool" -> actions::purchaseTool
-            "egg" -> actions::purchaseEgg
-            "decor" -> actions::purchaseDecor
-            else -> return
-        }
-        repeat(currentStock) { purchaseFn(itemName) }
+        repeat(currentStock) { actions.purchaseShopItem(shopType, itemName) }
 
         // Rollback after 5s if server hasn't confirmed
         val key = "$sessionId:$shopType:$itemName"
