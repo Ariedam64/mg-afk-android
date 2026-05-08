@@ -86,6 +86,15 @@ private val SHOP_SECTIONS = listOf(
     "Decors" to "decor",
 )
 
+/**
+ * Weather-conditional shops. Only rendered when the WS snapshot reports the
+ * shop is currently active (has items or a running restock timer); the game
+ * only spawns these during specific weather events (Dawn, AmberMoon...).
+ */
+private val WEATHER_SHOPS = listOf(
+    "Dawn" to "dawn",
+)
+
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
 @Composable
 fun ShopsCards(
@@ -174,6 +183,23 @@ fun ShopsCards(
 
     SHOP_SECTIONS.forEach { (label, key) ->
         val shop = shops.find { it.type == key }
+        ShopCategoryCard(
+            label = label,
+            shop = shop,
+            session = session,
+            apiReady = apiReady,
+            purchaseMode = purchaseMode,
+            onBuy = { itemName -> onBuy(key, itemName) },
+            onBuyAll = { itemName -> onBuyAll(key, itemName) },
+        )
+    }
+
+    WEATHER_SHOPS.forEach { (label, key) ->
+        val shop = shops.find { it.type == key } ?: return@forEach
+        // Dawn / AmberMoon shops only exist during their weather event. Hide
+        // the card entirely when the shop is dormant (no items and no timer).
+        val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock > 0
+        if (!isActive) return@forEach
         ShopCategoryCard(
             label = label,
             shop = shop,
