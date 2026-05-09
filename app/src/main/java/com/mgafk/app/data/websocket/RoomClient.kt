@@ -136,6 +136,13 @@ class RoomClient {
         val cookie: String,
         val host: String,
         val userAgent: String,
+        /**
+         * Re-fetch the game version before each reconnect attempt. Returning a
+         * fresh version handles the case where the game updates server-side
+         * while the client is in a retry loop (the old version path stops
+         * working). Null falls back to [version].
+         */
+        val versionFetcher: (suspend () -> String)? = null,
     )
 
     fun connect(
@@ -146,6 +153,7 @@ class RoomClient {
         userAgent: String = Constants.DEFAULT_UA,
         reconnect: ReconnectConfig? = null,
         isRetry: Boolean = false,
+        versionFetcher: (suspend () -> String)? = null,
     ): String {
         val nextCookie = IdGenerator.normalizeCookie(cookie)
         val nextRoom = room.trim().ifEmpty { IdGenerator.generateRoomId() }
@@ -182,12 +190,17 @@ class RoomClient {
         this.lastInventoryPayload = null
         gameState.reset()
 
+        // Preserve the previously-stored versionFetcher across retry attempts:
+        // retries call connect() with isRetry=true and no fetcher, so we'd lose
+        // the original closure if we always overwrote.
+        val preservedFetcher = if (isRetry) lastConnectOpts?.versionFetcher else versionFetcher
         lastConnectOpts = ConnectOptions(
             version = this.version,
             room = this.room,
             cookie = this.cookie,
             host = this.host,
             userAgent = this.userAgent,
+            versionFetcher = preservedFetcher,
         )
 
         val url = UrlBuilder.buildUrl(this.host, this.version, this.room, this.playerId)
@@ -573,9 +586,10 @@ class RoomClient {
             if (delayMs > 0) delay(delayMs)
             emit(ClientEvent.DebugLog("info", "reconnect attempt", "attempt=$attempt/$displayMax code=$code"))
             val opts = lastConnectOpts ?: return@launch
+            val freshVersion = resolveFreshVersion(opts)
             try {
                 connect(
-                    version = opts.version,
+                    version = freshVersion,
                     cookie = opts.cookie,
                     room = opts.room,
                     host = opts.host,
@@ -600,9 +614,10 @@ class RoomClient {
         cancelRetryJob()
         retryJob = scope.launch {
             val opts = lastConnectOpts ?: return@launch
+            val freshVersion = resolveFreshVersion(opts)
             try {
                 connect(
-                    version = opts.version,
+                    version = freshVersion,
                     cookie = opts.cookie,
                     room = opts.room,
                     host = opts.host,
@@ -613,6 +628,31 @@ class RoomClient {
                 emit(ClientEvent.DebugLog("error", "reconnect failed", e.message ?: e.toString()))
                 emitStatus(SessionStatus.ERROR, message = e.message ?: e.toString())
             }
+        }
+    }
+
+    /**
+     * Re-fetch the game version before reconnecting. If the fetcher fails or
+     * is null, fall back to the cached version — better to attempt a stale
+     * reconnect than to skip retry entirely.
+     */
+    private suspend fun resolveFreshVersion(opts: ConnectOptions): String {
+        val fetcher = opts.versionFetcher ?: return opts.version
+        return try {
+            val fetched = fetcher.invoke().trim()
+            if (fetched.isBlank()) {
+                opts.version
+            } else {
+                if (fetched != opts.version) {
+                    emit(ClientEvent.DebugLog("info", "game version changed",
+                        "${opts.version} -> $fetched"))
+                }
+                fetched
+            }
+        } catch (e: Exception) {
+            emit(ClientEvent.DebugLog("warn", "version fetch failed",
+                "using cached ${opts.version}: ${e.message}"))
+            opts.version
         }
     }
 

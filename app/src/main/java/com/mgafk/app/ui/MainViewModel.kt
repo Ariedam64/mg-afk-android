@@ -314,6 +314,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     room = session.room,
                     host = host,
                     reconnect = reconnectWithSettings,
+                    versionFetcher = { VersionFetcher.fetchGameVersion(host = host) },
                 )
             } catch (e: Exception) {
                 updateSession(sessionId) {
