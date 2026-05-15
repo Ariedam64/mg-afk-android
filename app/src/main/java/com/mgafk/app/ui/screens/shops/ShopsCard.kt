@@ -3,10 +3,11 @@ package com.mgafk.app.ui.screens.shops
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -264,6 +264,7 @@ private fun ShopCategoryCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ShopItemTile(
     itemName: String,
@@ -298,20 +299,19 @@ private fun ShopItemTile(
                     else Modifier.border(1.5.dp, TextMuted.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
                 )
                 .background(SurfaceDark)
+                // Use combinedClickable instead of pointerInput(Unit). The latter
+                // captures the onBuy/onBuyAll lambdas at first composition and
+                // never refreshes, so when the shop restocks and the item order
+                // changes, tapping a tile fires the OLD lambda (buying a
+                // neighbour item). combinedClickable updates with each recomp.
                 .then(
                     if (!soldOut && !notBuyable) when (purchaseMode) {
-                        PurchaseMode.SINGLE -> Modifier.pointerInput(Unit) {
-                            detectTapGestures(onTap = { onBuy() })
-                        }
-                        PurchaseMode.BULK -> Modifier.pointerInput(Unit) {
-                            detectTapGestures(onTap = { onBuyAll() })
-                        }
-                        PurchaseMode.HYBRID -> Modifier.pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = { onBuy() },
-                                onLongPress = { onBuyAll() },
-                            )
-                        }
+                        PurchaseMode.SINGLE -> Modifier.combinedClickable(onClick = onBuy)
+                        PurchaseMode.BULK -> Modifier.combinedClickable(onClick = onBuyAll)
+                        PurchaseMode.HYBRID -> Modifier.combinedClickable(
+                            onClick = onBuy,
+                            onLongClick = onBuyAll,
+                        )
                     } else Modifier
                 )
                 .alpha(tileAlpha)
