@@ -43,7 +43,7 @@ class BotClient(
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS) // long-lived
-        .pingInterval(20, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS)
         .build()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -104,7 +104,13 @@ class BotClient(
                 emit(BotEvent.StatusChanged(BotStatus.CONNECTED))
             }
             override fun onMessage(webSocket: WebSocket, text: String) {
-                // Ignored on purpose — bots don't observe game state.
+                // The server uses an application-level ping/pong on top of the
+                // WS protocol pings — RoomClient does the same. If we don't
+                // reply, the server closes the connection after ~30s with 4400.
+                if (text == "ping" || text == "\"ping\"") {
+                    webSocket.send("pong")
+                }
+                // All other messages are ignored — bots don't observe state.
             }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 webSocket.close(1000, null)
