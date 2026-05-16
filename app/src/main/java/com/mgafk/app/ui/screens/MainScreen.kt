@@ -127,6 +127,9 @@ import com.mgafk.app.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** Master switch for the Room → Populate UI. Flip to true to re-enable. */
+private const val POPULATE_ENABLED = false
+
 // ── Navigation sections ──
 
 enum class NavSection(
@@ -597,14 +600,19 @@ private fun SectionContent(
                 gameHost = session.gameUrl,
                 hostPlayerId = session.hostPlayerId,
             )
-            PopulateCard(
-                isHost = session.playerId.isNotBlank() && session.playerId == session.hostPlayerId,
-                playersConnected = session.players,
-                bots = session.bots,
-                onPopulate = { viewModel.populateRoom(session.id) },
-                onDisconnectBot = { botId -> viewModel.disconnectBot(session.id, botId) },
-                onDisconnectAll = { viewModel.disconnectAllBots(session.id) },
-            )
+            // Populate hidden for now — code kept so we can flip this back on
+            // without touching MainViewModel / BotClient.
+            @Suppress("KotlinConstantConditions")
+            if (POPULATE_ENABLED) {
+                PopulateCard(
+                    isHost = session.playerId.isNotBlank() && session.playerId == session.hostPlayerId,
+                    playersConnected = session.players,
+                    bots = session.bots,
+                    onPopulate = { viewModel.populateRoom(session.id) },
+                    onDisconnectBot = { botId -> viewModel.disconnectBot(session.id, botId) },
+                    onDisconnectAll = { viewModel.disconnectAllBots(session.id) },
+                )
+            }
             ChatCard(
                 messages = session.chatMessages,
                 players = session.playersList,
