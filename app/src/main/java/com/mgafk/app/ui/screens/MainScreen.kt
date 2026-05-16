@@ -86,6 +86,7 @@ import com.mgafk.app.ui.screens.settings.SettingsCards
 import com.mgafk.app.ui.screens.connection.ConnectionCard
 import com.mgafk.app.ui.screens.room.ChatCard
 import com.mgafk.app.ui.screens.room.PlayersCard
+import com.mgafk.app.ui.screens.room.PopulateCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
 import com.mgafk.app.ui.screens.minigames.BalanceCard
 import com.mgafk.app.ui.screens.minigames.CasinoLoginGate
@@ -594,6 +595,15 @@ private fun SectionContent(
                 players = session.playersList,
                 gameVersion = session.gameVersion,
                 gameHost = session.gameUrl,
+                hostPlayerId = session.hostPlayerId,
+            )
+            PopulateCard(
+                isHost = session.playerId.isNotBlank() && session.playerId == session.hostPlayerId,
+                playersConnected = session.players,
+                bots = session.bots,
+                onPopulate = { viewModel.populateRoom(session.id) },
+                onDisconnectBot = { botId -> viewModel.disconnectBot(session.id, botId) },
+                onDisconnectAll = { viewModel.disconnectAllBots(session.id) },
             )
             ChatCard(
                 messages = session.chatMessages,

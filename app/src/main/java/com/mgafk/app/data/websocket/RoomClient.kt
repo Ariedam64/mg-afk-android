@@ -56,6 +56,7 @@ sealed class ClientEvent {
         val playerId: String,
         val playerName: String,
         val roomId: String,
+        val hostPlayerId: String,
         val weather: String,
         val pets: List<PetInfo>,
     ) : ClientEvent()
@@ -687,10 +688,12 @@ class RoomClient {
 
     private fun emitLiveStatus() {
         val me = gameState.getPlayer(playerId)
+        val room = gameState.getRoom()
         val payload = ClientEvent.LiveStatusChanged(
             playerId = playerId,
             playerName = me?.name.orEmpty(),
-            roomId = gameState.getRoom()?.roomId.orEmpty(),
+            roomId = room?.roomId.orEmpty(),
+            hostPlayerId = room?.hostPlayerId.orEmpty(),
             weather = Constants.formatWeather(gameState.getWeather()),
             pets = me?.getActivePetInfos() ?: emptyList(),
         )

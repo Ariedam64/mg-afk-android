@@ -15,7 +15,14 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.model.BotSnapshot
+import com.mgafk.app.data.model.BotStatus
+import com.mgafk.app.data.websocket.BotClient
+import com.mgafk.app.data.websocket.BotEvent
+import com.mgafk.app.data.websocket.BotNameGenerator
+import com.mgafk.app.data.websocket.IdGenerator
 import com.mgafk.app.data.model.WakeLockMode
+import java.util.UUID
 import com.mgafk.app.data.model.ChatMessage
 import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.data.model.GardenEggSnapshot
@@ -109,6 +116,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val alertNotifier = AlertNotifier(application)
     private val clients = mutableMapOf<String, RoomClient>()
     private val collectorJobs = mutableMapOf<String, Job>()
+    // Populate bots, scoped per session. Outer map keyed by sessionId, inner by botId.
+    private val botClients = mutableMapOf<String, MutableMap<String, BotClient>>()
+    private val botJobs = mutableMapOf<String, Job>()
     private var serviceRunning = false
     private val connectivityManager =
         application.getSystemService(ConnectivityManager::class.java)
@@ -346,6 +356,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun disconnectInternal(sessionId: String, stopServiceIfIdle: Boolean) {
         collectorJobs.remove(sessionId)?.cancel()
         clients[sessionId]?.disconnect()
+        // Bots are tied to the parent session — kill them when the user disconnects.
+        disconnectAllBots(sessionId)
         updateSession(sessionId) {
             it.copy(
                 connected = false,
@@ -353,10 +365,97 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 status = SessionStatus.IDLE,
                 players = 0,
                 connectedAt = 0,
+                hostPlayerId = "",
             )
         }
         if (stopServiceIfIdle) stopAfkServiceIfIdle()
     }
+
+    // ──── Populate (guest bots for sell bonus) ─────────────────────────────
+
+    /** Max players a Magic Garden room can hold (game-side constraint). */
+    private val ROOM_MAX_PLAYERS = 6
+
+    /**
+     * Spawn enough guest bots to fill empty slots in this session's room.
+     * Host-only. Caller is expected to gate the action in the UI; we still
+     * guard here.
+     */
+    fun populateRoom(sessionId: String) {
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        if (!session.connected) return
+        if (session.playerId.isBlank() || session.playerId != session.hostPlayerId) return
+
+        val activeBots = session.bots.count { it.status != BotStatus.DISCONNECTED }
+        val freeSlots = ROOM_MAX_PLAYERS - session.players - activeBots
+        if (freeSlots <= 0) return
+
+        val host = session.gameUrl
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .ifBlank { "magicgarden.gg" }
+        val version = session.gameVersion
+        if (version.isBlank()) return
+
+        val takenNames = session.bots.map { it.name }.toMutableSet()
+        val sessionBots = botClients.getOrPut(sessionId) { mutableMapOf() }
+
+        repeat(freeSlots) {
+            val (name, avatar) = BotNameGenerator.next(takenNames)
+            takenNames.add(name)
+            val botId = UUID.randomUUID().toString()
+            val playerId = IdGenerator.generatePlayerId()
+            val bot = BotClient(botId = botId, playerId = playerId, name = name, avatar = avatar)
+            sessionBots[botId] = bot
+
+            val snapshot = BotSnapshot(
+                id = botId,
+                playerId = playerId,
+                name = name,
+                avatar = avatar,
+                status = BotStatus.CONNECTING,
+            )
+            updateSession(sessionId) { it.copy(bots = it.bots + snapshot) }
+
+            // Subscribe to bot events to update its snapshot in session state.
+            viewModelScope.launch {
+                bot.events.collect { event ->
+                    if (event is BotEvent.StatusChanged) {
+                        updateSession(sessionId) { s ->
+                            s.copy(bots = s.bots.map {
+                                if (it.id == botId) it.copy(
+                                    status = event.status,
+                                    statusMessage = event.message,
+                                ) else it
+                            })
+                        }
+                    }
+                }
+            }
+
+            bot.connect(
+                version = version,
+                room = session.room,
+                host = host,
+                versionFetcher = { VersionFetcher.fetchGameVersion(host = host) },
+            )
+        }
+    }
+
+    /** Disconnect a single bot and remove it from the session. */
+    fun disconnectBot(sessionId: String, botId: String) {
+        val sessionBots = botClients[sessionId] ?: return
+        sessionBots.remove(botId)?.disconnect()
+        updateSession(sessionId) { it.copy(bots = it.bots.filter { b -> b.id != botId }) }
+    }
+
+    /** Disconnect every bot tied to this session. */
+    fun disconnectAllBots(sessionId: String) {
+        botClients.remove(sessionId)?.values?.forEach { it.disconnect() }
+        updateSession(sessionId) { it.copy(bots = emptyList()) }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
 
     fun setToken(sessionId: String, token: String) {
         updateSession(sessionId) { it.copy(cookie = token) }
@@ -1718,6 +1817,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         playerName = event.playerName,
                         roomId = event.roomId,
+                        hostPlayerId = event.hostPlayerId,
                         weather = event.weather,
                         pets = newPets,
                     )

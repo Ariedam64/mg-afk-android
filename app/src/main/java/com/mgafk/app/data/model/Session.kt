@@ -47,6 +47,10 @@ data class Session(
     val siloCapacityLevel: Int = 0,
     /** Storage decor ids the player currently owns (e.g. "SeedSilo", "DecorShed", "PetHutch"). */
     val availableStorages: Set<String> = emptySet(),
+    /** Player id of the room host (empty until known). Used to gate Populate. */
+    val hostPlayerId: String = "",
+    /** Guest-bot snapshots currently active for this session. */
+    val bots: List<BotSnapshot> = emptyList(),
 )
 
 @Serializable

@@ -34,6 +34,7 @@ fun PlayersCard(
     players: List<PlayerSnapshot>,
     gameVersion: String,
     gameHost: String,
+    hostPlayerId: String = "",
     modifier: Modifier = Modifier,
 ) {
     AppCard(
@@ -49,7 +50,7 @@ fun PlayersCard(
             Text("No players.", fontSize = 12.sp, color = TextMuted)
         } else {
             players.forEach { player ->
-                PlayerRow(player, gameVersion, gameHost)
+                PlayerRow(player, gameVersion, gameHost, isHost = player.id == hostPlayerId)
             }
         }
     }
@@ -60,6 +61,7 @@ private fun PlayerRow(
     player: PlayerSnapshot,
     gameVersion: String,
     gameHost: String,
+    isHost: Boolean,
 ) {
     Row(
         modifier = Modifier
@@ -82,12 +84,31 @@ private fun PlayerRow(
 
         // Name + status
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = player.name.ifBlank { player.id },
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = player.name.ifBlank { player.id },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary,
+                )
+                if (isHost) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Accent.copy(alpha = 0.18f))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    ) {
+                        Text(
+                            text = "HOST",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Accent,
+                            lineHeight = 10.sp,
+                        )
+                    }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
