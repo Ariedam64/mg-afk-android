@@ -23,15 +23,39 @@ object Constants {
         "&redirect_uri=https%3A%2F%2Fmagicgarden.gg%2Foauth2%2Fredirect" +
         "&scope=identify+guilds.members.read+guilds"
 
+    /**
+     * Fallback max-hunger values when the live game API isn't loaded yet.
+     * The source of truth is `MgApi.getPets()[species].coinsToFullyReplenishHunger`
+     * — use [maxHungerFor] which checks the API first.
+     */
     val PET_HUNGER_COSTS = mapOf(
         "worm" to 500, "snail" to 1000, "bee" to 1500, "chicken" to 3000,
         "bunny" to 750, "dragonfly" to 250, "pig" to 50000, "cow" to 25000,
         "turkey" to 500, "squirrel" to 15000, "turtle" to 100000, "goat" to 20000,
         "snowfox" to 14000, "stoat" to 10000, "whitecaribou" to 30000,
-        "caribou" to 30000, "pony" to 4000, "horse" to 4000,
+        "caribou" to 30000, "pony" to 4000, "horse" to 25000,
         "firehorse" to 200000, "butterfly" to 25000, "capybara" to 150000,
-        "peacock" to 100000,
+        "peacock" to 100000, "sheep" to 250,
     )
+
+    /**
+     * Max hunger value for a given pet species. Prefers the live API
+     * (`coinsToFullyReplenishHunger`) so the app stays correct as the game
+     * adds new pets or tweaks values; falls back to [PET_HUNGER_COSTS] when
+     * the API hasn't been fetched yet.
+     */
+    fun maxHungerFor(species: String): Int? {
+        // WS payloads use PascalCase species ("Sheep", "WhiteCaribou"...) which
+        // matches the API key. Try direct lookup, then case-insensitive
+        // fallback for safety.
+        val apiEntry = com.mgafk.app.data.repository.MgApi.findPet(species)
+            ?: com.mgafk.app.data.repository.MgApi.getPets().entries
+                .firstOrNull { it.key.equals(species, ignoreCase = true) }
+                ?.value
+        val apiValue = apiEntry?.coinsToFullyReplenishHunger
+        if (apiValue != null && apiValue > 0) return apiValue
+        return PET_HUNGER_COSTS[species.lowercase()]
+    }
 
     val RESTOCK_SECONDS = mapOf(
         "seed" to 300, "tool" to 600, "egg" to 900, "decor" to 3600,

@@ -67,6 +67,9 @@ object MgApi {
         val cropTransformOrigin: String? = null,
         // Egg-only: weight of each pet species that can hatch from this egg
         val faunaSpawnWeights: Map<String, Double> = emptyMap(),
+        // Pet-only: also the pet's max hunger value (hunger drops from this
+        // down to 0). Source-of-truth for the hunger bar % display.
+        val coinsToFullyReplenishHunger: Int? = null,
         // Decor-only (PetHutch): capacity upgrade tiers
         val upgrades: List<DecorUpgrade> = emptyList(),
         // Shop buyability — owning >= 1 of a one-time-purchase item blocks further buys.
@@ -445,6 +448,7 @@ object MgApi {
                     isOneTimePurchase = obj?.get("isOneTimePurchase")?.jsonPrimitive?.booleanOrNull == true,
                     maxInventoryQuantity = obj?.get("maxInventoryQuantity")?.jsonPrimitive?.intOrNull,
                     eligibleShops = eligibleShops,
+                    coinsToFullyReplenishHunger = obj?.get("coinsToFullyReplenishHunger")?.jsonPrimitive?.intOrNull,
                 )
             }
         }

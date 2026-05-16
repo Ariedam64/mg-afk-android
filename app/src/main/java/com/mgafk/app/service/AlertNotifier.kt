@@ -73,7 +73,7 @@ class AlertNotifier(private val context: Context) {
         val items = mutableListOf<DisplayItem>()
 
         for (pet in pets) {
-            val maxHunger = Constants.PET_HUNGER_COSTS[pet.species.lowercase()] ?: continue
+            val maxHunger = Constants.maxHungerFor(pet.species) ?: continue
             val percent = (pet.hunger.toFloat() / maxHunger) * 100
             if (percent < threshold) {
                 currentLowPets.add(pet.id)

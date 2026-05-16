@@ -270,7 +270,7 @@ private fun ActivePetRow(
     onSwapPet: (activePetId: String, targetPetId: String, targetIsInHutch: Boolean) -> Unit,
     onUnequipPet: (petId: String) -> Unit,
 ) {
-    val maxHunger = Constants.PET_HUNGER_COSTS[pet.species.lowercase()] ?: 1000
+    val maxHunger = Constants.maxHungerFor(pet.species) ?: 1000
     val hungerPercent = ((pet.hunger.toFloat() / maxHunger) * 100).coerceIn(0f, 100f)
     val hungerColor = when {
         hungerPercent < 5f -> StatusError
