@@ -711,6 +711,7 @@ private fun SectionContent(
             val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
                 inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
             val hutchMax = PriceCalculator.calculateHutchCapacity(session.hutchCapacityLevel)
+            val siloMax = PriceCalculator.calculateSiloCapacity(session.siloCapacityLevel)
             val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
             val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
             val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
@@ -724,6 +725,7 @@ private fun SectionContent(
                 petHutchCount = session.petHutch.size,
                 petHutchMax = hutchMax,
                 seedSiloCount = session.seedSilo.size,
+                seedSiloMax = siloMax,
                 seedSiloSpecies = seedSiloSpecies,
                 decorShedCount = session.decorShed.size,
                 decorShedDecorIds = decorShedIds,

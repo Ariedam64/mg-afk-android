@@ -161,6 +161,7 @@ fun InventoryCard(
     petHutchCount: Int = 0,
     petHutchMax: Int = 25,
     seedSiloCount: Int = 0,
+    seedSiloMax: Int = 25,
     seedSiloSpecies: Set<String> = emptySet(),
     decorShedCount: Int = 0,
     decorShedDecorIds: Set<String> = emptySet(),
@@ -329,7 +330,7 @@ fun InventoryCard(
                 isLocked = species in favoritedItemIds,
                 canMoveToSilo = StorageCapacity.canAddStackable(
                     currentCount = seedSiloCount,
-                    max = StorageCapacity.SEED_SILO_LIMIT,
+                    max = seedSiloMax,
                     stackExists = species in seedSiloSpecies,
                 ),
                 onPlantSeed = { onPlantSeed(species) },
