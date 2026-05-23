@@ -1834,6 +1834,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val slots = data["slots"] as? JsonArray ?: continue
                     for ((index, slotEl) in slots.withIndex()) {
                         val slot = slotEl as? JsonObject ?: continue
+                        // Prefer the slot's own slotId — that's what the server
+                        // expects back in HarvestCrop.slotsIndex and
+                        // CropCleanser.growSlotIdx. Fall back to the array
+                        // position only if the field is missing.
+                        val slotId = slot["slotId"]?.jsonPrimitive?.intOrNull ?: index
                         val species = slot["species"]?.jsonPrimitive?.contentOrNull.orEmpty()
                         val mutations = mutableListOf<String>()
                         (slot["mutations"] as? JsonArray)?.forEach { m ->
@@ -1842,7 +1847,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         newGarden += GardenPlantSnapshot(
                             tileId = tile.tileId,
-                            slotIndex = index,
+                            slotIndex = slotId,
                             species = species,
                             targetScale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
                             mutations = mutations,
