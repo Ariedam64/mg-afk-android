@@ -614,7 +614,7 @@ private fun WithdrawFlow(
                         text = when {
                             gameBalanceLoading && maxWithdrawable == null -> "Checking game balance..."
                             maxWithdrawable != null -> "Max withdrawable: ${"%,d".format(maxWithdrawable)}"
-                            else -> "Max withdrawable: —"
+                            else -> "Max withdrawable: -"
                         },
                         fontSize = 11.sp,
                         color = TextMuted,
@@ -658,7 +658,7 @@ private fun WithdrawFlow(
                 if (overLimit && maxWithdrawable != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Would push your game balance past ${"%,d".format(GAME_COIN_CAP)} — the max you can withdraw right now is ${"%,d".format(maxWithdrawable)}.",
+                        "Would push your game balance past ${"%,d".format(GAME_COIN_CAP)}. The max you can withdraw right now is ${"%,d".format(maxWithdrawable)}.",
                         fontSize = 11.sp,
                         color = StatusError,
                     )
@@ -701,8 +701,8 @@ private fun WithdrawHelpDialog(onDismiss: () -> Unit) {
                 "Breads are sent to your in-game account via the /doughnate command.\n\n" +
                     "/doughnate refuses to deliver if your new in-game balance would exceed " +
                     "${"%,d".format(GAME_COIN_CAP)}. " +
-                    "The app caps the withdraw amount to what can actually be delivered — " +
-                    "max = min(casino balance, ${"%,d".format(GAME_COIN_CAP)} − your game balance).\n\n" +
+                    "The app caps the withdraw amount to what can actually be delivered. " +
+                    "Max = min(casino balance, ${"%,d".format(GAME_COIN_CAP)} − your game balance).\n\n" +
                     "If your balance in-game grows after this dialog opens, tap the Use max shortcut " +
                     "to refresh the cap.",
                 fontSize = 12.sp,

@@ -83,4 +83,7 @@ dependencies {
 
     // Browser (Custom Tabs for OAuth)
     implementation("androidx.browser:browser:1.8.0")
+
+    // WorkManager (periodic watchdog that re-arms the AFK service)
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 }

@@ -61,7 +61,7 @@ class PlayActivity : Activity() {
         injectGemini = intent.getBooleanExtra(EXTRA_INJECT_GEMINI, true)
 
         if (cookie.isBlank() || room.isBlank()) {
-            AppLog.w(TAG, "Missing cookie or room — finishing")
+            AppLog.w(TAG, "Missing cookie or room, finishing")
             finish()
             return
         }

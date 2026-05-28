@@ -51,6 +51,7 @@ import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
 import com.mgafk.app.service.AfkService
+import com.mgafk.app.service.AfkWatchdogWorker
 import com.mgafk.app.service.AlertNotifier
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -188,6 +189,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(loadingStep = "Preloading sprites…") }
                 preloadSprites()
                 _state.update { it.copy(apiReady = true, loadingStep = "") }
+                // Auto-reconnect sessions that were live before the process
+                // died. wantConnected survives serialization (unlike connected
+                // /status which are stripped on save), so we use it as the
+                // "user wants this session live" flag.
+                autoReconnectPendingSessions()
             }
             // Check for app updates periodically (immediately + every hour)
             launch {
@@ -257,9 +263,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Connection ----
 
+    /**
+     * Reconnect any session that was live before the process died
+     * (wantConnected=true). Called once after API + sprites are ready so the
+     * WS handshake doesn't race with version lookups. connect() returns
+     * immediately and runs the WS work inside viewModelScope, so launching
+     * them all back-to-back is safe — server-side rate-limit fallback is
+     * handled by [ReconnectConfig] anyway.
+     */
+    private fun autoReconnectPendingSessions() {
+        val pending = _state.value.sessions.filter { it.wantConnected && it.cookie.isNotBlank() }
+        if (pending.isEmpty()) return
+        AppLog.d(TAG, "[AutoReconnect] resuming ${pending.size} session(s)")
+        for (session in pending) connect(session.id)
+    }
+
     private fun startAfkService() {
-        if (serviceRunning) return
         val app = getApplication<Application>()
+        // Watchdog is independent of the in-memory serviceRunning flag —
+        // scheduling is idempotent (KEEP policy) so it's safe to call every time.
+        AfkWatchdogWorker.schedule(app)
+        if (serviceRunning) return
         val intent = Intent(app, AfkService::class.java)
             .putExtra(AfkService.EXTRA_WIFI_LOCK, _state.value.settings.wifiLockEnabled)
             .putExtra(AfkService.EXTRA_WAKE_LOCK_MODE, _state.value.settings.wakeLockMode.toServiceMode())
@@ -277,6 +301,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!anyConnected && serviceRunning) {
             val app = getApplication<Application>()
             app.stopService(Intent(app, AfkService::class.java))
+            // Cancel the watchdog too — no live sessions, nothing to babysit.
+            AfkWatchdogWorker.cancel(app)
             serviceRunning = false
         }
     }
@@ -286,7 +312,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (session.cookie.isBlank()) return
 
         startAfkService()
-        updateSession(sessionId) { it.copy(busy = true, status = SessionStatus.CONNECTING) }
+        updateSession(sessionId) { it.copy(busy = true, status = SessionStatus.CONNECTING, wantConnected = true) }
 
         viewModelScope.launch {
             try {
@@ -358,6 +384,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         clients[sessionId]?.disconnect()
         // Bots are tied to the parent session — kill them when the user disconnects.
         disconnectAllBots(sessionId)
+        // Only clear wantConnected on an explicit user disconnect (stopServiceIfIdle=true).
+        // For the PlayActivity flow (keepService=false) we want the auto-resume
+        // path to fire if the process dies while the game is open.
         updateSession(sessionId) {
             it.copy(
                 connected = false,
@@ -366,6 +395,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 players = 0,
                 connectedAt = 0,
                 hostPlayerId = "",
+                wantConnected = if (stopServiceIfIdle) false else it.wantConnected,
             )
         }
         if (stopServiceIfIdle) stopAfkServiceIfIdle()
@@ -571,7 +601,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 AppLog.d(TAG, "[Balance] OK -> $balance breads")
                 _state.update { it.copy(currencyBalance = balance, currencyBalanceLoading = false, currencyBalanceError = null) }
             } catch (e: TokenExpiredException) {
-                AppLog.e(TAG, "[Balance] Token expired — need re-login")
+                AppLog.e(TAG, "[Balance] Token expired, need re-login")
                 _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = "token_expired") }
             } catch (e: Exception) {
                 AppLog.e(TAG, "[Balance] Failed: ${e.message}", e)

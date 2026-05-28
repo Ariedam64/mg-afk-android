@@ -602,7 +602,7 @@ private fun StorageUpgradePanel(
         }
 
         if (nextUpgrade == null) {
-            Text("$entityLabel maxed out — capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
+            Text("$entityLabel maxed out, capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         } else {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,

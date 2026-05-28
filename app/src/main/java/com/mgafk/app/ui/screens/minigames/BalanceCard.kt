@@ -135,7 +135,7 @@ fun BalanceCard(
                 ) {
                     Icon(Icons.Outlined.Warning, contentDescription = null, tint = StatusError, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Token expired — re-login", fontSize = 10.sp, color = StatusError)
+                    Text("Token expired, re-login", fontSize = 10.sp, color = StatusError)
                 }
             } else if (gameBalanceError != null) {
                 Spacer(modifier = Modifier.height(4.dp))

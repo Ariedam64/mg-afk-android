@@ -740,6 +740,6 @@ private fun shortResult(result: String?): String = when (result) {
     "bust" -> "Bust"
     "lose" -> "Lose"
     "dealer_blackjack" -> "Lose"
-    null -> "—"
+    null -> "-"
     else -> result.replaceFirstChar { it.uppercase() }
 }

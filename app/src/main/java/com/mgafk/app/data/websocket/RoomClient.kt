@@ -78,8 +78,11 @@ class RoomClient {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val json = AppJson.default
     private val httpClient = OkHttpClient.Builder()
-        .pingInterval(30, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS)
+        // 20s keeps us comfortably below the ~30-60s NAT idle timeout most
+        // mobile carriers enforce, so the connection stays alive even when
+        // the device is in light Doze between wake-lock windows.
+        .pingInterval(20, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .connectTimeout(15, TimeUnit.SECONDS)
         .build()
 
@@ -274,7 +277,7 @@ class RoomClient {
     // ---- Internal handlers ----
 
     private fun handleOpen() {
-        AppLog.d(TAG, "onOpen — sending handshake")
+        AppLog.d(TAG, "onOpen, sending handshake")
         actions.voteForGame()
         actions.setSelectedGame()
     }
@@ -305,7 +308,7 @@ class RoomClient {
     }
 
     private fun handleWelcome(msg: JsonObject) {
-        AppLog.d(TAG, "handleWelcome — playerId=$playerId")
+        AppLog.d(TAG, "handleWelcome, playerId=$playerId")
         // Check auth before accepting state
         val fullState = msg["fullState"]?.jsonObject ?: run {
             AppLog.w(TAG, "Welcome missing fullState!")
@@ -317,11 +320,11 @@ class RoomClient {
             (el as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull == playerId
         } as? JsonObject
         if (me != null && me["databaseUserId"]?.jsonPrimitive?.contentOrNull == null) {
-            AppLog.e(TAG, "Auth failed — player found but no databaseUserId")
+            AppLog.e(TAG, "Auth failed, player found but no databaseUserId")
             failAuth("Invalid mc_jwt cookie.")
             return
         }
-        AppLog.d(TAG, "Auth OK — me=${me != null} players=${players?.size ?: 0}")
+        AppLog.d(TAG, "Auth OK, me=${me != null} players=${players?.size ?: 0}")
 
         // Delegate full state handling to GameState
         gameState.handleMessage(msg)

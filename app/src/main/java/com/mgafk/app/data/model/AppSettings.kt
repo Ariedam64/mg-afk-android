@@ -61,7 +61,7 @@ data class AppSettings(
     // Background & Battery
     val wifiLockEnabled: Boolean = true,
     val wakeLockMode: WakeLockMode = WakeLockMode.ALWAYS,
-    val wakeLockAutoDelayMin: Int = 5,
+    val wakeLockAutoDelayMin: Int = 2,
 
     // Reconnection
     val retryDelayMs: Long = 1500,

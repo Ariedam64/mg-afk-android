@@ -14,6 +14,12 @@ data class Session(
     val casinoApiKey: String = "",
     val reconnect: ReconnectConfig = ReconnectConfig(),
     val connected: Boolean = false,
+    /**
+     * User intent: should this session be connected? Survives process death
+     * (unlike [connected]) so the app can auto-reconnect on launch / boot /
+     * service restart. Flipped on by [connect], off by explicit [disconnect].
+     */
+    val wantConnected: Boolean = false,
     val busy: Boolean = false,
     val status: SessionStatus = SessionStatus.IDLE,
     val error: String = "",

@@ -269,7 +269,7 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
                 message = "Android can restrict background apps to save battery.\n\n" +
                     "When MG AFK is \"Optimized\", the system may pause or kill it while " +
                     "the screen is off, interrupting your AFK session.\n\n" +
-                    "\"Unrestricted\" lets the app run freely in the background — recommended " +
+                    "\"Unrestricted\" lets the app run freely in the background. Recommended " +
                     "for uninterrupted AFK sessions.\n\n" +
                     "Tap a button to open the system battery settings.",
             )

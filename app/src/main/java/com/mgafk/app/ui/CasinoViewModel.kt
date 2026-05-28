@@ -456,7 +456,7 @@ class CasinoViewModel : ViewModel() {
                             crashed = true,
                             won = false,
                             payout = 0,
-                            error = "Connection lost — game ended",
+                            error = "Connection lost, game ended",
                         ))
                     }
                     break

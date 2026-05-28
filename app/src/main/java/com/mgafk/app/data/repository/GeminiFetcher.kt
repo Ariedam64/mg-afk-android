@@ -62,12 +62,12 @@ object GeminiFetcher {
                 .build()
             val metaRes = client.newCall(metaReq).execute()
             if (!metaRes.isSuccessful) {
-                AppLog.w(TAG, "releases/latest HTTP ${metaRes.code} — using cache if any")
+                AppLog.w(TAG, "releases/latest HTTP ${metaRes.code}, using cache if any")
                 return@withContext readCached(context)
             }
             val body = metaRes.body?.string()
                 ?: run {
-                    AppLog.w(TAG, "releases/latest empty body — using cache if any")
+                    AppLog.w(TAG, "releases/latest empty body, using cache if any")
                     return@withContext readCached(context)
                 }
 
@@ -81,7 +81,7 @@ object GeminiFetcher {
                 ?.get("browser_download_url")?.jsonPrimitive?.contentOrNull
 
             if (tag == null || downloadUrl == null) {
-                AppLog.w(TAG, "releases/latest missing tag or asset — using cache if any")
+                AppLog.w(TAG, "releases/latest missing tag or asset, using cache if any")
                 return@withContext readCached(context)
             }
 
@@ -94,7 +94,7 @@ object GeminiFetcher {
             val dlReq = Request.Builder().url(downloadUrl).build()
             val dlRes = client.newCall(dlReq).execute()
             if (!dlRes.isSuccessful) {
-                AppLog.w(TAG, "asset HTTP ${dlRes.code} — using cache if any")
+                AppLog.w(TAG, "asset HTTP ${dlRes.code}, using cache if any")
                 return@withContext readCached(context)
             }
             val script = dlRes.body?.string()
@@ -105,7 +105,7 @@ object GeminiFetcher {
             AppLog.d(TAG, "Downloaded Gemini $tag (${script.length} chars)")
             script
         } catch (e: Exception) {
-            AppLog.w(TAG, "fetchLatest failed: ${e.message} — using cache if any")
+            AppLog.w(TAG, "fetchLatest failed: ${e.message}, using cache if any")
             readCached(context)
         }
     }

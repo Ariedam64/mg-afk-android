@@ -81,7 +81,7 @@ class AlertNotifier(private val context: Context) {
                     firedHungerPets.add(pet.id)
                     val petEntry = MgApi.findPet(pet.species.lowercase())
                     items.add(DisplayItem(
-                        label = "${pet.name} (${pet.species}) — ${"%.1f".format(percent)}%",
+                        label = "${pet.name} (${pet.species}): ${"%.1f".format(percent)}%",
                         spriteUrl = petEntry?.sprite,
                     ))
                 }
@@ -190,7 +190,7 @@ class AlertNotifier(private val context: Context) {
     private val DISCONNECT_NOTIFICATION_ID = 999
 
     fun notifyDisconnect(sessionName: String, code: Int?, reason: String) {
-        val body = if (code != null) "Code $code — $reason" else reason
+        val body = if (code != null) "Code $code: $reason" else reason
         val builder = NotificationCompat.Builder(context, MgAfkApp.CHANNEL_ALERTS)
             .setContentTitle("$sessionName disconnected")
             .setContentText(body)

@@ -1,8 +1,10 @@
 package com.mgafk.app
 
+import android.app.ActivityManager
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
@@ -24,6 +26,9 @@ class MgAfkApp : Application(), ImageLoaderFactory {
         // sound is the only one that plays). Notification channels are immutable
         // after creation, so a new id is required to change those attributes.
         const val CHANNEL_ALARMS = "mgafk_alarms_v2"
+        // Dedicated channel for the companion watchdog FGS notification — kept
+        // at IMPORTANCE_MIN so it stays collapsed and silent in the shade.
+        const val CHANNEL_WATCHDOG = "mgafk_watchdog"
         private const val LEGACY_CHANNEL_ALARMS = "mgafk_alarms"
     }
 
@@ -32,9 +37,26 @@ class MgAfkApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // The :watchdog process also instantiates Application; skip any
+        // non-trivial bootstrapping there since it only needs the channels
+        // (already created above) to post its own foreground notification.
+        if (!isMainProcess()) return
         // Warm the Gemini userscript cache so the in-app Play WebView has it
         // ready as soon as the user taps Play.
         appScope.launch { GeminiFetcher.fetchLatest(this@MgAfkApp) }
+    }
+
+    private fun isMainProcess(): Boolean {
+        val pid = android.os.Process.myPid()
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            ?: return true
+        val info = try {
+            am.runningAppProcesses
+        } catch (_: Exception) {
+            null
+        }
+        val processName = info?.firstOrNull { it.pid == pid }?.processName
+        return processName == null || processName == packageName
     }
 
     override fun newImageLoader(): ImageLoader =
@@ -93,9 +115,19 @@ class MgAfkApp : Application(), ImageLoaderFactory {
             enableVibration(false)
         }
 
+        val watchdogChannel = NotificationChannel(
+            CHANNEL_WATCHDOG,
+            "Background Watchdog",
+            NotificationManager.IMPORTANCE_MIN,
+        ).apply {
+            description = "Companion process that resurrects the main service if killed"
+            setShowBadge(false)
+        }
+
         manager.createNotificationChannel(serviceChannel)
         manager.createNotificationChannel(alertsChannel)
         manager.createNotificationChannel(alarmsChannel)
+        manager.createNotificationChannel(watchdogChannel)
 
         // Clean up the v1 alarm channel from older installs.
         manager.deleteNotificationChannel(LEGACY_CHANNEL_ALARMS)

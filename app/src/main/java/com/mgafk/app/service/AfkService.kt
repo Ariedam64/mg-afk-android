@@ -5,15 +5,18 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.mgafk.app.MainActivity
 import com.mgafk.app.MgAfkApp
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,9 +37,32 @@ class AfkService : Service() {
 
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private val silentAudio = SilentAudioLoop()
+    private var watchdogBound = false
 
     private var wakeLockMode = MODE_OFF
     private var wakeLockDelayMin = 15
+
+    private val watchdogConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            watchdogBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            // Watchdog process died. Respawn it so the mutual death-watch keeps working.
+            watchdogBound = false
+            startAndBindWatchdog()
+        }
+
+        override fun onBindingDied(name: ComponentName?) {
+            watchdogBound = false
+            startAndBindWatchdog()
+        }
+
+        override fun onNullBinding(name: ComponentName?) {
+            watchdogBound = true
+        }
+    }
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -57,13 +83,37 @@ class AfkService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
+        // Two "we got resurrected with nothing to do" paths:
+        //   1. intent == null      → system restart after START_STICKY kill
+        //   2. action == SELF_RESTART → our post-onTaskRemoved alarm fired
+        // In both, the activity/ViewModel are gone so there's no RoomClient to
+        // keep alive. Post a resume notification and stop. Tapping the notif
+        // launches MainActivity, whose init auto-reconnects wantConnected sessions.
+        if (intent == null || intent.action == ACTION_SELF_RESTART) {
+            emitLog(
+                "service resurrected",
+                if (intent == null) "null intent (system restart)"
+                else "self-restart alarm fired",
+            )
+            postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
-        val wantWifiLock = intent?.getBooleanExtra(EXTRA_WIFI_LOCK, true) ?: true
+        // Activity is starting us with real config — cancel any pending
+        // self-restart alarm queued by a previous onTaskRemoved.
+        cancelSelfRestart()
+
+        startForegroundWithFullTypeMask(NOTIFICATION_ID, buildNotification())
+        if (silentAudio.start()) emitLog("silent audio started")
+        startAndBindWatchdog()
+
+        val wantWifiLock = intent.getBooleanExtra(EXTRA_WIFI_LOCK, true)
         if (wantWifiLock) acquireWifiLock() else releaseWifiLock()
 
-        wakeLockMode = intent?.getIntExtra(EXTRA_WAKE_LOCK_MODE, MODE_OFF) ?: MODE_OFF
-        wakeLockDelayMin = intent?.getIntExtra(EXTRA_WAKE_LOCK_DELAY_MIN, 15) ?: 15
+        wakeLockMode = intent.getIntExtra(EXTRA_WAKE_LOCK_MODE, MODE_OFF)
+        wakeLockDelayMin = intent.getIntExtra(EXTRA_WAKE_LOCK_DELAY_MIN, 15)
 
         val modeName = when (wakeLockMode) { MODE_SMART -> "smart"; MODE_ALWAYS -> "always"; else -> "off" }
         emitLog("service started", "wifi=${if (wantWifiLock) "on" else "off"} cpu=$modeName delay=${wakeLockDelayMin}min")
@@ -71,6 +121,45 @@ class AfkService : Service() {
         applyWakeLockMode()
 
         return START_STICKY
+    }
+
+    /**
+     * Fired when the user swipes the app out of Recents. On stock Android the
+     * service would survive, but several OEM skins (Samsung, Xiaomi, …) kill
+     * the whole process. Schedule an inexact-but-while-idle alarm to restart
+     * ourselves a few seconds later with [ACTION_SELF_RESTART], which our
+     * onStartCommand turns into a resume notification.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        emitLog("task removed", "scheduling self-restart in ${TASK_REMOVED_RESTART_DELAY_MS / 1000}s")
+        scheduleSelfRestart()
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private fun scheduleSelfRestart() {
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        val triggerAt = SystemClock.elapsedRealtime() + TASK_REMOVED_RESTART_DELAY_MS
+        // setAndAllowWhileIdle works in Doze and doesn't require USE_EXACT_ALARM.
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            triggerAt,
+            selfRestartPendingIntent(),
+        )
+    }
+
+    private fun cancelSelfRestart() {
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(selfRestartPendingIntent())
+    }
+
+    private fun selfRestartPendingIntent(): PendingIntent {
+        val restartIntent = Intent(this, AfkService::class.java).setAction(ACTION_SELF_RESTART)
+        return PendingIntent.getService(
+            this,
+            RESTART_REQUEST_CODE,
+            restartIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     override fun onCreate() {
@@ -98,6 +187,12 @@ class AfkService : Service() {
         try { unregisterReceiver(smartAlarmReceiver) } catch (_: Exception) {}
         releaseWakeLock()
         releaseWifiLock()
+        silentAudio.stop()
+        // onDestroy fires for legitimate stopService() calls — NOT for kills.
+        // So this is the right place to bring the watchdog down with us:
+        // a real shutdown should leave nothing running, while a kill leaves
+        // the watchdog alive to resurrect us.
+        unbindAndStopWatchdog()
         super.onDestroy()
     }
 
@@ -176,6 +271,39 @@ class AfkService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+    // ── Watchdog (companion process for mutual resurrection) ──
+
+    private fun startAndBindWatchdog() {
+        WatchdogService.start(this)
+        if (watchdogBound) return
+        try {
+            bindService(
+                Intent(this, WatchdogService::class.java),
+                watchdogConnection,
+                BIND_AUTO_CREATE,
+            )
+        } catch (_: Exception) {}
+    }
+
+    private fun unbindAndStopWatchdog() {
+        // Tell the watchdog this is a legitimate shutdown BEFORE unbinding —
+        // otherwise its onServiceDisconnected callback would try to resurrect
+        // us during the very shutdown we're performing. The flag is set in
+        // the watchdog process via an intent action; a short grace window
+        // there absorbs the IPC delay.
+        try {
+            startService(
+                Intent(this, WatchdogService::class.java)
+                    .setAction(WatchdogService.ACTION_SHUTDOWN),
+            )
+        } catch (_: Exception) {}
+        if (watchdogBound) {
+            try { unbindService(watchdogConnection) } catch (_: Exception) {}
+            watchdogBound = false
+        }
+        WatchdogService.stop(this)
+    }
+
     // ── Lock management ──
 
     private fun acquireWifiLock() {
@@ -221,13 +349,20 @@ class AfkService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_rotate)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            // Android 12+: post the notification immediately rather than the
+            // default 10s grace, so the system has stronger proof we're a
+            // legitimate foreground service.
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
 
     companion object {
         private const val NOTIFICATION_ID = 1
         private const val SMART_ALARM_REQUEST_CODE = 42
+        private const val RESTART_REQUEST_CODE = 43
         private const val ACTION_SMART_WAKE_LOCK = "com.mgafk.app.SMART_WAKE_LOCK"
+        internal const val ACTION_SELF_RESTART = "com.mgafk.app.SELF_RESTART"
+        private const val TASK_REMOVED_RESTART_DELAY_MS = 3_000L
 
         const val EXTRA_WIFI_LOCK = "extra_wifi_lock"
         const val EXTRA_WAKE_LOCK_MODE = "extra_wake_lock_mode"
