@@ -671,18 +671,18 @@ private fun SectionContent(
                 },
             )
             PetTeamCard(
-                teams = state.petTeams,
+                teams = session.petTeams,
                 activePets = session.pets,
                 inventoryPets = session.inventory.pets,
                 hutchPets = session.petHutch,
-                activeTeamId = remember(session.pets, state.petTeams) {
+                activeTeamId = remember(session.pets, session.petTeams) {
                     viewModel.detectActiveTeamId(session.id)
                 },
                 apiReady = state.apiReady,
-                onCreate = { team -> viewModel.createPetTeam(team) },
-                onUpdate = { team -> viewModel.updatePetTeam(team) },
-                onDelete = { teamId -> viewModel.deletePetTeam(teamId) },
-                onReorder = { from, to -> viewModel.reorderPetTeams(from, to) },
+                onCreate = { team -> viewModel.createPetTeam(session.id, team) },
+                onUpdate = { team -> viewModel.updatePetTeam(session.id, team) },
+                onDelete = { teamId -> viewModel.deletePetTeam(session.id, teamId) },
+                onReorder = { from, to -> viewModel.reorderPetTeams(session.id, from, to) },
                 onActivate = { team -> viewModel.activateTeam(session.id, team) },
                 showTip = state.showTeamTip,
                 onDismissTip = { viewModel.dismissTeamTip() },

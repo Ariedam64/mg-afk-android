@@ -223,12 +223,6 @@ class SessionRepository(private val context: Context) {
         }
     }
 
-    suspend fun savePetTeams(teams: List<PetTeam>) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_PET_TEAMS] = json.encodeToString(teams)
-        }
-    }
-
     suspend fun getLastNotifiedVersion(): String? {
         return context.dataStore.data.map { it[KEY_NOTIFIED_VERSION] }.first()
     }

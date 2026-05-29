@@ -98,7 +98,6 @@ data class UiState(
     val showSeedTip: Boolean = false,
     val showEggTip: Boolean = false,
     val showPlantTip: Boolean = false,
-    val petTeams: List<PetTeam> = emptyList(),
     val settings: AppSettings = AppSettings(),
     val serviceLogs: List<AfkService.ServiceLog> = emptyList(),
     val currencyBalance: Long? = null,
@@ -151,14 +150,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             alertNotifier.alarmSoundUri = settings.alarmSoundUri
             alertNotifier.alarmSchedule = settings.alarmSchedule
             alertNotifier.alarmVolume = settings.alarmVolume
-            val petTeams = repo.loadPetTeams()
+            // Legacy migration: pet teams used to be a single global list. Seed each
+            // session that has none yet from the old global one, so the previous behaviour
+            // (same teams on every session) is preserved.
+            val legacyPetTeams = repo.loadPetTeams()
+            val migratedSessions = if (legacyPetTeams.isEmpty()) sessions
+                else sessions.map { if (it.petTeams.isEmpty()) it.copy(petTeams = legacyPetTeams) else it }
             val teamTipDismissed = repo.isTeamTipDismissed()
             val gardenTipDismissed = repo.isGardenTipDismissed()
             val seedTipDismissed = repo.isSeedTipDismissed()
             val eggTipDismissed = repo.isEggTipDismissed()
             val plantTipDismissed = repo.isPlantTipDismissed()
             _state.value = UiState(
-                sessions = sessions,
+                sessions = migratedSessions,
                 activeSessionId = activeId,
                 alerts = alerts,
                 collapsedCards = collapsedCards,
@@ -171,7 +175,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 showSeedTip = !seedTipDismissed,
                 showEggTip = !eggTipDismissed,
                 showPlantTip = !plantTipDismissed,
-                petTeams = petTeams,
                 settings = settings,
             )
             // Collect service logs (wake lock events etc.)
@@ -1532,54 +1535,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Pet Teams ----
 
-    private fun persistPetTeams() {
-        viewModelScope.launch { repo.savePetTeams(_state.value.petTeams) }
+    private fun updatePetTeams(sessionId: String, transform: (List<PetTeam>) -> List<PetTeam>) {
+        updateSession(sessionId) { it.copy(petTeams = transform(it.petTeams)) }
     }
 
     /** Create a new pet team from the editor overlay selections. */
-    fun createPetTeam(team: PetTeam) {
-        if (_state.value.petTeams.size >= PetTeam.MAX_TEAMS) return
-        _state.update { it.copy(petTeams = it.petTeams + team) }
-        persistPetTeams()
+    fun createPetTeam(sessionId: String, team: PetTeam) {
+        updatePetTeams(sessionId) { teams ->
+            if (teams.size >= PetTeam.MAX_TEAMS) teams else teams + team
+        }
     }
 
     /** Update an existing pet team (from the editor overlay). */
-    fun updatePetTeam(team: PetTeam) {
-        _state.update { s ->
-            s.copy(petTeams = s.petTeams.map { t ->
-                if (t.id == team.id) team.copy(updatedAt = System.currentTimeMillis()) else t
-            })
+    fun updatePetTeam(sessionId: String, team: PetTeam) {
+        updatePetTeams(sessionId) { teams ->
+            teams.map { t -> if (t.id == team.id) team.copy(updatedAt = System.currentTimeMillis()) else t }
         }
-        persistPetTeams()
     }
 
     /** Delete a team by id. */
-    fun deletePetTeam(teamId: String) {
-        _state.update { it.copy(petTeams = it.petTeams.filter { t -> t.id != teamId }) }
-        persistPetTeams()
+    fun deletePetTeam(sessionId: String, teamId: String) {
+        updatePetTeams(sessionId) { teams -> teams.filter { t -> t.id != teamId } }
     }
 
     /** Rename a team. */
-    fun renamePetTeam(teamId: String, newName: String) {
-        _state.update { s ->
-            s.copy(petTeams = s.petTeams.map { t ->
-                if (t.id == teamId) t.copy(name = newName, updatedAt = System.currentTimeMillis()) else t
-            })
+    fun renamePetTeam(sessionId: String, teamId: String, newName: String) {
+        updatePetTeams(sessionId) { teams ->
+            teams.map { t -> if (t.id == teamId) t.copy(name = newName, updatedAt = System.currentTimeMillis()) else t }
         }
-        persistPetTeams()
     }
 
     /** Reorder teams by moving [fromIndex] to [toIndex]. */
-    fun reorderPetTeams(fromIndex: Int, toIndex: Int) {
-        _state.update { s ->
-            val list = s.petTeams.toMutableList()
+    fun reorderPetTeams(sessionId: String, fromIndex: Int, toIndex: Int) {
+        updatePetTeams(sessionId) { teams ->
+            val list = teams.toMutableList()
             if (fromIndex in list.indices && toIndex in list.indices) {
                 val item = list.removeAt(fromIndex)
                 list.add(toIndex, item)
             }
-            s.copy(petTeams = list)
+            list
         }
-        persistPetTeams()
     }
 
     /**
@@ -1661,7 +1656,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val session = _state.value.sessions.find { it.id == sessionId } ?: return null
         val activePetIds = session.pets.map { it.id }.toSet()
         if (activePetIds.isEmpty()) return null
-        return _state.value.petTeams.firstOrNull { team ->
+        return session.petTeams.firstOrNull { team ->
             team.petIds.filter { it.isNotBlank() }.toSet() == activePetIds
         }?.id
     }

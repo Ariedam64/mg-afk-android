@@ -57,6 +57,8 @@ data class Session(
     val hostPlayerId: String = "",
     /** Guest-bot snapshots currently active for this session. */
     val bots: List<BotSnapshot> = emptyList(),
+    /** Per-session saved pet teams (reference account-specific pet ids). */
+    val petTeams: List<PetTeam> = emptyList(),
 )
 
 @Serializable
