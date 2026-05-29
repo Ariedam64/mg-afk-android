@@ -95,6 +95,14 @@ class AfkService : Service() {
                 if (intent == null) "null intent (system restart)"
                 else "self-restart alarm fired",
             )
+            // We may have been launched via startForegroundService() (the
+            // watchdog resurrection path) or auto-restarted by the system.
+            // Either way Android requires a startForeground() call within the
+            // start timeout, even though we are about to stop immediately.
+            // Skipping it throws ForegroundServiceDidNotStartInTimeException,
+            // and the mutual death-watch turns that single crash into a crash
+            // loop ("MG AFK keeps stopping"). Promote first, then demote+stop.
+            startForegroundWithFullTypeMask(NOTIFICATION_ID, buildNotification())
             postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -154,12 +162,7 @@ class AfkService : Service() {
 
     private fun selfRestartPendingIntent(): PendingIntent {
         val restartIntent = Intent(this, AfkService::class.java).setAction(ACTION_SELF_RESTART)
-        return PendingIntent.getService(
-            this,
-            RESTART_REQUEST_CODE,
-            restartIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        return foregroundServicePendingIntent(RESTART_REQUEST_CODE, restartIntent)
     }
 
     override fun onCreate() {

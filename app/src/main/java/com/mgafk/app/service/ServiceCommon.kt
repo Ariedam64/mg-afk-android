@@ -44,17 +44,36 @@ internal fun postResumeNotification(
     )
     val text = if (pendingCount <= 1) "Tap to resume your session"
         else "Tap to resume your $pendingCount sessions"
-    val notif = NotificationCompat.Builder(context, MgAfkApp.CHANNEL_ALERTS)
+    val notif = NotificationCompat.Builder(context, MgAfkApp.CHANNEL_RESUME)
         .setContentTitle("MG AFK was stopped")
         .setContentText(text)
         .setSmallIcon(android.R.drawable.ic_menu_rotate)
         .setContentIntent(pendingIntent)
         .setAutoCancel(true)
-        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .build()
     context.getSystemService(NotificationManager::class.java)
         ?.notify(notificationId, notif)
 }
+
+/**
+ * Build a PendingIntent that starts a service as a foreground service. Fired
+ * from our allow-while-idle restart alarms, this is the correct API: such
+ * alarms are exempt from the Android 12+ background-FGS-start restriction,
+ * whereas a plain getService() background start would throw on modern OEMs.
+ * Every alarm-driven restart promotes itself via startForeground() in
+ * onStartCommand, so the foreground contract is honored. (minSdk 26, so
+ * getForegroundService is always available.)
+ */
+internal fun Context.foregroundServicePendingIntent(
+    requestCode: Int,
+    intent: Intent,
+): PendingIntent = PendingIntent.getForegroundService(
+    this,
+    requestCode,
+    intent,
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+)
 
 /**
  * Wrap [Service.startForeground] with the typeMask Android 14+ enforces for

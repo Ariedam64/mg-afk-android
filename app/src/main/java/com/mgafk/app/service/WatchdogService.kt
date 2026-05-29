@@ -1,7 +1,6 @@
 package com.mgafk.app.service
 
 import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.ComponentName
 import android.content.Context
@@ -136,12 +135,7 @@ class WatchdogService : Service() {
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         val triggerAt = SystemClock.elapsedRealtime() + WATCHDOG_RESTART_DELAY_MS
         val intent = Intent(this, WatchdogService::class.java)
-        val pendingIntent = PendingIntent.getService(
-            this,
-            WATCHDOG_RESTART_REQUEST_CODE,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val pendingIntent = foregroundServicePendingIntent(WATCHDOG_RESTART_REQUEST_CODE, intent)
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.ELAPSED_REALTIME_WAKEUP,
             triggerAt,
@@ -158,12 +152,7 @@ class WatchdogService : Service() {
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         val triggerAt = SystemClock.elapsedRealtime() + WATCHDOG_RESTART_DELAY_MS
         val intent = Intent(this, AfkService::class.java).setAction(AfkService.ACTION_SELF_RESTART)
-        val pendingIntent = PendingIntent.getService(
-            this,
-            AFK_FALLBACK_REQUEST_CODE,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val pendingIntent = foregroundServicePendingIntent(AFK_FALLBACK_REQUEST_CODE, intent)
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.ELAPSED_REALTIME_WAKEUP,
             triggerAt,

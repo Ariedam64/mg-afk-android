@@ -29,6 +29,10 @@ class MgAfkApp : Application(), ImageLoaderFactory {
         // Dedicated channel for the companion watchdog FGS notification — kept
         // at IMPORTANCE_MIN so it stays collapsed and silent in the shade.
         const val CHANNEL_WATCHDOG = "mgafk_watchdog"
+        // "Tap to resume" notifications. Own channel (separate from the loud
+        // Game Alerts) at IMPORTANCE_DEFAULT: a normal sound, no intrusive
+        // heads-up, and the user can mute it independently.
+        const val CHANNEL_RESUME = "mgafk_resume"
         private const val LEGACY_CHANNEL_ALARMS = "mgafk_alarms"
     }
 
@@ -124,10 +128,19 @@ class MgAfkApp : Application(), ImageLoaderFactory {
             setShowBadge(false)
         }
 
+        val resumeChannel = NotificationChannel(
+            CHANNEL_RESUME,
+            "Session Resume",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = "Lets you know a background session stopped and needs a tap to resume"
+        }
+
         manager.createNotificationChannel(serviceChannel)
         manager.createNotificationChannel(alertsChannel)
         manager.createNotificationChannel(alarmsChannel)
         manager.createNotificationChannel(watchdogChannel)
+        manager.createNotificationChannel(resumeChannel)
 
         // Clean up the v1 alarm channel from older installs.
         manager.deleteNotificationChannel(LEGACY_CHANNEL_ALARMS)
