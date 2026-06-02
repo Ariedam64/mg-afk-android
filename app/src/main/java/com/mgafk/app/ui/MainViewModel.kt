@@ -53,6 +53,7 @@ import com.mgafk.app.data.websocket.RoomClient
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.service.AfkWatchdogWorker
 import com.mgafk.app.service.AlertNotifier
+import com.mgafk.app.service.cancelResumeNotification
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -1798,6 +1799,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         connectedAt = if (event.status == SessionStatus.CONNECTED) System.currentTimeMillis() else 0,
                         wsLogs = (listOf(wsLog) + it.wsLogs).take(100),
                     )
+                }
+                if (event.status == SessionStatus.CONNECTED) {
+                    // A session is live again (user tap, auto-reconnect, or WS
+                    // self-reconnect): clear any stale "tap to resume" notif.
+                    cancelResumeNotification(getApplication<Application>())
                 }
                 // Disconnect / reconnect notifications
                 if (_state.value.settings.notifyOnDisconnect && previousSession != null) {

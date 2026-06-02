@@ -33,7 +33,7 @@ class BootReceiver : BroadcastReceiver() {
                 val sessions = repo.loadSessions()
                 val pending = sessions.count { it.wantConnected && it.cookie.isNotBlank() }
                 if (pending > 0) {
-                    postResumeNotification(appContext, ResumeNotificationIds.FROM_BOOT_RECEIVER, pending)
+                    postResumeNotification(appContext, pending)
                     // Keep nagging every ~15 min until the user taps — without
                     // this, ignoring the boot notification means silent forever.
                     AfkWatchdogWorker.schedule(appContext)

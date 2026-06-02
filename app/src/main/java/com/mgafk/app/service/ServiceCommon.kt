@@ -16,21 +16,21 @@ import androidx.core.app.ServiceCompat
 import com.mgafk.app.MainActivity
 import com.mgafk.app.MgAfkApp
 
-/** Notification IDs owned across all "tap to resume" entry points. */
-internal object ResumeNotificationIds {
-    const val FROM_AFK_SERVICE = 2
-    const val FROM_BOOT_RECEIVER = 3
-    const val FROM_WATCHDOG_WORKER = 4
-}
+/**
+ * Single notification id for the "tap to resume" notification, shared by every
+ * entry point so they replace each other (never stack) and can be cleared from
+ * any process via [cancelResumeNotification].
+ */
+internal const val RESUME_NOTIFICATION_ID = 2
 
 /**
- * Build and post the "MG AFK was stopped — tap to resume" notification used
- * by every code path that detects the service died: AfkService null-intent
- * restart, BootReceiver, AfkWatchdogWorker, and any future entry point.
+ * Build and post the "MG AFK was stopped, tap to resume" notification used by
+ * every code path that detects the service died: AfkService restart,
+ * BootReceiver, AfkWatchdogWorker. Always posts under [RESUME_NOTIFICATION_ID],
+ * so repeated posts update the single notification instead of stacking.
  */
 internal fun postResumeNotification(
     context: Context,
-    notificationId: Int,
     pendingCount: Int = 1,
 ) {
     val pendingIntent = PendingIntent.getActivity(
@@ -53,7 +53,16 @@ internal fun postResumeNotification(
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .build()
     context.getSystemService(NotificationManager::class.java)
-        ?.notify(notificationId, notif)
+        ?.notify(RESUME_NOTIFICATION_ID, notif)
+}
+
+/**
+ * Clear the "tap to resume" notification once a session is live again (or there
+ * is nothing left to resume). Safe to call from any process.
+ */
+internal fun cancelResumeNotification(context: Context) {
+    context.getSystemService(NotificationManager::class.java)
+        ?.cancel(RESUME_NOTIFICATION_ID)
 }
 
 /**

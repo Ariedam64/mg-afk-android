@@ -28,14 +28,20 @@ class AfkWatchdogWorker(
         val repo = SessionRepository(ctx)
         val pending = repo.loadSessions().count { it.wantConnected && it.cookie.isNotBlank() }
         if (pending == 0) {
-            // Nothing to babysit, cancel ourselves.
+            // Nothing to babysit. Clear any stale resume notif and cancel ourselves.
+            cancelResumeNotification(ctx)
             WorkManager.getInstance(ctx).cancelUniqueWork(UNIQUE_WORK_NAME)
             return Result.success()
         }
 
-        if (isAfkServiceRunning(ctx)) return Result.success()
+        if (isAfkServiceRunning(ctx)) {
+            // Service is alive: a "stopped" notif here would be a false positive
+            // (getRunningServices is unreliable). Clear it instead of posting.
+            cancelResumeNotification(ctx)
+            return Result.success()
+        }
 
-        postResumeNotification(ctx, ResumeNotificationIds.FROM_WATCHDOG_WORKER, pending)
+        postResumeNotification(ctx, pending)
         return Result.success()
     }
 

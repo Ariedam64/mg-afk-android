@@ -105,7 +105,7 @@ class AfkService : Service() {
             // If promotion is refused (e.g. Android 15 FGS time limit) we still
             // stop cleanly without crashing.
             tryStartForegroundAsMediaPlayback(NOTIFICATION_ID, buildNotification())
-            postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
+            postResumeNotification(this)
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -119,10 +119,12 @@ class AfkService : Service() {
             // System refused the foreground promotion (e.g. Android 15 6h FGS
             // time limit). Don't crash; tell the user they need to reopen.
             emitLog("service start refused", "foreground promotion rejected")
-            postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
+            postResumeNotification(this)
             stopSelf()
             return START_NOT_STICKY
         }
+        // Foreground for a live session now: clear any stale "tap to resume".
+        cancelResumeNotification(this)
         if (silentAudio.start()) emitLog("silent audio started")
         startAndBindWatchdog()
 
