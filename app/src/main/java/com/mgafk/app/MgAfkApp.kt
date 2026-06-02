@@ -10,6 +10,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import com.mgafk.app.data.CrashLog
 import com.mgafk.app.data.repository.GeminiFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,11 +41,18 @@ class MgAfkApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        val isMain = isMainProcess()
+        // Install the crash recorder in EVERY process (main + :watchdog) first,
+        // so a crash during the rest of bootstrapping is captured too. This is
+        // how we get the real stack trace for intermittent background crashes
+        // instead of guessing.
+        CrashLog.install(this, if (isMain) "main" else "watchdog")
+        CrashLog.trimIfLarge(this)
         createNotificationChannels()
         // The :watchdog process also instantiates Application; skip any
         // non-trivial bootstrapping there since it only needs the channels
         // (already created above) to post its own foreground notification.
-        if (!isMainProcess()) return
+        if (!isMain) return
         // Warm the Gemini userscript cache so the in-app Play WebView has it
         // ready as soon as the user taps Play.
         appScope.launch { GeminiFetcher.fetchLatest(this@MgAfkApp) }

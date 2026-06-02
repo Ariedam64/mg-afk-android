@@ -17,21 +17,29 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mgafk.app.data.CrashLog
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.WsLog
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.theme.Accent
+import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextSecondary
@@ -47,9 +55,96 @@ fun DebugCards(
     onClearWsLogs: () -> Unit,
     onClearServiceLogs: () -> Unit,
 ) {
+    CrashLogDebugCard()
     AlertDebugCard(onTestAlert = onTestAlert)
     WebSocketDebugCard(wsLogs = session.wsLogs, onClear = onClearWsLogs)
     ServiceDebugCard(logs = serviceLogs, onClear = onClearServiceLogs)
+}
+
+// ── Crash Log Debug Card ──
+
+@Composable
+private fun CrashLogDebugCard() {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    var content by remember { mutableStateOf(CrashLog.read(context)) }
+
+    AppCard(
+        title = "Crash log",
+        collapsible = true,
+        persistKey = "debug_crash",
+        trailing = {
+            if (content.isNotBlank()) {
+                Text(
+                    text = "present",
+                    fontSize = 11.sp,
+                    color = StatusError,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            }
+        },
+    ) {
+        Text(
+            "Uncaught crashes from all processes (main + watchdog) are saved here, " +
+                "so night-time background crashes are not lost. Copy and send this if " +
+                "the app keeps stopping.",
+            fontSize = 11.sp,
+            color = TextMuted,
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DebugActionChip("Refresh", Accent) { content = CrashLog.read(context) }
+            if (content.isNotBlank()) {
+                DebugActionChip("Copy", Accent) { clipboard.setText(AnnotatedString(content)) }
+                DebugActionChip("Clear", StatusError) {
+                    CrashLog.clear(context)
+                    content = ""
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if (content.isBlank()) {
+            Text("No crashes recorded yet.", fontSize = 11.sp, color = TextMuted)
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(SurfaceBorder.copy(alpha = 0.15f))
+                    .padding(8.dp),
+            ) {
+                Text(
+                    text = content,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextSecondary,
+                    lineHeight = 14.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DebugActionChip(label: String, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color)
+    }
 }
 
 // ── Alert Debug Card ──

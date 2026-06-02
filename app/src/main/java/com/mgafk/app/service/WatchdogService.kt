@@ -182,10 +182,19 @@ class WatchdogService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, WatchdogService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            // May be called from a background context (e.g. AfkService's
+            // onServiceDisconnected). Android 12+ can reject a background
+            // foreground-service start with ForegroundServiceStartNotAllowed
+            // Exception. Swallow it instead of crashing: the periodic
+            // AfkWatchdogWorker and the next foreground start recover the
+            // watchdog without taking the whole app down.
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (_: Exception) {
             }
         }
 
