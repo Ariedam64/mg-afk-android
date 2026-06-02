@@ -102,7 +102,9 @@ class AfkService : Service() {
             // Skipping it throws ForegroundServiceDidNotStartInTimeException,
             // and the mutual death-watch turns that single crash into a crash
             // loop ("MG AFK keeps stopping"). Promote first, then demote+stop.
-            startForegroundWithFullTypeMask(NOTIFICATION_ID, buildNotification())
+            // If promotion is refused (e.g. Android 15 FGS time limit) we still
+            // stop cleanly without crashing.
+            tryStartForegroundAsMediaPlayback(NOTIFICATION_ID, buildNotification())
             postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -113,7 +115,14 @@ class AfkService : Service() {
         // self-restart alarm queued by a previous onTaskRemoved.
         cancelSelfRestart()
 
-        startForegroundWithFullTypeMask(NOTIFICATION_ID, buildNotification())
+        if (!tryStartForegroundAsMediaPlayback(NOTIFICATION_ID, buildNotification())) {
+            // System refused the foreground promotion (e.g. Android 15 6h FGS
+            // time limit). Don't crash; tell the user they need to reopen.
+            emitLog("service start refused", "foreground promotion rejected")
+            postResumeNotification(this, ResumeNotificationIds.FROM_AFK_SERVICE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (silentAudio.start()) emitLog("silent audio started")
         startAndBindWatchdog()
 

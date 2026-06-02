@@ -21,9 +21,10 @@ import com.mgafk.app.MgAfkApp
  * trick: Android can kill our two processes independently, so as long as at
  * least one survives, the surviving one rebinds and respawns the other.
  *
- * Both services use foregroundServiceType="dataSync|mediaPlayback" and play
- * a silent audio loop, so the OS / OEM task killers treat them as honest
- * media services and leave them alone.
+ * Both services use foregroundServiceType="mediaPlayback" and play a silent
+ * audio loop, so the OS / OEM task killers treat them as honest media services
+ * and leave them alone. (mediaPlayback is also not subject to the Android 15
+ * 6-hour dataSync time limit.)
  */
 class WatchdogService : Service() {
 
@@ -79,7 +80,13 @@ class WatchdogService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startForegroundWithFullTypeMask(NOTIFICATION_ID, buildNotification())
+        if (!tryStartForegroundAsMediaPlayback(NOTIFICATION_ID, buildNotification())) {
+            // System refused the foreground promotion (e.g. Android 15 6h FGS
+            // time limit). Stop instead of crash-looping on startForeground;
+            // AfkService and the periodic worker handle recovery.
+            stopSelf()
+            return START_NOT_STICKY
+        }
         silentAudio.start()
         if (!afkBound) bindToAfk()
         return START_STICKY

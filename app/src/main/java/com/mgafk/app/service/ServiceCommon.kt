@@ -76,24 +76,36 @@ internal fun Context.foregroundServicePendingIntent(
 )
 
 /**
- * Wrap [Service.startForeground] with the typeMask Android 14+ enforces for
- * the `dataSync|mediaPlayback` combo we use on every FGS in the app.
+ * Promote this service to the foreground as a `mediaPlayback` FGS, backed by the
+ * app's silent audio loop.
+ *
+ * We deliberately do NOT use the `dataSync` type: on Android 15 (API 35),
+ * dataSync foreground services are capped at 6 hours per 24h, after which
+ * [Service.startForeground] throws ForegroundServiceStartNotAllowedException
+ * ("time limit already exhausted") and would crash an always-on AFK service in
+ * a loop. `mediaPlayback` is not time-limited and is the same type that makes
+ * OEM task killers leave us alone.
+ *
+ * Returns true on success, false if the system refused the promotion (the
+ * caller should then stop instead of crashing).
  */
-internal fun Service.startForegroundWithFullTypeMask(
+internal fun Service.tryStartForegroundAsMediaPlayback(
     notificationId: Int,
     notification: Notification,
-) {
+): Boolean = try {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         ServiceCompat.startForeground(
             this,
             notificationId,
             notification,
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
         )
     } else {
         startForeground(notificationId, notification)
     }
+    true
+} catch (_: Exception) {
+    false
 }
 
 /**
