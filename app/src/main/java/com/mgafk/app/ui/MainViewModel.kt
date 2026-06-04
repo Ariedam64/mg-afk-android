@@ -46,6 +46,7 @@ import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.AriesApi
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
+import com.mgafk.app.data.repository.StateCollector
 import com.mgafk.app.data.repository.AppRelease
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
@@ -112,11 +113,17 @@ data class UiState(
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private companion object { const val TAG = "MainViewModel" }
+    private companion object {
+        const val TAG = "MainViewModel"
+        /** How often each connected session is evaluated for a collect-state send. */
+        const val STATE_COLLECT_INTERVAL_MS = 60_000L
+    }
     private val repo = SessionRepository(application)
     private val alertNotifier = AlertNotifier(application)
     private val clients = mutableMapOf<String, RoomClient>()
     private val collectorJobs = mutableMapOf<String, Job>()
+    /** Reports player state to the backend (online flag + data sync). */
+    private val stateCollector = StateCollector()
     // Populate bots, scoped per session. Outer map keyed by sessionId, inner by botId.
     private val botClients = mutableMapOf<String, MutableMap<String, BotClient>>()
     private val botJobs = mutableMapOf<String, Job>()
@@ -206,6 +213,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     delay(3_600_000) // 1 hour
                 }
             }
+            // Report player state to the backend once a minute. Each connected
+            // session sends only when its data changed, or as a 5-min keep-alive.
+            launch {
+                while (true) {
+                    delay(STATE_COLLECT_INTERVAL_MS)
+                    collectAllSessionStates()
+                }
+            }
         }
     }
 
@@ -242,6 +257,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun removeSession(id: String) {
         collectorJobs.remove(id)?.cancel()
+        stateCollector.reset(id)
         val client = clients.remove(id)
         client?.dispose()
         _state.update { s ->
@@ -385,6 +401,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun disconnectInternal(sessionId: String, stopServiceIfIdle: Boolean) {
         collectorJobs.remove(sessionId)?.cancel()
+        stateCollector.reset(sessionId)
         clients[sessionId]?.disconnect()
         // Bots are tied to the parent session — kill them when the user disconnects.
         disconnectAllBots(sessionId)
@@ -1810,6 +1827,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     // A session is live again (user tap, auto-reconnect, or WS
                     // self-reconnect): clear any stale "tap to resume" notif.
                     cancelResumeNotification(getApplication<Application>())
+                    // Report online immediately rather than waiting for the
+                    // next minute tick, so the backend marks the player online.
+                    collectStateNow(sessionId)
                 }
                 // Disconnect / reconnect notifications
                 if (_state.value.settings.notifyOnDisconnect && previousSession != null) {
@@ -2172,6 +2192,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     it.copy(wsLogs = (listOf(entry) + it.wsLogs).take(100))
                 }
+            }
+        }
+    }
+
+    // ---- Backend state reporting (online flag + data sync) ----
+
+    /** Evaluate every connected session for a collect-state send. */
+    private suspend fun collectAllSessionStates() {
+        val now = System.currentTimeMillis()
+        val version = com.mgafk.app.BuildConfig.VERSION_NAME
+        val connectedIds = _state.value.sessions
+            .filter { it.status == SessionStatus.CONNECTED }
+            .map { it.id }
+        for (id in connectedIds) {
+            val client = clients[id] ?: continue
+            withContext(Dispatchers.IO) {
+                try {
+                    stateCollector.tick(id, client, version, now)
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "state collect tick failed for $id: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /** Fire an immediate collect-state for one session (e.g. right after it connects). */
+    private fun collectStateNow(sessionId: String) {
+        val client = clients[sessionId] ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                stateCollector.tick(
+                    sessionId,
+                    client,
+                    com.mgafk.app.BuildConfig.VERSION_NAME,
+                    System.currentTimeMillis(),
+                )
+            } catch (e: Exception) {
+                AppLog.w(TAG, "state collect (on connect) failed for $sessionId: ${e.message}")
             }
         }
     }

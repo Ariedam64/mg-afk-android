@@ -90,6 +90,19 @@ class GameState {
         return null
     }
 
+    /**
+     * Raw `data` object of the given player's userSlot (garden / inventory /
+     * stats / activityLogs / journal sub-trees), or null if the slot can't be
+     * resolved. Used to report untyped state sub-trees verbatim without lossy
+     * round-tripping through [PlayerModel].
+     */
+    fun getRawUserSlotData(playerId: String): JsonObject? {
+        val slotIndex = findUserSlotIndex(playerId) ?: return null
+        val slots = (gameState as? JsonObject)?.get("userSlots") as? JsonArray ?: return null
+        val slot = slots.getOrNull(slotIndex) as? JsonObject ?: return null
+        return slot["data"] as? JsonObject
+    }
+
     fun reset() {
         roomState = null
         gameState = null
