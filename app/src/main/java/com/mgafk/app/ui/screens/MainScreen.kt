@@ -38,7 +38,6 @@ import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
@@ -88,20 +87,6 @@ import com.mgafk.app.ui.screens.room.ChatCard
 import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.room.PopulateCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
-import com.mgafk.app.ui.screens.minigames.BalanceCard
-import com.mgafk.app.ui.screens.minigames.CasinoDisabledNotice
-import com.mgafk.app.ui.screens.minigames.CasinoLoginGate
-import com.mgafk.app.ui.screens.minigames.BlackjackGame
-import com.mgafk.app.ui.screens.minigames.CoinFlipGame
-import com.mgafk.app.ui.screens.minigames.CrashGame
-import com.mgafk.app.ui.screens.minigames.DiceGame
-import com.mgafk.app.ui.screens.minigames.EggHatchGame
-import com.mgafk.app.ui.screens.minigames.MinesGame
-import com.mgafk.app.ui.screens.minigames.SlotsGame
-import com.mgafk.app.ui.screens.minigames.GameConflictDialog
-import com.mgafk.app.ui.screens.minigames.GamesGrid
-import com.mgafk.app.ui.screens.minigames.HistoryCard
-import com.mgafk.app.ui.screens.minigames.WalletCard
 import com.mgafk.app.ui.screens.garden.EggsCard
 import com.mgafk.app.ui.screens.garden.GardenCard
 import com.mgafk.app.ui.screens.storage.DecorShedCard
@@ -145,7 +130,6 @@ enum class NavSection(
     GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
     SHOPS("Shops", Icons.Outlined.ShoppingCart, requiresConnection = true),
     SOCIAL("Social", Icons.Outlined.People),
-    MINI_GAMES("Mini Games", Icons.Outlined.SportsEsports),
     ALERTS("Alerts", Icons.Outlined.Notifications),
     SETTINGS("Settings", Icons.Outlined.Settings),
     DEBUG("Debug", Icons.Outlined.BugReport),
@@ -156,21 +140,12 @@ enum class NavSection(
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    casinoViewModel: com.mgafk.app.ui.CasinoViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
-    onCasinoLoginRequest: (sessionId: String) -> Unit = {},
     onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
 ) {
     val state by viewModel.state.collectAsState()
-    val casinoState by casinoViewModel.state.collectAsState()
     val session = state.activeSession
 
-    // Sync casino API key when active session changes
-    LaunchedEffect(session.casinoApiKey) {
-        if (session.casinoApiKey.isNotBlank()) {
-            casinoViewModel.setApiKey(session.casinoApiKey)
-        }
-    }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var currentSection by rememberSaveable { mutableStateOf(NavSection.DASHBOARD.name) }
@@ -265,10 +240,7 @@ fun MainScreen(
                                         session = session,
                                         state = state,
                                         viewModel = viewModel,
-                                        casinoViewModel = casinoViewModel,
-                                        casinoState = casinoState,
                                         onLoginRequest = onLoginRequest,
-                                        onCasinoLoginRequest = onCasinoLoginRequest,
                                         onPlayRequest = onPlayRequest,
                                     )
                                     Spacer(modifier = Modifier.height(24.dp))
@@ -438,13 +410,6 @@ private fun DrawerContent(
             onClick = { onSelect(NavSection.SOCIAL) },
         )
         DrawerItem(
-            icon = NavSection.MINI_GAMES.icon,
-            label = NavSection.MINI_GAMES.label,
-            selected = selected == NavSection.MINI_GAMES,
-            enabled = true,
-            onClick = { onSelect(NavSection.MINI_GAMES) },
-        )
-        DrawerItem(
             icon = NavSection.ALERTS.icon,
             label = NavSection.ALERTS.label,
             selected = selected == NavSection.ALERTS,
@@ -550,10 +515,7 @@ private fun SectionContent(
     session: Session,
     state: com.mgafk.app.ui.UiState,
     viewModel: MainViewModel,
-    casinoViewModel: com.mgafk.app.ui.CasinoViewModel,
-    casinoState: com.mgafk.app.ui.CasinoUiState,
     onLoginRequest: (sessionId: String) -> Unit,
-    onCasinoLoginRequest: (sessionId: String) -> Unit = {},
     onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
 ) {
     when (section) {
@@ -787,9 +749,6 @@ private fun SectionContent(
                 onRefresh = { viewModel.fetchPublicRooms() },
                 onJoin = { roomId -> viewModel.joinPublicRoom(session.id, roomId) },
             )
-        }
-        NavSection.MINI_GAMES -> {
-            CasinoDisabledNotice()
         }
         NavSection.ALERTS -> {
             AlertsCards(

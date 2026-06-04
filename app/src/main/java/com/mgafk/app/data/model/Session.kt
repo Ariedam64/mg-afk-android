@@ -11,7 +11,6 @@ data class Session(
     val cookie: String = "",
     val room: String = "",
     val gameUrl: String = "magicgarden.gg",
-    val casinoApiKey: String = "",
     val reconnect: ReconnectConfig = ReconnectConfig(),
     val connected: Boolean = false,
     /**

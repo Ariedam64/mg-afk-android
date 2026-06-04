@@ -614,9 +614,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setCasinoApiKey(sessionId: String, apiKey: String) {
-        updateSession(sessionId) { it.copy(casinoApiKey = apiKey) }
-    }
 
     fun purchaseShopItem(sessionId: String, shopType: String, itemName: String) {
         val actions = clients[sessionId]?.actions ?: return
@@ -1772,21 +1769,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val url = entry.sprite ?: return@forEach
                 loader.enqueue(ImageRequest.Builder(app).data(url).build())
             }
-        }
-        // Preload casino/minigame images
-        val casinoUrls = listOf(
-            "https://i.imgur.com/HlvVrpI.png",  // bread sprite
-            "https://i.imgur.com/yPcQYDB.png",   // coin heads
-            "https://i.imgur.com/J2gqn25.png",   // coin tails
-            MgApi.plantSpriteUrl("Carrot"),       // slots - common
-            MgApi.plantSpriteUrl("Banana"),       // slots - common
-            MgApi.plantSpriteUrl("Pepper"),       // slots - medium
-            MgApi.plantSpriteUrl("Sunflower"),    // slots - rare
-            MgApi.plantSpriteUrl("Starweaver"),   // slots - epic / mines gem
-            MgApi.lockSpriteUrl,                  // mines bomb
-        )
-        casinoUrls.forEach { url ->
-            loader.enqueue(ImageRequest.Builder(app).data(url).build())
         }
     }
 
