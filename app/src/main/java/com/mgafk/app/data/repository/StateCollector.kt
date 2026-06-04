@@ -135,6 +135,7 @@ class StateCollector {
         val players = roomClient.gameState.getAllPlayers()
         val roomId = room?.roomId
         put("id", if (roomId.isNullOrBlank()) JsonNull else JsonPrimitive(roomId))
+        put("isPrivate", true)
         put("playersCount", players.size)
         put("userSlots", buildJsonArray {
             players.forEach { player ->
