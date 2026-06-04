@@ -99,6 +99,7 @@ private val SHOP_CATEGORIES = listOf(
     "Eggs" to "egg",
     "Decors" to "decor",
     "Dawn Shop" to "dawn",
+    "Snow Shop" to "snow",
 )
 
 /** Emits 4 separate collapsible cards with per-section mode. */
@@ -311,6 +312,9 @@ private fun ShopAlertsCard(
                     "decor" -> MgApi.getDecors().values.toList()
                     "dawn" -> (MgApi.getPlants().values + MgApi.getEggs().values)
                         .filter { "Dawn" in it.eligibleShops }
+                    "snow" -> (MgApi.getPlants().values + MgApi.getEggs().values +
+                        MgApi.getItems().values + MgApi.getDecors().values)
+                        .filter { "Snow" in it.eligibleShops }
                     else -> emptyList()
                 }
             }
