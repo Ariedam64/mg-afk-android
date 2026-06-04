@@ -706,6 +706,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val pendingTroughJobs = mutableMapOf<String, Job>()
 
+    /** Debounce per session for the "trough low" alert check (see scheduleTroughAlertCheck). */
+    private val pendingTroughAlertJobs = mutableMapOf<String, Job>()
+
+    /**
+     * Debounced + ownership-gated feeding-trough low alert.
+     *
+     * Inventory snapshots can be transient/partial right after login or while the server
+     * streams patches (e.g. a pet eating an item briefly replaces the player slot), which
+     * made the alert fire "0/1 items left" while the trough was actually full. Instead of
+     * checking the just-received snapshot, wait a short moment for the state to settle and
+     * then evaluate the latest known trough — and only if the player actually owns a
+     * FeedingTrough in that settled snapshot (an absent storage means an incomplete read,
+     * not an empty trough).
+     */
+    private fun scheduleTroughAlertCheck(sessionId: String) {
+        pendingTroughAlertJobs[sessionId]?.cancel()
+        pendingTroughAlertJobs[sessionId] = viewModelScope.launch {
+            delay(2500)
+            val session = _state.value.sessions.find { it.id == sessionId } ?: return@launch
+            if ("FeedingTrough" !in session.availableStorages) return@launch
+            alertNotifier.checkFeedingTrough(session.feedingTrough, _state.value.alerts)
+        }
+    }
+
     fun putItemsInFeedingTrough(sessionId: String, produceItems: List<InventoryProduceItem>) {
         val actions = clients[sessionId]?.actions ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
@@ -2088,7 +2112,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         availableStorages = availableStorages,
                     )
                 }
-                alertNotifier.checkFeedingTrough(troughCrops, _state.value.alerts)
+                scheduleTroughAlertCheck(sessionId)
                 runAutoStock(sessionId, seeds, decors, siloSeeds, shedDecors, availableStorages)
             }
             is ClientEvent.EggsChanged -> {
