@@ -117,6 +117,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val TAG = "MainViewModel"
         /** How often each connected session is evaluated for a collect-state send. */
         const val STATE_COLLECT_INTERVAL_MS = 60_000L
+        /**
+         * On connect the userSlot is hydrated shortly after the room player
+         * resolves, so the immediate collect-state is retried briefly until the
+         * slot loads (else we'd just skip it and wait for the next minute tick).
+         */
+        const val ON_CONNECT_COLLECT_ATTEMPTS = 20
+        const val ON_CONNECT_COLLECT_RETRY_MS = 1_500L
     }
     private val repo = SessionRepository(application)
     private val alertNotifier = AlertNotifier(application)
@@ -2217,19 +2224,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Fire an immediate collect-state for one session (e.g. right after it connects). */
+    /**
+     * Fire an immediate collect-state for one session (e.g. right after it
+     * connects). The userSlot isn't hydrated yet at connect time, so retry
+     * briefly until [StateCollector.tick] actually sends — that's when the slot
+     * (coins/garden/inventory) has loaded. The minute tick is the backstop.
+     */
     private fun collectStateNow(sessionId: String) {
-        val client = clients[sessionId] ?: return
+        clients[sessionId] ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                stateCollector.tick(
-                    sessionId,
-                    client,
-                    com.mgafk.app.BuildConfig.VERSION_NAME,
-                    System.currentTimeMillis(),
-                )
-            } catch (e: Exception) {
-                AppLog.w(TAG, "state collect (on connect) failed for $sessionId: ${e.message}")
+            repeat(ON_CONNECT_COLLECT_ATTEMPTS) {
+                val client = clients[sessionId] ?: return@launch
+                val sent = try {
+                    stateCollector.tick(
+                        sessionId,
+                        client,
+                        com.mgafk.app.BuildConfig.VERSION_NAME,
+                        System.currentTimeMillis(),
+                    )
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "state collect (on connect) failed for $sessionId: ${e.message}")
+                    false
+                }
+                if (sent) return@launch
+                delay(ON_CONNECT_COLLECT_RETRY_MS)
             }
         }
     }

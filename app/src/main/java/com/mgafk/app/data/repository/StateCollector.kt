@@ -63,7 +63,8 @@ class StateCollector {
     /**
      * Evaluate one session and POST a collect-state when needed. Blocking;
      * call on an IO dispatcher. Safe to call before the session is fully
-     * welcomed — it no-ops until the player (with a `databaseUserId`) resolves.
+     * welcomed — it no-ops until the player resolves (with a `databaseUserId`)
+     * AND their userSlot has actually loaded.
      *
      * @return true if a request was sent and accepted.
      */
@@ -76,6 +77,13 @@ class StateCollector {
         if (userId == null || userId.length < MIN_PLAYER_ID_LENGTH) return false
 
         val slotData = roomClient.gameState.getRawUserSlotData(playerId)
+        // The room player resolves before its userSlot is hydrated: in the
+        // Welcome the slot arrives null and is only filled by a later
+        // PartialState, so coins/garden/inventory are all absent until then.
+        // Don't report until the slot has loaded, otherwise we'd push an empty
+        // snapshot (coins 0, no state) that only self-corrects on the next tick.
+        if (!isSlotHydrated(slotData)) return false
+
         val stateObj = buildStateObject(slotData)
         val signature = "${me.coins.toLong()}|$stateObj"
 
@@ -91,6 +99,17 @@ class StateCollector {
         }
         return sent
     }
+
+    // ---- Readiness ----
+
+    /**
+     * True once the player's userSlot has actually loaded. `coinsCount` is the
+     * canonical marker that the slot's `data` is hydrated — it's also the field
+     * [PlayerModel] reads coins from, so its presence guarantees both the coins
+     * and the reported state sub-trees are real rather than defaults.
+     */
+    private fun isSlotHydrated(slotData: JsonObject?): Boolean =
+        slotData != null && slotData.containsKey("coinsCount")
 
     // ---- Payload building ----
 
