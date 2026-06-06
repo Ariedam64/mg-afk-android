@@ -1095,7 +1095,7 @@ private fun CropSlotRow(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             ) {
                 Text(
-                    if (canWater) "Water" else if (isMature) "Mature" else "No cans",
+                    if (canWater) "Water ($wateringCans)" else if (isMature) "Mature" else "No cans",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (canWater) Color.White else Color.White.copy(alpha = 0.4f),
