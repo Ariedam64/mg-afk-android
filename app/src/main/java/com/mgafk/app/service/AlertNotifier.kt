@@ -18,6 +18,8 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import com.mgafk.app.MainActivity
 import com.mgafk.app.MgAfkApp
+import com.mgafk.app.data.model.AbilityFormatter
+import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.AlarmSchedule
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
@@ -160,6 +162,27 @@ class AlertNotifier(private val context: Context) {
         } else if (!isLow) {
             firedTroughLow = false
         }
+    }
+
+    /**
+     * Fire a notification for a single pet ability proc, if that ability is
+     * enabled in the alert config. Always a (silent-capable) notification —
+     * ability procs are notification-only, with no alarm/custom mode. Called
+     * once per genuinely-new proc, so no dedup tracking is needed here.
+     */
+    fun checkAbilityProc(log: AbilityLog, alerts: AlertConfig) {
+        val key = "ability:${log.action}"
+        if (alerts.items[key]?.enabled != true) return
+
+        val abilityName = MgApi.abilityDisplayName(log.action)
+        val petLabel = log.petName.ifBlank { log.petSpecies }
+        val description = AbilityFormatter.format(log)
+        val label = listOf(petLabel, description.orEmpty())
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .ifBlank { abilityName }
+
+        dispatchAlert(abilityName, listOf(DisplayItem(label = label)), AlertMode.NOTIFICATION)
     }
 
     fun stopAlarm() {

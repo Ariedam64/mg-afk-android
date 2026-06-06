@@ -1853,12 +1853,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             is ClientEvent.UptimeChanged -> { /* computed locally in UI */ }
             is ClientEvent.AbilityLogged -> {
-                updateSession(sessionId) {
-                    val isDuplicate = it.logs.any { existing ->
-                        existing.timestamp == event.log.timestamp && existing.action == event.log.action
+                val current = _state.value.sessions.find { it.id == sessionId }
+                val isDuplicate = current?.logs?.any { existing ->
+                    existing.timestamp == event.log.timestamp && existing.action == event.log.action
+                } == true
+                if (!isDuplicate) {
+                    updateSession(sessionId) {
+                        it.copy(logs = (listOf(event.log) + it.logs).take(200))
                     }
-                    if (isDuplicate) it
-                    else it.copy(logs = (listOf(event.log) + it.logs).take(200))
+                    // Notify if this ability proc is enabled in the alert config.
+                    alertNotifier.checkAbilityProc(event.log, _state.value.alerts)
                 }
             }
             is ClientEvent.LiveStatusChanged -> {
