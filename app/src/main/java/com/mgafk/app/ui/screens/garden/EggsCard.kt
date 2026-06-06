@@ -146,6 +146,7 @@ fun EggsCard(
     onHatch: (slot: Int) -> Unit = {},
     lastHatchedPet: InventoryPetItem? = null,
     lastHatchedEggId: String = "",
+    instantHatch: Boolean = false,
     onDismissHatchedPet: () -> Unit = {},
 ) {
     var selectedEggTileId by remember { mutableStateOf<Int?>(null) }
@@ -229,6 +230,7 @@ fun EggsCard(
             pet = lastHatchedPet,
             eggId = lastHatchedEggId,
             apiReady = apiReady,
+            instantHatch = instantHatch,
             onDismiss = onDismissHatchedPet,
         )
     }
@@ -466,6 +468,7 @@ private fun HatchedPetDialog(
     pet: InventoryPetItem,
     eggId: String,
     apiReady: Boolean,
+    instantHatch: Boolean,
     onDismiss: () -> Unit,
 ) {
     val petEntry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
@@ -488,6 +491,18 @@ private fun HatchedPetDialog(
 
     // Run the animation sequence
     LaunchedEffect(Unit) {
+        // Instant hatch: skip the animation and jump straight to the final
+        // state — egg gone, pet and info fully revealed.
+        if (instantHatch) {
+            phase = PHASE_INFO
+            eggAlpha.snapTo(0f)
+            petScale.snapTo(1f)
+            petAlpha.snapTo(1f)
+            infoAlpha.snapTo(1f)
+            infoOffsetY.snapTo(0f)
+            return@LaunchedEffect
+        }
+
         // Phase 0: Egg shake (3 shakes getting bigger)
         phase = PHASE_EGG_SHAKE
         repeat(3) { i ->

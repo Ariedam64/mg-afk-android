@@ -79,6 +79,10 @@ data class AppSettings(
     // Play in game — inject the Gemini userscript into the WebView
     val injectGeminiMod: Boolean = true,
 
+    // Gameplay — skip the egg-opening animation and show the hatched pet
+    // result instantly. Off by default so the animation plays.
+    val instantHatch: Boolean = false,
+
     // Alarm sound URI (RingtoneManager). Empty = system default alarm.
     val alarmSoundUri: String = "",
 

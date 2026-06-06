@@ -80,6 +80,7 @@ fun SettingsCards(
     BackgroundCard(settings = settings, onUpdate = onUpdate)
     ShopsSettingsCard(settings = settings, onUpdate = onUpdate)
     StoragesCard(settings = settings, availableStorages = availableStorages, onUpdate = onUpdate)
+    GameplayCard(settings = settings, onUpdate = onUpdate)
     AlarmCard(
         settings = settings,
         onUpdate = onUpdate,
@@ -459,6 +460,20 @@ private fun StoragesCard(
                 onCheckedChange = { onUpdate(settings.copy(autoStockDecorShed = it)) },
             )
         }
+    }
+}
+
+// ── Gameplay ──
+
+@Composable
+private fun GameplayCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
+    AppCard(title = "Gameplay", collapsible = true, persistKey = "settings_gameplay") {
+        ToggleRow(
+            title = "Instant hatch",
+            description = "Skip the egg-opening animation and show the hatched pet result instantly.",
+            checked = settings.instantHatch,
+            onCheckedChange = { onUpdate(settings.copy(instantHatch = it)) },
+        )
     }
 }
 

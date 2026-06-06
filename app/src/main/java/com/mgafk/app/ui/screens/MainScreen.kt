@@ -607,6 +607,7 @@ private fun SectionContent(
                 onHatch = { slot -> viewModel.hatchEgg(session.id, slot) },
                 lastHatchedPet = session.lastHatchedPet,
                 lastHatchedEggId = session.lastHatchedEggId,
+                instantHatch = state.settings.instantHatch,
                 onDismissHatchedPet = { viewModel.clearHatchedPet(session.id) },
             )
         }
