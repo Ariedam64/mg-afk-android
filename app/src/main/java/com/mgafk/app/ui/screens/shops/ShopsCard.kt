@@ -94,6 +94,7 @@ private val SHOP_SECTIONS = listOf(
 private val WEATHER_SHOPS = listOf(
     "Dawn" to "dawn",
     "Snow" to "snow",
+    "Thunder" to "thunder",
 )
 
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
