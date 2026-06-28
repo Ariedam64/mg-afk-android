@@ -100,14 +100,14 @@ private const val TROUGH_KEY = "trough_low"
 
 private val HUNGER_THRESHOLDS = listOf(5, 10, 15, 20, 25)
 
-private val SHOP_CATEGORIES = listOf(
+private val CORE_SHOP_CATEGORIES = listOf(
     "Seeds" to "seed",
     "Tools" to "tool",
     "Eggs" to "egg",
     "Decors" to "decor",
-    "Dawn Shop" to "dawn",
-    "Snow Shop" to "snow",
 )
+
+private val CORE_SHOP_KEYS = CORE_SHOP_CATEGORIES.map { it.second }.toSet()
 
 /** Emits 4 separate collapsible cards with per-section mode. */
 @Composable
@@ -312,7 +312,20 @@ private fun ShopAlertsCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        SHOP_CATEGORIES.forEachIndexed { index, (label, category) ->
+        val allCategories = remember(MgApi.isReady) {
+            val allEntries = MgApi.getPlants().values + MgApi.getEggs().values +
+                MgApi.getItems().values + MgApi.getDecors().values
+            val dynamic = allEntries
+                .flatMap { it.eligibleShops }
+                .distinct()
+                .map { it.lowercase() }
+                .filter { it !in CORE_SHOP_KEYS }
+                .sorted()
+                .map { key -> "${key.replaceFirstChar { c -> c.uppercase() }} Shop" to key }
+            CORE_SHOP_CATEGORIES + dynamic
+        }
+
+        allCategories.forEachIndexed { index, (label, category) ->
             val items = remember(category, MgApi.isReady) {
                 when (category) {
                     "seed" -> MgApi.getPlants().values.filter {
@@ -323,12 +336,12 @@ private fun ShopAlertsCard(
                         it.eligibleShops.isEmpty() || "Egg" in it.eligibleShops
                     }
                     "decor" -> MgApi.getDecors().values.toList()
-                    "dawn" -> (MgApi.getPlants().values + MgApi.getEggs().values)
-                        .filter { "Dawn" in it.eligibleShops }
-                    "snow" -> (MgApi.getPlants().values + MgApi.getEggs().values +
-                        MgApi.getItems().values + MgApi.getDecors().values)
-                        .filter { "Snow" in it.eligibleShops }
-                    else -> emptyList()
+                    else -> {
+                        val shopName = category.replaceFirstChar { it.uppercase() }
+                        (MgApi.getPlants().values + MgApi.getEggs().values +
+                            MgApi.getItems().values + MgApi.getDecors().values)
+                            .filter { shopName in it.eligibleShops }
+                    }
                 }
             }
             val activeCount = items.count { entry ->
@@ -382,7 +395,7 @@ private fun ShopAlertsCard(
                 }
             }
 
-            if (index < SHOP_CATEGORIES.lastIndex) {
+            if (index < allCategories.lastIndex) {
                 Spacer(modifier = Modifier.height(14.dp))
             }
         }

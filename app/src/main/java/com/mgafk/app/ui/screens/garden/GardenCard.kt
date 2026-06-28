@@ -28,6 +28,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -179,6 +181,22 @@ private sealed class GardenEntry {
     }
 }
 
+private enum class SortMode(val label: String) {
+    NONE("Default"),
+    SIZE_ASC("Size ↑"),
+    SIZE_DESC("Size ↓"),
+    PRICE_ASC("Price ↑"),
+    PRICE_DESC("Price ↓"),
+}
+
+private fun GardenEntry.sizePercent(): Double = when (this) {
+    is GardenEntry.SingleCrop -> computeSizePercent(plant.snapshot.targetScale, plant.maxScale)
+    is GardenEntry.MultiSlotPlant -> {
+        if (crops.isEmpty()) 0.0
+        else crops.map { computeSizePercent(it.snapshot.targetScale, it.maxScale) }.average()
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GardenCard(
@@ -196,6 +214,9 @@ fun GardenCard(
     var selectedMutation by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedCropKey by remember { mutableStateOf<Pair<Int, Int>?>(null) } // tileId to slotIndex
     var selectedMultiPlantTileId by remember { mutableStateOf<Int?>(null) }
+    var sortModeName by rememberSaveable { mutableStateOf("NONE") }
+    val sortMode = remember(sortModeName) { SortMode.entries.find { it.name == sortModeName } ?: SortMode.NONE }
+    var minSizePercent by rememberSaveable { mutableStateOf(0f) }
 
     // Pre-resolve all API lookups once when plants/apiReady change
     val resolved = remember(plants, apiReady) {
@@ -248,19 +269,28 @@ fun GardenCard(
     if (safeMutation != selectedMutation) selectedMutation = safeMutation
 
     // Filter entries
-    val filtered = remember(entries, safeRarity, safeMutation) {
-        if (safeRarity == null && safeMutation == null) entries
+    val minSize = minSizePercent.toDouble()
+    val filtered = remember(entries, safeRarity, safeMutation, minSize) {
+        if (safeRarity == null && safeMutation == null && minSize <= 0.0) entries
         else entries.filter { entry ->
-            when (entry) {
-                is GardenEntry.SingleCrop -> {
-                    (safeRarity == null || entry.rarity == safeRarity) &&
-                        (safeMutation == null || safeMutation in entry.plant.snapshot.mutations)
-                }
-                is GardenEntry.MultiSlotPlant -> {
-                    (safeRarity == null || entry.rarity == safeRarity) &&
-                        (safeMutation == null || entry.crops.any { safeMutation in it.snapshot.mutations })
-                }
+            val matchesRarity = safeRarity == null || entry.rarity == safeRarity
+            val matchesMutation = safeMutation == null || when (entry) {
+                is GardenEntry.SingleCrop -> safeMutation in entry.plant.snapshot.mutations
+                is GardenEntry.MultiSlotPlant -> entry.crops.any { safeMutation in it.snapshot.mutations }
             }
+            val matchesSize = minSize <= 0.0 || entry.sizePercent() >= minSize
+            matchesRarity && matchesMutation && matchesSize
+        }
+    }
+
+    // Sort entries
+    val sorted = remember(filtered, sortMode) {
+        when (sortMode) {
+            SortMode.NONE -> filtered
+            SortMode.SIZE_ASC -> filtered.sortedBy { it.sizePercent() }
+            SortMode.SIZE_DESC -> filtered.sortedByDescending { it.sizePercent() }
+            SortMode.PRICE_ASC -> filtered.sortedBy { it.totalValue }
+            SortMode.PRICE_DESC -> filtered.sortedByDescending { it.totalValue }
         }
     }
 
@@ -295,8 +325,9 @@ fun GardenCard(
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                 }
+                val hasFilter = safeRarity != null || safeMutation != null || minSizePercent > 0f || sortMode != SortMode.NONE
                 Text(
-                    text = if (safeRarity != null || safeMutation != null)
+                    text = if (hasFilter)
                         "$filteredCropCount/$totalCropCount" else "$totalCropCount plants",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
@@ -362,16 +393,76 @@ fun GardenCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Sort chips ──
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Sort:", fontSize = 10.sp, color = TextMuted, modifier = Modifier.align(Alignment.CenterVertically))
+                SortMode.entries.forEach { mode ->
+                    if (mode == SortMode.NONE) return@forEach
+                    val isSelected = sortMode == mode
+                    Text(
+                        text = mode.label,
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) Accent else TextSecondary,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(
+                                1.dp,
+                                if (isSelected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
+                                RoundedCornerShape(12.dp),
+                            )
+                            .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
+                            .clickable { sortModeName = if (isSelected) SortMode.NONE.name else mode.name }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Min size slider ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Min size:", fontSize = 10.sp, color = TextMuted)
+                Slider(
+                    value = minSizePercent,
+                    onValueChange = { minSizePercent = it },
+                    valueRange = 0f..100f,
+                    modifier = Modifier.weight(1f).height(24.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Accent,
+                        activeTrackColor = Accent,
+                        inactiveTrackColor = SurfaceBorder,
+                    ),
+                )
+                Text(
+                    text = "${minSizePercent.toInt()}%",
+                    fontSize = 10.sp,
+                    color = if (minSizePercent > 0f) Accent else TextSecondary,
+                    fontWeight = if (minSizePercent > 0f) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Garden grid ──
-            if (filtered.isEmpty()) {
+            if (sorted.isEmpty()) {
                 Text("No plants match filters.", fontSize = 12.sp, color = TextMuted)
             } else {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val columns = ((maxWidth + TILE_SPACING) / (TILE_MIN_WIDTH + TILE_SPACING))
                         .toInt().coerceAtLeast(1)
-                    val rows = filtered.chunked(columns)
+                    val rows = sorted.chunked(columns)
 
                     Column(verticalArrangement = Arrangement.spacedBy(TILE_SPACING)) {
                         rows.forEach { rowEntries ->

@@ -79,22 +79,14 @@ private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
     else -> TextMuted
 }
 
-private val SHOP_SECTIONS = listOf(
+private val CORE_SHOPS = listOf(
     "Seeds" to "seed",
     "Tools" to "tool",
     "Eggs" to "egg",
     "Decors" to "decor",
 )
 
-/**
- * Weather-conditional shops. Only rendered when the WS snapshot reports the
- * shop is currently active (has items or a running restock timer); the game
- * only spawns these during specific weather events (Dawn, AmberMoon...).
- */
-private val WEATHER_SHOPS = listOf(
-    "Dawn" to "dawn",
-    "Snow" to "snow",
-)
+private val CORE_SHOP_KEYS = CORE_SHOPS.map { it.second }.toSet()
 
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
 @Composable
@@ -182,7 +174,7 @@ fun ShopsCards(
         }
     }
 
-    SHOP_SECTIONS.forEach { (label, key) ->
+    CORE_SHOPS.forEach { (label, key) ->
         val shop = shops.find { it.type == key }
         ShopCategoryCard(
             label = label,
@@ -195,20 +187,18 @@ fun ShopsCards(
         )
     }
 
-    WEATHER_SHOPS.forEach { (label, key) ->
-        val shop = shops.find { it.type == key } ?: return@forEach
-        // Dawn / AmberMoon shops only exist during their weather event. Hide
-        // the card entirely when the shop is dormant (no items and no timer).
+    shops.filter { it.type !in CORE_SHOP_KEYS }.forEach { shop ->
         val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock > 0
         if (!isActive) return@forEach
+        val label = shop.type.replaceFirstChar { it.uppercase() }
         ShopCategoryCard(
             label = label,
             shop = shop,
             session = session,
             apiReady = apiReady,
             purchaseMode = purchaseMode,
-            onBuy = { itemName -> onBuy(key, itemName) },
-            onBuyAll = { itemName -> onBuyAll(key, itemName) },
+            onBuy = { itemName -> onBuy(shop.type, itemName) },
+            onBuyAll = { itemName -> onBuyAll(shop.type, itemName) },
         )
     }
 }

@@ -401,9 +401,9 @@ class AlertNotifier(private val context: Context) {
             "tool" -> MgApi.getItems()
             "egg" -> MgApi.getEggs()
             "decor" -> MgApi.getDecors()
-            else -> emptyMap()
+            else -> null
         }
-        return map[itemId]
+        return map?.get(itemId) ?: MgApi.findItem(itemId)
     }
 
     private fun playAlarmSound() {
