@@ -674,8 +674,8 @@ private fun SectionContent(
             val inv = session.inventory
             val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
                 inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
-            val hutchMax = PriceCalculator.calculateHutchCapacity(session.hutchCapacityLevel)
-            val siloMax = PriceCalculator.calculateSiloCapacity(session.siloCapacityLevel)
+            val hutchMax = session.hutchCapacitySlots
+            val siloMax = session.siloCapacitySlots
             val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
             val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
             val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
@@ -710,7 +710,7 @@ private fun SectionContent(
                 inventorySeedSpecies = invSeedSpecies,
                 inventoryItemCount = totalInventoryItems,
                 magicDust = session.magicDust,
-                capacityLevel = session.siloCapacityLevel,
+                capacitySlots = siloMax,
                 onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
                 onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
                 onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
@@ -721,7 +721,7 @@ private fun SectionContent(
                 onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) })
             PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
                 magicDust = session.magicDust,
-                capacityLevel = session.hutchCapacityLevel,
+                capacitySlots = hutchMax,
                 inventoryItemCount = totalInventoryItems,
                 onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
                 onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },

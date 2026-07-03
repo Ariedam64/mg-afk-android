@@ -122,14 +122,15 @@ fun SeedSiloCard(
     inventorySeedSpecies: Set<String> = emptySet(),
     inventoryItemCount: Int = 0,
     magicDust: Double = 0.0,
-    capacityLevel: Int = 0,
+    capacitySlots: Int = PriceCalculator.SILO_BASE_CAPACITY,
     onToggleLock: (String) -> Unit = {},
     onMoveToInventory: (String) -> Unit = {},
     onUpgrade: () -> Unit = {},
 ) {
     val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
     var selectedSpecies by remember { mutableStateOf<String?>(null) }
-    val maxItems = remember(capacityLevel, apiReady) { PriceCalculator.calculateSiloCapacity(capacityLevel) }
+    val maxItems = capacitySlots
+    val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.siloLevelForCapacity(capacitySlots) }
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextSiloUpgrade(capacityLevel) }
 
     AppCard(title = "Seed Silo", collapsible = true, persistKey = "storage.seedSilo", trailing = {
@@ -499,7 +500,7 @@ fun PetHutchCard(
     apiReady: Boolean,
     favoritedItemIds: Set<String> = emptySet(),
     magicDust: Double = 0.0,
-    capacityLevel: Int = 0,
+    capacitySlots: Int = PriceCalculator.HUTCH_BASE_CAPACITY,
     inventoryItemCount: Int = 0,
     onToggleLock: (String) -> Unit = {},
     onSellPet: (String) -> Unit = {},
@@ -508,7 +509,8 @@ fun PetHutchCard(
 ) {
     val sorted = remember(pets, apiReady) { pets.sortedBy { raritySortPet(it.petSpecies) } }
     var selectedPetId by remember { mutableStateOf<String?>(null) }
-    val maxItems = remember(capacityLevel, apiReady) { PriceCalculator.calculateHutchCapacity(capacityLevel) }
+    val maxItems = capacitySlots
+    val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.hutchLevelForCapacity(capacitySlots) }
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextHutchUpgrade(capacityLevel) }
 
     AppCard(title = "Pet Hutch", collapsible = true, persistKey = "storage.petHutch", trailing = {

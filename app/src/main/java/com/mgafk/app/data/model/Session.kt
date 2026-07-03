@@ -1,5 +1,6 @@
 package com.mgafk.app.data.model
 
+import com.mgafk.app.data.repository.PriceCalculator
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -48,8 +49,9 @@ data class Session(
     val lastHatchedEggId: String = "",
     val wsLogs: List<WsLog> = emptyList(),
     val magicDust: Double = 0.0,
-    val hutchCapacityLevel: Int = 0,
-    val siloCapacityLevel: Int = 0,
+    /** Max item capacity reported by the game ("capacitySlots" on the storage). */
+    val hutchCapacitySlots: Int = PriceCalculator.HUTCH_BASE_CAPACITY,
+    val siloCapacitySlots: Int = PriceCalculator.SILO_BASE_CAPACITY,
     /** Storage decor ids the player currently owns (e.g. "SeedSilo", "DecorShed", "PetHutch"). */
     val availableStorages: Set<String> = emptySet(),
     /** Player id of the room host (empty until known). Used to gate Populate. */

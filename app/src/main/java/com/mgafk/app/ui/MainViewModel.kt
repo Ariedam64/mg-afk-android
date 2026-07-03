@@ -2027,18 +2027,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val shedDecors = mutableListOf<InventoryDecorItem>()
                 val hutchPets = mutableListOf<InventoryPetItem>()
                 val troughCrops = mutableListOf<InventoryCropsItem>()
-                var hutchCapacityLevel = 0
-                var siloCapacityLevel = 0
+                var hutchCapacitySlots = PriceCalculator.HUTCH_BASE_CAPACITY
+                var siloCapacitySlots = PriceCalculator.SILO_BASE_CAPACITY
                 val availableStorages = mutableSetOf<String>()
 
                 for (storageEl in event.storages) {
                     val storage = storageEl as? JsonObject ?: continue
                     val storageId = storage["decorId"]?.jsonPrimitive?.contentOrNull ?: continue
                     availableStorages.add(storageId)
-                    val level = storage["capacityLevel"]?.jsonPrimitive?.intOrNull ?: 0
+                    // Game now sends the capacity directly as "capacitySlots";
+                    // fall back to the legacy "capacityLevel" tier if absent.
+                    val slots = storage["capacitySlots"]?.jsonPrimitive?.intOrNull
+                    val legacyLevel = storage["capacityLevel"]?.jsonPrimitive?.intOrNull ?: 0
                     when (storageId) {
-                        "PetHutch" -> hutchCapacityLevel = level
-                        "SeedSilo" -> siloCapacityLevel = level
+                        "PetHutch" -> hutchCapacitySlots =
+                            slots ?: PriceCalculator.calculateHutchCapacity(legacyLevel)
+                        "SeedSilo" -> siloCapacitySlots =
+                            slots ?: PriceCalculator.calculateSiloCapacity(legacyLevel)
                     }
                     val storageItems = storage["items"] as? JsonArray ?: continue
                     for (el in storageItems) {
@@ -2120,8 +2125,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         favoritedItemIds = event.favoritedItemIds.toSet(),
                         lastHatchedPet = hatchedPet ?: it.lastHatchedPet,
                         magicDust = event.magicDust,
-                        hutchCapacityLevel = hutchCapacityLevel,
-                        siloCapacityLevel = siloCapacityLevel,
+                        hutchCapacitySlots = hutchCapacitySlots,
+                        siloCapacitySlots = siloCapacitySlots,
                         availableStorages = availableStorages,
                     )
                 }

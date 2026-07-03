@@ -223,9 +223,9 @@ object PriceCalculator {
     // Port of Gemini's modules/calculators/logic/petHutch.ts
     // Formula: base + sum(upgrade.capacityBonus for targetLevel <= level)
 
-    private const val HUTCH_BASE_CAPACITY = 25
+    const val HUTCH_BASE_CAPACITY = 25
     const val HUTCH_MAX_LEVEL = 10
-    private const val SILO_BASE_CAPACITY = 25
+    const val SILO_BASE_CAPACITY = 25
     const val SILO_MAX_LEVEL = 5
 
     /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo). */
@@ -252,6 +252,21 @@ object PriceCalculator {
         SILO_BASE_CAPACITY + siloUpgrades()
             .filter { it.targetLevel <= capacityLevel }
             .sumOf { it.capacityBonus }
+
+    /**
+     * Upgrade level matching a capacity reported by the game ("capacitySlots").
+     * Highest tier whose computed capacity fits within [capacitySlots], 0 if none.
+     */
+    fun hutchLevelForCapacity(capacitySlots: Int): Int =
+        hutchUpgrades()
+            .filter { calculateHutchCapacity(it.targetLevel) <= capacitySlots }
+            .maxOfOrNull { it.targetLevel } ?: 0
+
+    /** Silo counterpart of [hutchLevelForCapacity]. */
+    fun siloLevelForCapacity(capacitySlots: Int): Int =
+        siloUpgrades()
+            .filter { calculateSiloCapacity(it.targetLevel) <= capacitySlots }
+            .maxOfOrNull { it.targetLevel } ?: 0
 
     /** Info about the next hutch upgrade tier, or null if maxed. */
     fun getNextHutchUpgrade(capacityLevel: Int): StorageUpgradeInfo? {
