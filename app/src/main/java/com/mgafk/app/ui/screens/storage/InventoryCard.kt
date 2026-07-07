@@ -64,6 +64,7 @@ import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
+import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -143,6 +144,9 @@ private fun raritySortPet(species: String): Int {
     return RARITY_ORDER.indexOfFirst { it.equals(rarity, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
 }
 
+private fun itemRarity(itemId: String): String? = MgApi.findItem(itemId)?.rarity
+private fun petRarity(species: String): String? = MgApi.findPet(species)?.rarity
+
 private fun fmtQty(q: Int): String = when {
     q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0).removeSuffix(".0M") + "M".takeIf { "M" !in "%.1fM".format(q / 1_000_000.0) }.orEmpty()
     q >= 10_000 -> "${q / 1000}K"
@@ -190,6 +194,7 @@ fun InventoryCard(
     var selectedPetId by remember { mutableStateOf<String?>(null) }
     var showSellAllPets by remember { mutableStateOf(false) }
     var showSellAllCrops by remember { mutableStateOf(false) }
+    var selectedRarity by remember { mutableStateOf<String?>(null) }
 
     AppCard(title = "Inventory", collapsible = true, persistKey = "storage.inventory", trailing = {
         Text("$totalItems types", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
@@ -205,39 +210,76 @@ fun InventoryCard(
             val sortedDecors = remember(inventory.decors, apiReady) { inventory.decors.sortedBy { raritySort(it.decorId) } }
             val sortedPets = remember(inventory.pets, apiReady) { inventory.pets.sortedBy { raritySortPet(it.petSpecies) } }
 
+            val allRarities = remember(sortedSeeds, sortedTools, sortedEggs, sortedPlants, sortedProduce, sortedDecors, sortedPets, apiReady) {
+                val present = buildSet {
+                    sortedSeeds.forEach { itemRarity(it.species)?.let(::add) }
+                    sortedTools.forEach { itemRarity(it.toolId)?.let(::add) }
+                    sortedEggs.forEach { itemRarity(it.eggId)?.let(::add) }
+                    sortedPlants.forEach { itemRarity(it.species)?.let(::add) }
+                    sortedProduce.forEach { itemRarity(it.species)?.let(::add) }
+                    sortedDecors.forEach { itemRarity(it.decorId)?.let(::add) }
+                    sortedPets.forEach { petRarity(it.petSpecies)?.let(::add) }
+                }
+                MgApi.RARITY_ORDER.filter { it in present }
+            }
+            val filteredSeeds = remember(sortedSeeds, selectedRarity) {
+                if (selectedRarity == null) sortedSeeds else sortedSeeds.filter { itemRarity(it.species).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredTools = remember(sortedTools, selectedRarity) {
+                if (selectedRarity == null) sortedTools else sortedTools.filter { itemRarity(it.toolId).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredEggs = remember(sortedEggs, selectedRarity) {
+                if (selectedRarity == null) sortedEggs else sortedEggs.filter { itemRarity(it.eggId).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredPlants = remember(sortedPlants, selectedRarity) {
+                if (selectedRarity == null) sortedPlants else sortedPlants.filter { itemRarity(it.species).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredProduce = remember(sortedProduce, selectedRarity) {
+                if (selectedRarity == null) sortedProduce else sortedProduce.filter { itemRarity(it.species).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredDecors = remember(sortedDecors, selectedRarity) {
+                if (selectedRarity == null) sortedDecors else sortedDecors.filter { itemRarity(it.decorId).equals(selectedRarity, ignoreCase = true) }
+            }
+            val filteredPets = remember(sortedPets, selectedRarity) {
+                if (selectedRarity == null) sortedPets else sortedPets.filter { petRarity(it.petSpecies).equals(selectedRarity, ignoreCase = true) }
+            }
+
+            RarityFilterRow(rarities = allRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
+            Spacer(modifier = Modifier.height(10.dp))
+
             Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                if (sortedSeeds.isNotEmpty()) SubSection("Seeds", sortedSeeds.size) {
-                    GridOf(sortedSeeds.size) { i ->
-                        Box(modifier = Modifier.clickable { selectedSeedSpecies = sortedSeeds[i].species }) {
-                            LockOverlay(isLocked = sortedSeeds[i].species in favoritedItemIds) {
-                                QuantityTile(sortedSeeds[i].species, sortedSeeds[i].quantity, apiReady)
+                if (filteredSeeds.isNotEmpty()) SubSection("Seeds", filteredSeeds.size) {
+                    GridOf(filteredSeeds.size) { i ->
+                        Box(modifier = Modifier.clickable { selectedSeedSpecies = filteredSeeds[i].species }) {
+                            LockOverlay(isLocked = filteredSeeds[i].species in favoritedItemIds) {
+                                QuantityTile(filteredSeeds[i].species, filteredSeeds[i].quantity, apiReady)
                             }
                         }
                     }
                 }
-                if (sortedTools.isNotEmpty()) SubSection("Tools", sortedTools.size) {
-                    GridOf(sortedTools.size) { i ->
-                        Box(modifier = Modifier.clickable { selectedToolId = sortedTools[i].toolId }) {
-                            LockOverlay(isLocked = sortedTools[i].toolId in favoritedItemIds) {
-                                QuantityTile(sortedTools[i].toolId, sortedTools[i].quantity, apiReady)
+                if (filteredTools.isNotEmpty()) SubSection("Tools", filteredTools.size) {
+                    GridOf(filteredTools.size) { i ->
+                        Box(modifier = Modifier.clickable { selectedToolId = filteredTools[i].toolId }) {
+                            LockOverlay(isLocked = filteredTools[i].toolId in favoritedItemIds) {
+                                QuantityTile(filteredTools[i].toolId, filteredTools[i].quantity, apiReady)
                             }
                         }
                     }
                 }
-                if (sortedEggs.isNotEmpty()) SubSection("Eggs", sortedEggs.size) {
-                    GridOf(sortedEggs.size) { i ->
-                        Box(modifier = Modifier.clickable { selectedEggId = sortedEggs[i].eggId }) {
-                            LockOverlay(isLocked = sortedEggs[i].eggId in favoritedItemIds) {
-                                QuantityTile(sortedEggs[i].eggId, sortedEggs[i].quantity, apiReady)
+                if (filteredEggs.isNotEmpty()) SubSection("Eggs", filteredEggs.size) {
+                    GridOf(filteredEggs.size) { i ->
+                        Box(modifier = Modifier.clickable { selectedEggId = filteredEggs[i].eggId }) {
+                            LockOverlay(isLocked = filteredEggs[i].eggId in favoritedItemIds) {
+                                QuantityTile(filteredEggs[i].eggId, filteredEggs[i].quantity, apiReady)
                             }
                         }
                     }
                 }
-                if (sortedPlants.isNotEmpty()) {
-                    val totalPlantsValue = remember(sortedPlants) { sortedPlants.sumOf { it.totalPrice } }
-                    SubSection("Plants", sortedPlants.size, extraInfo = if (totalPlantsValue > 0) PriceCalculator.formatPrice(totalPlantsValue) else null) {
-                        GridOf(sortedPlants.size) { i ->
-                            val pl = sortedPlants[i]
+                if (filteredPlants.isNotEmpty()) {
+                    val totalPlantsValue = remember(filteredPlants) { filteredPlants.sumOf { it.totalPrice } }
+                    SubSection("Plants", filteredPlants.size, extraInfo = if (totalPlantsValue > 0) PriceCalculator.formatPrice(totalPlantsValue) else null) {
+                        GridOf(filteredPlants.size) { i ->
+                            val pl = filteredPlants[i]
                             Box(modifier = Modifier.clickable { selectedPlantId = pl.id }) {
                                 LockOverlay(isLocked = pl.id in favoritedItemIds || pl.species in favoritedItemIds) {
                                     PlantTile(pl, apiReady)
@@ -246,18 +288,21 @@ fun InventoryCard(
                         }
                     }
                 }
-                if (sortedProduce.isNotEmpty()) {
-                    val totalProduceValue = remember(sortedProduce, apiReady, playerCount) {
-                        sortedProduce.sumOf { p ->
+                if (filteredProduce.isNotEmpty()) {
+                    val totalProduceValue = remember(filteredProduce, apiReady, playerCount) {
+                        filteredProduce.sumOf { p ->
                             PriceCalculator.calculateCropSellPrice(p.species, p.scale, p.mutations, playerCount) ?: 0L
                         }
                     }
+                    // Scoped to the full (unfiltered) inventory - matches the sell-all dialog
+                    // below, which always sells every unlocked crop regardless of the rarity
+                    // filter currently narrowing what's on screen.
                     val unlockedProduce = remember(sortedProduce, favoritedItemIds) {
                         sortedProduce.filter { it.id !in favoritedItemIds && it.species !in favoritedItemIds }
                     }
-                    SubSection("Produce", sortedProduce.size, extraInfo = if (totalProduceValue > 0) PriceCalculator.formatPrice(totalProduceValue) else null) {
-                        GridOf(sortedProduce.size) { i ->
-                            val p = sortedProduce[i]
+                    SubSection("Produce", filteredProduce.size, extraInfo = if (totalProduceValue > 0) PriceCalculator.formatPrice(totalProduceValue) else null) {
+                        GridOf(filteredProduce.size) { i ->
+                            val p = filteredProduce[i]
                             Box(modifier = Modifier.clickable { selectedProduceId = p.id }) {
                                 LockOverlay(isLocked = p.id in favoritedItemIds || p.species in favoritedItemIds) {
                                     ProduceTile(p, apiReady, playerCount)
@@ -282,21 +327,24 @@ fun InventoryCard(
                         }
                     }
                 }
-                if (sortedDecors.isNotEmpty()) SubSection("Decors", sortedDecors.size) {
-                    GridOf(sortedDecors.size) { i ->
-                        Box(modifier = Modifier.clickable { selectedDecorId = sortedDecors[i].decorId }) {
-                            LockOverlay(isLocked = sortedDecors[i].decorId in favoritedItemIds) {
-                                QuantityTile(sortedDecors[i].decorId, sortedDecors[i].quantity, apiReady)
+                if (filteredDecors.isNotEmpty()) SubSection("Decors", filteredDecors.size) {
+                    GridOf(filteredDecors.size) { i ->
+                        Box(modifier = Modifier.clickable { selectedDecorId = filteredDecors[i].decorId }) {
+                            LockOverlay(isLocked = filteredDecors[i].decorId in favoritedItemIds) {
+                                QuantityTile(filteredDecors[i].decorId, filteredDecors[i].quantity, apiReady)
                             }
                         }
                     }
                 }
-                if (sortedPets.isNotEmpty()) {
+                if (filteredPets.isNotEmpty()) {
+                    // Scoped to the full (unfiltered) inventory - matches the sell-all dialog
+                    // below, which always sells every unlocked pet regardless of the rarity
+                    // filter currently narrowing what's on screen.
                     val unlockedPets = remember(sortedPets, favoritedItemIds) {
                         sortedPets.filter { it.id !in favoritedItemIds && it.petSpecies !in favoritedItemIds }
                     }
-                    SubSection("Pets", sortedPets.size) {
-                        PetsList(sortedPets, apiReady, favoritedItemIds, onPetClick = { selectedPetId = it })
+                    SubSection("Pets", filteredPets.size) {
+                        PetsList(filteredPets, apiReady, favoritedItemIds, onPetClick = { selectedPetId = it })
                         if (unlockedPets.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(

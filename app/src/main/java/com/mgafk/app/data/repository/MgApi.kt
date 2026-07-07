@@ -203,6 +203,9 @@ object MgApi {
     val unlockSpriteUrl: String get() = uiSpriteUrl("Unlocked")
     val magicDustUrl: String get() = spriteUrl("items", "MagicDust")
 
+    /** URL for a rarity tier's badge sprite (e.g. "Common", "Divine"). */
+    fun raritySpriteUrl(rarity: String): String = uiSpriteUrl("Rarity$rarity")
+
     private val MUTATION_SPRITE_ALIAS = mapOf("Ambershine" to "Amberlit")
 
     /** URL for a mutation sprite (`ui/Mutation{Name}.png`). */

@@ -55,6 +55,7 @@ import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
+import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -341,34 +342,17 @@ fun GardenCard(
         if (plants.isEmpty()) {
             Text("No plants in the garden.", fontSize = 12.sp, color = TextMuted)
         } else {
-            // ── Filters ──
+            // ── Rarity filter ──
+            RarityFilterRow(rarities = allRarities, selected = safeRarity, onSelect = { selectedRarity = it })
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Mutation filter ──
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                allRarities.forEach { rarity ->
-                    val isSelected = rarity == safeRarity
-                    val color = rarityColor(rarity)
-                    Text(
-                        text = rarity,
-                        fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) color else TextSecondary,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(
-                                1.dp,
-                                if (isSelected) color.copy(alpha = 0.5f) else SurfaceBorder,
-                                RoundedCornerShape(12.dp),
-                            )
-                            .background(if (isSelected) color.copy(alpha = 0.18f) else SurfaceCard)
-                            .clickable { selectedRarity = if (isSelected) null else rarity }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                }
-
                 allMutations.forEach { mutation ->
                     val isSelected = mutation == safeMutation
                     Box(

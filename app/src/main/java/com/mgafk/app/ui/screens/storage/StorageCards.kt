@@ -56,6 +56,7 @@ import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
+import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.StatusConnected
@@ -129,6 +130,14 @@ fun SeedSiloCard(
 ) {
     val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
     var selectedSpecies by remember { mutableStateOf<String?>(null) }
+    var selectedRarity by remember { mutableStateOf<String?>(null) }
+    val availableRarities = remember(sorted, apiReady) {
+        MgApi.RARITY_ORDER.filter { r -> sorted.any { MgApi.findItem(it.species)?.rarity.equals(r, ignoreCase = true) } }
+    }
+    val visible = remember(sorted, selectedRarity) {
+        if (selectedRarity == null) sorted
+        else sorted.filter { MgApi.findItem(it.species)?.rarity.equals(selectedRarity, ignoreCase = true) }
+    }
     val maxItems = capacitySlots
     val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.siloLevelForCapacity(capacitySlots) }
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextSiloUpgrade(capacityLevel) }
@@ -149,10 +158,12 @@ fun SeedSiloCard(
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i ->
-                Box(modifier = Modifier.clickable { selectedSpecies = sorted[i].species }) {
-                    LockOverlay(isLocked = sorted[i].species in favoritedItemIds) {
-                        QtyTile(sorted[i].species, sorted[i].quantity, apiReady)
+            RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
+            Spacer(modifier = Modifier.height(8.dp))
+            GridOf(visible.size) { i ->
+                Box(modifier = Modifier.clickable { selectedSpecies = visible[i].species }) {
+                    LockOverlay(isLocked = visible[i].species in favoritedItemIds) {
+                        QtyTile(visible[i].species, visible[i].quantity, apiReady)
                     }
                 }
             }
@@ -200,6 +211,14 @@ fun DecorShedCard(
 ) {
     val sorted = remember(decors, apiReady) { decors.sortedBy { raritySort(it.decorId) } }
     var selectedDecorId by remember { mutableStateOf<String?>(null) }
+    var selectedRarity by remember { mutableStateOf<String?>(null) }
+    val availableRarities = remember(sorted, apiReady) {
+        MgApi.RARITY_ORDER.filter { r -> sorted.any { MgApi.findItem(it.decorId)?.rarity.equals(r, ignoreCase = true) } }
+    }
+    val visible = remember(sorted, selectedRarity) {
+        if (selectedRarity == null) sorted
+        else sorted.filter { MgApi.findItem(it.decorId)?.rarity.equals(selectedRarity, ignoreCase = true) }
+    }
 
     AppCard(title = "Decor Shed", collapsible = true, persistKey = "storage.decorShed", trailing = {
         Text("${decors.size}/${StorageCapacity.DECOR_SHED_LIMIT}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
@@ -207,10 +226,12 @@ fun DecorShedCard(
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i ->
-                Box(modifier = Modifier.clickable { selectedDecorId = sorted[i].decorId }) {
-                    LockOverlay(isLocked = sorted[i].decorId in favoritedItemIds) {
-                        QtyTile(sorted[i].decorId, sorted[i].quantity, apiReady)
+            RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
+            Spacer(modifier = Modifier.height(8.dp))
+            GridOf(visible.size) { i ->
+                Box(modifier = Modifier.clickable { selectedDecorId = visible[i].decorId }) {
+                    LockOverlay(isLocked = visible[i].decorId in favoritedItemIds) {
+                        QtyTile(visible[i].decorId, visible[i].quantity, apiReady)
                     }
                 }
             }
@@ -509,6 +530,14 @@ fun PetHutchCard(
 ) {
     val sorted = remember(pets, apiReady) { pets.sortedBy { raritySortPet(it.petSpecies) } }
     var selectedPetId by remember { mutableStateOf<String?>(null) }
+    var selectedRarity by remember { mutableStateOf<String?>(null) }
+    val availableRarities = remember(sorted, apiReady) {
+        MgApi.RARITY_ORDER.filter { r -> sorted.any { MgApi.findPet(it.petSpecies)?.rarity.equals(r, ignoreCase = true) } }
+    }
+    val visible = remember(sorted, selectedRarity) {
+        if (selectedRarity == null) sorted
+        else sorted.filter { MgApi.findPet(it.petSpecies)?.rarity.equals(selectedRarity, ignoreCase = true) }
+    }
     val maxItems = capacitySlots
     val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.hutchLevelForCapacity(capacitySlots) }
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextHutchUpgrade(capacityLevel) }
@@ -529,8 +558,10 @@ fun PetHutchCard(
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
-            GridOf(sorted.size) { i ->
-                val pet = sorted[i]
+            RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
+            Spacer(modifier = Modifier.height(8.dp))
+            GridOf(visible.size) { i ->
+                val pet = visible[i]
                 Box(modifier = Modifier.clickable { selectedPetId = pet.id }) {
                     LockOverlay(isLocked = pet.id in favoritedItemIds || pet.petSpecies in favoritedItemIds) {
                         PetTile(pet, apiReady)
