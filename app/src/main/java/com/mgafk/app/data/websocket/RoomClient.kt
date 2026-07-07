@@ -308,6 +308,15 @@ class RoomClient {
     }
 
     private fun handleWelcome(msg: JsonObject) {
+        // The server now assigns the room player id itself (the authenticated user's
+        // own database id) instead of honoring the client-generated id sent in the
+        // connect URL, and tells us which one is ours via "selfPlayerId". Without this,
+        // `playerId` never matches anything in `players`/`userSlots` and every
+        // gameState.getPlayer(playerId) lookup below returns null forever - garden,
+        // inventory and storage silently never populate (no crash, just nothing).
+        msg["selfPlayerId"]?.jsonPrimitive?.contentOrNull?.let { self ->
+            if (self.isNotBlank() && self != playerId) playerId = self
+        }
         AppLog.d(TAG, "handleWelcome, playerId=$playerId")
         // Check auth before accepting state
         val fullState = msg["fullState"]?.jsonObject ?: run {
