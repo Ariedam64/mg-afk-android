@@ -676,6 +676,7 @@ private fun SectionContent(
                 inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
             val hutchMax = session.hutchCapacitySlots
             val siloMax = session.siloCapacitySlots
+            val decorShedMax = session.decorShedCapacitySlots
             val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
             val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
             val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
@@ -692,6 +693,7 @@ private fun SectionContent(
                 seedSiloMax = siloMax,
                 seedSiloSpecies = seedSiloSpecies,
                 decorShedCount = session.decorShed.size,
+                decorShedMax = decorShedMax,
                 decorShedDecorIds = decorShedIds,
                 onPlantSeed = { species -> viewModel.plantSeed(session.id, species) },
                 onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
@@ -717,8 +719,11 @@ private fun SectionContent(
             DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
                 inventoryDecorIds = invDecorIds,
                 inventoryItemCount = totalInventoryItems,
+                magicDust = session.magicDust,
+                capacitySlots = decorShedMax,
                 onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) })
+                onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) },
+                onUpgrade = { viewModel.upgradeDecorShed(session.id) })
             PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
                 magicDust = session.magicDust,
                 capacitySlots = hutchMax,

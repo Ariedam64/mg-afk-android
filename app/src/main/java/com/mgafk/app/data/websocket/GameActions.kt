@@ -220,6 +220,8 @@ class GameActions(private val sendFn: (String) -> Unit) {
 
     fun upgradeSeedSilo() = game("UpgradeSeedSilo")
 
+    fun upgradeDecorShed() = game("UpgradeDecorShed")
+
     fun namePet(petItemId: String, name: String) =
         game("NamePet", obj("petItemId" to JsonPrimitive(petItemId), "name" to JsonPrimitive(name)))
 

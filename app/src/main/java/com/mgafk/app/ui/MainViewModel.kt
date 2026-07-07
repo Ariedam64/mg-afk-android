@@ -1089,6 +1089,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         clients[sessionId]?.actions?.upgradeSeedSilo()
     }
 
+    /** Upgrade the decor shed capacity by one level (server uses caller's dust). */
+    fun upgradeDecorShed(sessionId: String) {
+        clients[sessionId]?.actions?.upgradeDecorShed()
+    }
+
     // ─── Move items between inventory and dedicated storages ────────────────
 
     /** Move a pet from inventory into the Pet Hutch. */
@@ -2022,14 +2027,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         ))
                     }
                 }
-                // Parse storages separately
+                // Parse storages separately. Seed each capacity from the session's last
+                // known value (not the base default) - some InventoryChanged events only
+                // carry the storages that actually changed (e.g. DecorShed is rarely
+                // touched vs. the constantly-churning Silo/Hutch), so a storage missing
+                // from *this* event's list must keep its previously known capacity
+                // instead of being reported back down to base.
+                val existingSession = _state.value.sessions.find { it.id == sessionId }
                 val siloSeeds = mutableListOf<InventorySeedItem>()
                 val shedDecors = mutableListOf<InventoryDecorItem>()
                 val hutchPets = mutableListOf<InventoryPetItem>()
                 val troughCrops = mutableListOf<InventoryCropsItem>()
-                var hutchCapacitySlots = PriceCalculator.HUTCH_BASE_CAPACITY
-                var siloCapacitySlots = PriceCalculator.SILO_BASE_CAPACITY
-                val availableStorages = mutableSetOf<String>()
+                var hutchCapacitySlots = existingSession?.hutchCapacitySlots ?: PriceCalculator.HUTCH_BASE_CAPACITY
+                var siloCapacitySlots = existingSession?.siloCapacitySlots ?: PriceCalculator.SILO_BASE_CAPACITY
+                var decorShedCapacitySlots = existingSession?.decorShedCapacitySlots ?: PriceCalculator.DECOR_SHED_BASE_CAPACITY
+                // Owned storages never go away - only grow this set, don't reset it, so a
+                // partial event doesn't make an already-purchased storage look unowned.
+                val availableStorages = existingSession?.availableStorages?.toMutableSet() ?: mutableSetOf()
 
                 for (storageEl in event.storages) {
                     val storage = storageEl as? JsonObject ?: continue
@@ -2044,6 +2058,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             slots ?: PriceCalculator.calculateHutchCapacity(legacyLevel)
                         "SeedSilo" -> siloCapacitySlots =
                             slots ?: PriceCalculator.calculateSiloCapacity(legacyLevel)
+                        "DecorShed" -> decorShedCapacitySlots =
+                            slots ?: PriceCalculator.calculateDecorShedCapacity(legacyLevel)
                     }
                     val storageItems = storage["items"] as? JsonArray ?: continue
                     for (el in storageItems) {
@@ -2115,6 +2131,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     allNewPets.firstOrNull { it.id !in previousPetIds }
                 } else null
 
+                AppLog.d(TAG, "[Storage] availableStorages=$availableStorages hutch=$hutchCapacitySlots silo=$siloCapacitySlots decorShed=$decorShedCapacitySlots")
+
                 updateSession(sessionId) {
                     it.copy(
                         inventory = InventorySnapshot(seeds, eggs, produce, plants, pets, tools, decors),
@@ -2127,6 +2145,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         magicDust = event.magicDust,
                         hutchCapacitySlots = hutchCapacitySlots,
                         siloCapacitySlots = siloCapacitySlots,
+                        decorShedCapacitySlots = decorShedCapacitySlots,
                         availableStorages = availableStorages,
                     )
                 }

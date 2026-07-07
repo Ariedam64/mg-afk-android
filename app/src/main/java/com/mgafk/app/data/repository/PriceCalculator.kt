@@ -219,76 +219,72 @@ object PriceCalculator {
         return if (raw.isFinite()) floor(raw).toLong().coerceAtLeast(0) else null
     }
 
-    // ── Storage upgrade tiers (PetHutch, SeedSilo) ──
-    // Port of Gemini's modules/calculators/logic/petHutch.ts
-    // Formula: base + sum(upgrade.capacityBonus for targetLevel <= level)
+    // ── Storage upgrade tiers (PetHutch, SeedSilo, DecorShed) ──
+    // Each decor's `upgrades` list (from `/data/decors`) is a chain of tiers keyed by
+    // capacity, e.g. {fromCapacitySlots:10, toCapacitySlots:15, dustCost}. "Level" here
+    // is just how many tiers of that chain have been applied (0 = base capacity).
 
-    const val HUTCH_BASE_CAPACITY = 25
-    const val HUTCH_MAX_LEVEL = 10
-    const val SILO_BASE_CAPACITY = 25
-    const val SILO_MAX_LEVEL = 5
+    const val HUTCH_BASE_CAPACITY = 10
+    const val SILO_BASE_CAPACITY = 10
+    const val DECOR_SHED_BASE_CAPACITY = 10
 
-    /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo). */
+    /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo, DecorShed). */
     data class StorageUpgradeInfo(
         val targetLevel: Int,
         val dustCost: Long,
         val capacityAfter: Int,
     )
 
-    private fun hutchUpgrades(): List<MgApi.DecorUpgrade> =
-        MgApi.getDecors()["PetHutch"]?.upgrades ?: emptyList()
+    private fun storageUpgrades(storageId: String): List<MgApi.DecorUpgrade> =
+        MgApi.getDecors()[storageId]?.upgrades ?: emptyList()
 
-    private fun siloUpgrades(): List<MgApi.DecorUpgrade> =
-        MgApi.getDecors()["SeedSilo"]?.upgrades ?: emptyList()
+    private fun storageBaseCapacity(storageId: String): Int = when (storageId) {
+        "PetHutch" -> HUTCH_BASE_CAPACITY
+        "SeedSilo" -> SILO_BASE_CAPACITY
+        "DecorShed" -> DECOR_SHED_BASE_CAPACITY
+        else -> 0
+    }
 
-    /** Current max capacity of the hutch for the given capacityLevel. */
-    fun calculateHutchCapacity(capacityLevel: Int): Int =
-        HUTCH_BASE_CAPACITY + hutchUpgrades()
-            .filter { it.targetLevel <= capacityLevel }
-            .sumOf { it.capacityBonus }
+    /** Total number of upgrade tiers available for this storage (i.e. max level). */
+    fun storageMaxLevel(storageId: String): Int = storageUpgrades(storageId).size
 
-    /** Current max capacity of the silo for the given capacityLevel. */
-    fun calculateSiloCapacity(capacityLevel: Int): Int =
-        SILO_BASE_CAPACITY + siloUpgrades()
-            .filter { it.targetLevel <= capacityLevel }
-            .sumOf { it.capacityBonus }
+    /** Capacity after [level] tiers have been applied (0 = base, untouched capacity). */
+    fun storageCapacity(storageId: String, level: Int): Int {
+        val tiers = storageUpgrades(storageId)
+        if (level <= 0) return storageBaseCapacity(storageId)
+        return tiers.getOrNull(level - 1)?.toCapacitySlots
+            ?: tiers.lastOrNull()?.toCapacitySlots
+            ?: storageBaseCapacity(storageId)
+    }
 
     /**
-     * Upgrade level matching a capacity reported by the game ("capacitySlots").
-     * Highest tier whose computed capacity fits within [capacitySlots], 0 if none.
+     * Upgrade level matching a capacity reported by the game ("capacitySlots"):
+     * how many tiers have already been completed to reach that capacity.
      */
-    fun hutchLevelForCapacity(capacitySlots: Int): Int =
-        hutchUpgrades()
-            .filter { calculateHutchCapacity(it.targetLevel) <= capacitySlots }
-            .maxOfOrNull { it.targetLevel } ?: 0
+    fun storageLevelForCapacity(storageId: String, capacitySlots: Int): Int =
+        storageUpgrades(storageId).count { it.toCapacitySlots <= capacitySlots }
 
-    /** Silo counterpart of [hutchLevelForCapacity]. */
-    fun siloLevelForCapacity(capacitySlots: Int): Int =
-        siloUpgrades()
-            .filter { calculateSiloCapacity(it.targetLevel) <= capacitySlots }
-            .maxOfOrNull { it.targetLevel } ?: 0
-
-    /** Info about the next hutch upgrade tier, or null if maxed. */
-    fun getNextHutchUpgrade(capacityLevel: Int): StorageUpgradeInfo? {
-        val next = hutchUpgrades().firstOrNull { it.targetLevel == capacityLevel + 1 }
-            ?: return null
+    /** Info about the next upgrade tier for this storage, or null if maxed. */
+    fun getNextStorageUpgrade(storageId: String, capacityLevel: Int): StorageUpgradeInfo? {
+        val tier = storageUpgrades(storageId).getOrNull(capacityLevel) ?: return null
         return StorageUpgradeInfo(
-            targetLevel = next.targetLevel,
-            dustCost = next.dustCost,
-            capacityAfter = calculateHutchCapacity(next.targetLevel),
+            targetLevel = capacityLevel + 1,
+            dustCost = tier.dustCost,
+            capacityAfter = tier.toCapacitySlots,
         )
     }
 
-    /** Info about the next silo upgrade tier, or null if maxed. */
-    fun getNextSiloUpgrade(capacityLevel: Int): StorageUpgradeInfo? {
-        val next = siloUpgrades().firstOrNull { it.targetLevel == capacityLevel + 1 }
-            ?: return null
-        return StorageUpgradeInfo(
-            targetLevel = next.targetLevel,
-            dustCost = next.dustCost,
-            capacityAfter = calculateSiloCapacity(next.targetLevel),
-        )
-    }
+    fun calculateHutchCapacity(capacityLevel: Int): Int = storageCapacity("PetHutch", capacityLevel)
+    fun calculateSiloCapacity(capacityLevel: Int): Int = storageCapacity("SeedSilo", capacityLevel)
+    fun calculateDecorShedCapacity(capacityLevel: Int): Int = storageCapacity("DecorShed", capacityLevel)
+
+    fun hutchLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("PetHutch", capacitySlots)
+    fun siloLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("SeedSilo", capacitySlots)
+    fun decorShedLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("DecorShed", capacitySlots)
+
+    fun getNextHutchUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("PetHutch", capacityLevel)
+    fun getNextSiloUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("SeedSilo", capacityLevel)
+    fun getNextDecorShedUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("DecorShed", capacityLevel)
 
     /**
      * Full number with thousand separators (e.g. 1,234,567). Use in detail popups

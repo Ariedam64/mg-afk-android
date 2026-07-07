@@ -149,7 +149,7 @@ fun SeedSiloCard(
             entityLabel = "Seed Silo",
             magicDust = magicDust,
             capacityLevel = capacityLevel,
-            maxLevel = PriceCalculator.SILO_MAX_LEVEL,
+            maxLevel = remember(apiReady) { PriceCalculator.storageMaxLevel("SeedSilo") },
             currentCapacity = maxItems,
             nextUpgrade = nextUpgrade,
             onUpgrade = onUpgrade,
@@ -206,8 +206,11 @@ fun DecorShedCard(
     favoritedItemIds: Set<String> = emptySet(),
     inventoryDecorIds: Set<String> = emptySet(),
     inventoryItemCount: Int = 0,
+    magicDust: Double = 0.0,
+    capacitySlots: Int = PriceCalculator.DECOR_SHED_BASE_CAPACITY,
     onToggleLock: (String) -> Unit = {},
     onMoveToInventory: (String) -> Unit = {},
+    onUpgrade: () -> Unit = {},
 ) {
     val sorted = remember(decors, apiReady) { decors.sortedBy { raritySort(it.decorId) } }
     var selectedDecorId by remember { mutableStateOf<String?>(null) }
@@ -219,10 +222,23 @@ fun DecorShedCard(
         if (selectedRarity == null) sorted
         else sorted.filter { MgApi.findItem(it.decorId)?.rarity.equals(selectedRarity, ignoreCase = true) }
     }
+    val maxItems = capacitySlots
+    val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.decorShedLevelForCapacity(capacitySlots) }
+    val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextDecorShedUpgrade(capacityLevel) }
 
     AppCard(title = "Decor Shed", collapsible = true, persistKey = "storage.decorShed", trailing = {
-        Text("${decors.size}/${StorageCapacity.DECOR_SHED_LIMIT}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${decors.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
     }) {
+        StorageUpgradePanel(
+            entityLabel = "Decor Shed",
+            magicDust = magicDust,
+            capacityLevel = capacityLevel,
+            maxLevel = remember(apiReady) { PriceCalculator.storageMaxLevel("DecorShed") },
+            currentCapacity = maxItems,
+            nextUpgrade = nextUpgrade,
+            onUpgrade = onUpgrade,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
             Text("Empty", fontSize = 12.sp, color = TextMuted)
         } else {
@@ -549,7 +565,7 @@ fun PetHutchCard(
             entityLabel = "Pet Hutch",
             magicDust = magicDust,
             capacityLevel = capacityLevel,
-            maxLevel = PriceCalculator.HUTCH_MAX_LEVEL,
+            maxLevel = remember(apiReady) { PriceCalculator.storageMaxLevel("PetHutch") },
             currentCapacity = maxItems,
             nextUpgrade = nextUpgrade,
             onUpgrade = onUpgrade,

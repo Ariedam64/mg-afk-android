@@ -168,6 +168,7 @@ fun InventoryCard(
     seedSiloMax: Int = 25,
     seedSiloSpecies: Set<String> = emptySet(),
     decorShedCount: Int = 0,
+    decorShedMax: Int = 25,
     decorShedDecorIds: Set<String> = emptySet(),
     onPlantSeed: (species: String) -> Unit = {},
     onGrowEgg: (eggId: String) -> Unit = {},
@@ -484,7 +485,7 @@ fun InventoryCard(
         if (liveDecor != null) {
             val canMoveToShed = StorageCapacity.canAddStackable(
                 currentCount = decorShedCount,
-                max = StorageCapacity.DECOR_SHED_LIMIT,
+                max = decorShedMax,
                 stackExists = decorId in decorShedDecorIds,
             )
             ItemDetailDialog(

@@ -5,30 +5,29 @@ package com.mgafk.app.data.repository
  * storage id). Values are baked into the game and not exposed via /data, so we
  * mirror the same constants here.
  *
- *   SeedSilo     → 25 base, upgradable ("capacitySlots" on the storage)
- *   DecorShed    → 25 distinct decor ids
+ *   SeedSilo     → 10 base, upgradable ("capacitySlots" on the storage)
+ *   DecorShed    → 10 base, upgradable ("capacitySlots" on the storage)
  *   FeedingTrough→ 9
- *   PetHutch     → 25 base, upgradable ("capacitySlots" on the storage)
+ *   PetHutch     → 10 base, upgradable ("capacitySlots" on the storage)
  *   Inventory    → 100 items total (stackable items merge with existing slots)
  */
 object StorageCapacity {
 
     const val INVENTORY_LIMIT = 100
-    const val SEED_SILO_LIMIT = 25
-    const val DECOR_SHED_LIMIT = 25
     const val FEEDING_TROUGH_LIMIT = 9
 
     /**
      * Max items the named storage can currently hold. For upgradable storages
-     * (PetHutch, SeedSilo) pass the "capacitySlots" value read from the game.
+     * (PetHutch, SeedSilo, DecorShed) pass the "capacitySlots" value read from the game.
      */
     fun maxItems(
         storageId: String,
         hutchCapacitySlots: Int = PriceCalculator.HUTCH_BASE_CAPACITY,
         siloCapacitySlots: Int = PriceCalculator.SILO_BASE_CAPACITY,
+        decorShedCapacitySlots: Int = PriceCalculator.DECOR_SHED_BASE_CAPACITY,
     ): Int = when (storageId) {
         "SeedSilo" -> siloCapacitySlots
-        "DecorShed" -> DECOR_SHED_LIMIT
+        "DecorShed" -> decorShedCapacitySlots
         "FeedingTrough" -> FEEDING_TROUGH_LIMIT
         "PetHutch" -> hutchCapacitySlots
         else -> Int.MAX_VALUE

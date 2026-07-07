@@ -70,7 +70,7 @@ object MgApi {
         // Pet-only: also the pet's max hunger value (hunger drops from this
         // down to 0). Source-of-truth for the hunger bar % display.
         val coinsToFullyReplenishHunger: Int? = null,
-        // Decor-only (PetHutch): capacity upgrade tiers
+        // Decor-only (PetHutch, SeedSilo, DecorShed): capacity upgrade tiers
         val upgrades: List<DecorUpgrade> = emptyList(),
         // Shop buyability — owning >= 1 of a one-time-purchase item blocks further buys.
         val isOneTimePurchase: Boolean = false,
@@ -87,11 +87,12 @@ object MgApi {
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
     data class SlotOffset(val x: Double, val y: Double, val rotation: Double)
 
-    /** Decor upgrade tier (used by PetHutch). */
+    /** Decor storage upgrade tier (PetHutch, SeedSilo, DecorShed): one step in the
+     * capacity chain, e.g. 10 -> 15 slots for a dust cost. */
     data class DecorUpgrade(
-        val targetLevel: Int,
+        val fromCapacitySlots: Int,
+        val toCapacitySlots: Int,
         val dustCost: Long,
-        val capacityBonus: Int,
     )
 
     /** Atlas metadata for a sprite: source canvas size and anchor point (fractions 0..1). */
@@ -127,6 +128,7 @@ object MgApi {
                         val data = fetchCategory(cat)
                         cache[cat] = data
                         AppLog.d(TAG, "Loaded $cat: ${data.size} entries")
+                        if (cat == "decors") logStorageUpgradeCounts(data)
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Failed to load $cat: ${e.message}")
                         // Retry once
@@ -134,6 +136,7 @@ object MgApi {
                             val data = fetchCategory(cat)
                             cache[cat] = data
                             AppLog.d(TAG, "Retry OK $cat: ${data.size} entries")
+                            if (cat == "decors") logStorageUpgradeCounts(data)
                         } catch (e2: Exception) {
                             AppLog.e(TAG, "Retry also failed for $cat: ${e2.message}")
                         }
@@ -173,6 +176,15 @@ object MgApi {
             spriteMetaJob.await()
             isReady = true
             AppLog.d(TAG, "All preloaded. Cache keys: ${cache.keys}")
+        }
+    }
+
+    /** One-shot diagnostic: confirms the upgrade-tier chain parsed correctly for each
+     * leveled storage decor - helps spot API schema drift without guessing. */
+    private fun logStorageUpgradeCounts(decors: Map<String, GameEntry>) {
+        for (id in listOf("PetHutch", "SeedSilo", "DecorShed")) {
+            val upgrades = decors[id]?.upgrades ?: emptyList()
+            AppLog.d(TAG, "$id upgrades: ${upgrades.size} tiers ${upgrades.map { "${it.fromCapacitySlots}->${it.toCapacitySlots}" }}")
         }
     }
 
@@ -426,12 +438,12 @@ object MgApi {
                     (obj?.get("upgrades") as? JsonArray)
                         ?.mapNotNull { el ->
                             val o = el as? JsonObject ?: return@mapNotNull null
-                            val level = o["targetLevel"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+                            val from = o["fromCapacitySlots"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+                            val to = o["toCapacitySlots"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
                             val cost = (o["cost"] as? JsonObject)
                                 ?.get("dustQuantity")?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0L
-                            val bonus = o["capacityBonus"]?.jsonPrimitive?.intOrNull ?: 0
-                            DecorUpgrade(level, cost, bonus)
-                        } ?: emptyList()
+                            DecorUpgrade(from, to, cost)
+                        }?.sortedBy { it.fromCapacitySlots } ?: emptyList()
                 } else emptyList()
                 val eligibleShops = (obj?.get("eligibleShops") as? JsonArray)
                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
