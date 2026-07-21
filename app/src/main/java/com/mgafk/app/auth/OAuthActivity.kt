@@ -4,11 +4,14 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.websocket.Constants
 
 /**
@@ -17,6 +20,8 @@ import com.mgafk.app.data.websocket.Constants
 class OAuthActivity : Activity() {
 
     companion object {
+        private const val TAG = "OAuthActivity"
+        private const val TOKEN_POLL_MS = 750L
         const val EXTRA_TOKEN = "token"
         const val RESULT_TOKEN = 1001
 
@@ -31,6 +36,20 @@ class OAuthActivity : Activity() {
     }
 
     private lateinit var webView: WebView
+    private val pollHandler = Handler(Looper.getMainLooper())
+
+    /**
+     * The game now finishes the Discord code exchange with an async XHR
+     * (POST .../authenticate-web) fired by the room page's own JS, which
+     * completes after onPageFinished with no further navigation event.
+     * Poll cookies so we still catch mc_jwt once that request lands.
+     */
+    private val pollRunnable = object : Runnable {
+        override fun run() {
+            checkForToken()
+            pollHandler.postDelayed(this, TOKEN_POLL_MS)
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,10 +85,13 @@ class OAuthActivity : Activity() {
 
         setContentView(webView)
         webView.loadUrl(Constants.DISCORD_OAUTH_URL)
+        pollHandler.postDelayed(pollRunnable, TOKEN_POLL_MS)
     }
 
     private fun checkForToken() {
-        val cookies = CookieManager.getInstance().getCookie("https://magicgarden.gg") ?: return
+        val cookies = CookieManager.getInstance().getCookie("https://magicgarden.gg")
+        AppLog.d(TAG, "checkForToken url=${webView.url} cookies=$cookies")
+        if (cookies == null) return
         val token = cookies.split(";")
             .map { it.trim() }
             .find { it.startsWith("mc_jwt=") }
@@ -77,6 +99,7 @@ class OAuthActivity : Activity() {
             ?.trim()
 
         if (!token.isNullOrBlank()) {
+            pollHandler.removeCallbacks(pollRunnable)
             val result = Intent().apply { putExtra(EXTRA_TOKEN, token) }
             setResult(RESULT_TOKEN, result)
             finish()
@@ -84,6 +107,7 @@ class OAuthActivity : Activity() {
     }
 
     override fun onDestroy() {
+        pollHandler.removeCallbacks(pollRunnable)
         webView.destroy()
         super.onDestroy()
     }
