@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -68,6 +70,23 @@ sealed class ClientEvent {
     data class ChatChanged(val messages: List<ChatMessage>) : ClientEvent()
     data class PlayersListChanged(val players: List<PlayerSnapshot>) : ClientEvent()
     data class DebugLog(val level: String, val message: String, val detail: String = "") : ClientEvent()
+}
+
+/**
+ * The netcode is migrating "PartialState" messages to "RoomFrame" messages:
+ * same patch data, moved from `msg.patches` to `msg.state.patches`. Rewrite
+ * RoomFrame into the PartialState shape so the rest of the pipeline (this
+ * file's dispatch + [com.mgafk.app.data.websocket.state.GameState]) keeps
+ * working unchanged for both the old and new server versions.
+ */
+internal fun normalizeIncomingMessage(msg: JsonObject): JsonObject {
+    if (msg["type"]?.jsonPrimitive?.contentOrNull != "RoomFrame") return msg
+    val patches = msg["state"]?.jsonObject?.get("patches") ?: return msg
+    return buildJsonObject {
+        msg.forEach { (key, value) -> if (key != "type" && key != "state") put(key, value) }
+        put("type", JsonPrimitive("PartialState"))
+        put("patches", patches)
+    }
 }
 
 class RoomClient {
@@ -289,7 +308,7 @@ class RoomClient {
         }
 
         val msg: JsonObject = try {
-            json.parseToJsonElement(raw).jsonObject
+            normalizeIncomingMessage(json.parseToJsonElement(raw).jsonObject)
         } catch (_: Exception) {
             return
         }
