@@ -65,7 +65,7 @@ object Constants {
         "sunny" to "Clear Skies",
         "rain" to "Rain",
         "frost" to "Snow",
-        "amber moon" to "Amber Moon",
+        "ambermoon" to "Amber Moon",
         "dawn" to "Dawn",
     )
 

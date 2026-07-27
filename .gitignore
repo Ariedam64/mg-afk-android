@@ -12,6 +12,7 @@ local.properties
 *.apk
 *.aab
 *.ap_
+app/release/
 
 # Signing
 *.jks

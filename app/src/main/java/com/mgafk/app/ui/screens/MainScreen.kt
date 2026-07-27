@@ -79,6 +79,7 @@ import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.components.CardCollapseState
 import com.mgafk.app.ui.components.LocalCardCollapseState
+import com.mgafk.app.ui.components.verticalScrollbar
 import com.mgafk.app.ui.screens.alerts.AlertsCards
 import com.mgafk.app.ui.screens.debug.DebugCards
 import com.mgafk.app.ui.screens.settings.SettingsCards
@@ -361,43 +362,55 @@ private fun DrawerContent(
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Dashboard (standalone)
-        DrawerItem(
-            icon = NavSection.DASHBOARD.icon,
-            label = NavSection.DASHBOARD.label,
-            selected = selected == NavSection.DASHBOARD,
-            enabled = true,
-            onClick = { onSelect(NavSection.DASHBOARD) },
-        )
+        // Scrollable middle region (Dashboard + session-dependent items). Takes the
+        // available height and scrolls when the list is taller than the sheet, so the
+        // bottom block (Settings, Debug, ...) always stays visible. The scrollbar thumb
+        // is a visual hint that this region scrolls - without it, a flush list gives no
+        // indication that items are hidden below (reported by users in landscape, where
+        // the shorter screen height makes this region small enough to matter most).
+        val drawerScrollState = rememberScrollState()
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(drawerScrollState)
+                .verticalScrollbar(drawerScrollState),
+        ) {
+            // Dashboard (standalone)
+            DrawerItem(
+                icon = NavSection.DASHBOARD.icon,
+                label = NavSection.DASHBOARD.label,
+                selected = selected == NavSection.DASHBOARD,
+                enabled = true,
+                onClick = { onSelect(NavSection.DASHBOARD) },
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Active session sub-category
-        val sessionLabel = if (connected && playerName.isNotBlank()) playerName else "Session"
-        Text(
-            text = sessionLabel,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (connected) Accent.copy(alpha = 0.7f) else TextMuted.copy(alpha = 0.5f),
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-        )
+            // Active session sub-category
+            val sessionLabel = if (connected && playerName.isNotBlank()) playerName else "Session"
+            Text(
+                text = sessionLabel,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (connected) Accent.copy(alpha = 0.7f) else TextMuted.copy(alpha = 0.5f),
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
 
-        // Session-dependent items (Pets, Shops)
-        NavSection.entries
-            .filter { it.requiresConnection }
-            .forEach { section ->
-                val isSelected = section == selected
-                DrawerItem(
-                    icon = section.icon,
-                    label = section.label,
-                    selected = isSelected,
-                    enabled = connected,
-                    onClick = { if (connected) onSelect(section) },
-                )
-            }
-
-        Spacer(modifier = Modifier.weight(1f))
+            // Session-dependent items (Pets, Shops)
+            NavSection.entries
+                .filter { it.requiresConnection }
+                .forEach { section ->
+                    val isSelected = section == selected
+                    DrawerItem(
+                        icon = section.icon,
+                        label = section.label,
+                        selected = isSelected,
+                        enabled = connected,
+                        onClick = { if (connected) onSelect(section) },
+                    )
+                }
+        }
 
         // Mini Games, Alerts, Settings & Debug — pinned at bottom
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
