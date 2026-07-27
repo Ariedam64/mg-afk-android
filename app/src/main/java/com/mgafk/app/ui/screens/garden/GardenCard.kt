@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
@@ -53,9 +54,11 @@ import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
+import com.mgafk.app.ui.components.MultiSelectChip
 import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.RarityFilterRow
+import com.mgafk.app.ui.components.SearchFilterBar
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
@@ -211,8 +214,12 @@ fun GardenCard(
     planterPots: Int = 0,
     cropCleansers: Int = 0,
 ) {
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var filtersExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedRarity by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedMutation by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedMutations by rememberSaveable(
+        stateSaver = listSaver<Set<String>, String>(save = { it.toList() }, restore = { it.toSet() }),
+    ) { mutableStateOf(emptySet<String>()) }
     var selectedCropKey by remember { mutableStateOf<Pair<Int, Int>?>(null) } // tileId to slotIndex
     var selectedMultiPlantTileId by remember { mutableStateOf<Int?>(null) }
     var sortModeName by rememberSaveable { mutableStateOf("NONE") }
@@ -265,22 +272,26 @@ fun GardenCard(
 
     // Reset filters if they no longer match available options
     val safeRarity = selectedRarity?.takeIf { it in allRarities }
-    val safeMutation = selectedMutation?.takeIf { it in allMutations }
+    val safeMutations = selectedMutations.filterTo(mutableSetOf()) { it in allMutations }
     if (safeRarity != selectedRarity) selectedRarity = safeRarity
-    if (safeMutation != selectedMutation) selectedMutation = safeMutation
+    if (safeMutations != selectedMutations) selectedMutations = safeMutations
 
-    // Filter entries
+    // Filter entries - mutations combine with AND (e.g. Frozen + Dawnlit finds crops
+    // carrying both at once, not either), matching how players hunt a specific combo.
     val minSize = minSizePercent.toDouble()
-    val filtered = remember(entries, safeRarity, safeMutation, minSize) {
-        if (safeRarity == null && safeMutation == null && minSize <= 0.0) entries
-        else entries.filter { entry ->
+    val filtered = remember(entries, safeRarity, safeMutations, minSize, searchQuery) {
+        entries.filter { entry ->
             val matchesRarity = safeRarity == null || entry.rarity == safeRarity
-            val matchesMutation = safeMutation == null || when (entry) {
-                is GardenEntry.SingleCrop -> safeMutation in entry.plant.snapshot.mutations
-                is GardenEntry.MultiSlotPlant -> entry.crops.any { safeMutation in it.snapshot.mutations }
+            val matchesMutations = safeMutations.isEmpty() || when (entry) {
+                is GardenEntry.SingleCrop -> safeMutations.all { it in entry.plant.snapshot.mutations }
+                is GardenEntry.MultiSlotPlant -> entry.crops.any { crop ->
+                    safeMutations.all { it in crop.snapshot.mutations }
+                }
             }
             val matchesSize = minSize <= 0.0 || entry.sizePercent() >= minSize
-            matchesRarity && matchesMutation && matchesSize
+            val matchesSearch = searchQuery.isBlank() ||
+                entry.displayName.contains(searchQuery.trim(), ignoreCase = true)
+            matchesRarity && matchesMutations && matchesSize && matchesSearch
         }
     }
 
@@ -326,7 +337,7 @@ fun GardenCard(
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                 }
-                val hasFilter = safeRarity != null || safeMutation != null || minSizePercent > 0f || sortMode != SortMode.NONE
+                val hasFilter = safeRarity != null || safeMutations.isNotEmpty() || minSizePercent > 0f || sortMode != SortMode.NONE
                 Text(
                     text = if (hasFilter)
                         "$filteredCropCount/$totalCropCount" else "$totalCropCount plants",
@@ -342,99 +353,110 @@ fun GardenCard(
         if (plants.isEmpty()) {
             Text("No plants in the garden.", fontSize = 12.sp, color = TextMuted)
         } else {
-            // ── Rarity filter ──
-            RarityFilterRow(rarities = allRarities, selected = safeRarity, onSelect = { selectedRarity = it })
+            val activeFilterCount = listOfNotNull(
+                safeRarity?.let { 1 },
+                if (safeMutations.isNotEmpty()) 1 else null,
+                if (minSizePercent > 0f) 1 else null,
+                if (sortMode != SortMode.NONE) 1 else null,
+            ).sum()
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ── Mutation filter ──
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            SearchFilterBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                placeholder = "Search plants...",
+                activeFilterCount = activeFilterCount,
+                filtersExpanded = filtersExpanded,
+                onFiltersExpandedChange = { filtersExpanded = it },
+                onClearFilters = {
+                    selectedRarity = null
+                    selectedMutations = emptySet()
+                    minSizePercent = 0f
+                    sortModeName = SortMode.NONE.name
+                },
             ) {
-                allMutations.forEach { mutation ->
-                    val isSelected = mutation == safeMutation
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .border(
-                                1.5.dp,
-                                if (isSelected) Accent else SurfaceBorder,
-                                CircleShape,
-                            )
-                            .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
-                            .clickable { selectedMutation = if (isSelected) null else mutation },
-                        contentAlignment = Alignment.Center,
+                // ── Rarity filter ──
+                RarityFilterRow(rarities = allRarities, selected = safeRarity, onSelect = { selectedRarity = it })
+
+                // ── Mutation filter (multi-select, combines with AND) ──
+                if (allMutations.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        SpriteImage(
-                            url = mutationSpriteUrl(mutation),
-                            size = 18.dp,
-                            contentDescription = mutation,
+                        allMutations.forEach { mutation ->
+                            val isSelected = mutation in safeMutations
+                            MultiSelectChip(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedMutations = if (isSelected) safeMutations - mutation else safeMutations + mutation
+                                },
+                            ) {
+                                SpriteImage(
+                                    url = mutationSpriteUrl(mutation),
+                                    size = 18.dp,
+                                    contentDescription = mutation,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── Sort chips ──
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Sort:", fontSize = 10.sp, color = TextMuted, modifier = Modifier.align(Alignment.CenterVertically))
+                    SortMode.entries.forEach { mode ->
+                        if (mode == SortMode.NONE) return@forEach
+                        val isSelected = sortMode == mode
+                        Text(
+                            text = mode.label,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) Accent else TextSecondary,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
+                                .clickable { sortModeName = if (isSelected) SortMode.NONE.name else mode.name }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ── Sort chips ──
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text("Sort:", fontSize = 10.sp, color = TextMuted, modifier = Modifier.align(Alignment.CenterVertically))
-                SortMode.entries.forEach { mode ->
-                    if (mode == SortMode.NONE) return@forEach
-                    val isSelected = sortMode == mode
+                // ── Min size slider ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Min size:", fontSize = 10.sp, color = TextMuted)
+                    Slider(
+                        value = minSizePercent,
+                        onValueChange = { minSizePercent = it },
+                        valueRange = 0f..100f,
+                        modifier = Modifier.weight(1f).height(24.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Accent,
+                            activeTrackColor = Accent,
+                            inactiveTrackColor = SurfaceBorder,
+                        ),
+                    )
                     Text(
-                        text = mode.label,
+                        text = "${minSizePercent.toInt()}%",
                         fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) Accent else TextSecondary,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(
-                                1.dp,
-                                if (isSelected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
-                                RoundedCornerShape(12.dp),
-                            )
-                            .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
-                            .clickable { sortModeName = if (isSelected) SortMode.NONE.name else mode.name }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = if (minSizePercent > 0f) Accent else TextSecondary,
+                        fontWeight = if (minSizePercent > 0f) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ── Min size slider ──
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text("Min size:", fontSize = 10.sp, color = TextMuted)
-                Slider(
-                    value = minSizePercent,
-                    onValueChange = { minSizePercent = it },
-                    valueRange = 0f..100f,
-                    modifier = Modifier.weight(1f).height(24.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Accent,
-                        activeTrackColor = Accent,
-                        inactiveTrackColor = SurfaceBorder,
-                    ),
-                )
-                Text(
-                    text = "${minSizePercent.toInt()}%",
-                    fontSize = 10.sp,
-                    color = if (minSizePercent > 0f) Accent else TextSecondary,
-                    fontWeight = if (minSizePercent > 0f) FontWeight.SemiBold else FontWeight.Normal,
-                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
