@@ -92,6 +92,15 @@ internal fun normalizeIncomingMessage(msg: JsonObject): JsonObject {
 class RoomClient {
     companion object {
         private const val TAG = "RoomClient"
+
+        /**
+         * Player fields that only carry a value once the server has accepted our
+         * mc_jwt cookie - a guest gets none of them. The field was `databaseUserId`
+         * until the server renamed it to `discordUserId`; we accept either so an
+         * older deployment keeps working. Any future rename shows up as a bogus
+         * 4800, so the failure path logs the keys the player actually has.
+         */
+        private val AUTH_IDENTITY_KEYS = listOf("discordUserId", "databaseUserId")
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -347,12 +356,18 @@ class RoomClient {
         val me = players?.firstOrNull { el ->
             (el as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull == playerId
         } as? JsonObject
-        if (me != null && me["databaseUserId"]?.jsonPrimitive?.contentOrNull == null) {
-            AppLog.e(TAG, "Auth failed, player found but no databaseUserId")
+        val identityKey = me?.let { player ->
+            AUTH_IDENTITY_KEYS.firstOrNull { key ->
+                player[key]?.jsonPrimitive?.contentOrNull != null
+            }
+        }
+        if (me != null && identityKey == null) {
+            AppLog.e(TAG, "Auth failed, player found but no identity field")
+            AppLog.e(TAG, "  keys=${me.keys}")
             failAuth("Invalid mc_jwt cookie.")
             return
         }
-        AppLog.d(TAG, "Auth OK, me=${me != null} players=${players?.size ?: 0}")
+        AppLog.d(TAG, "Auth OK via $identityKey, me=${me != null} players=${players?.size ?: 0}")
 
         // Delegate full state handling to GameState
         gameState.handleMessage(msg)

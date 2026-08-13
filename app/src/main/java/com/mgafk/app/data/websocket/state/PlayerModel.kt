@@ -135,7 +135,10 @@ data class PlayerModel(
                 discordAvatarUrl = roomPlayer["discordAvatarUrl"]?.jsonPrimitive?.contentOrNull,
                 cosmetic = roomPlayer["cosmetic"] as? JsonObject,
                 emoteData = roomPlayer["emoteData"] as? JsonObject,
-                databaseUserId = roomPlayer["databaseUserId"]?.jsonPrimitive?.contentOrNull,
+                // The server renamed this field to `discordUserId`; it always held
+                // the Discord id anyway. Older deployments still send the old name.
+                databaseUserId = roomPlayer["discordUserId"]?.jsonPrimitive?.contentOrNull
+                    ?: roomPlayer["databaseUserId"]?.jsonPrimitive?.contentOrNull,
                 guildId = roomPlayer["guildId"]?.jsonPrimitive?.contentOrNull,
                 secondsRemainingUntilChatEnabled = roomPlayer["secondsRemainingUntilChatEnabled"]?.jsonPrimitive?.intOrNull,
             )

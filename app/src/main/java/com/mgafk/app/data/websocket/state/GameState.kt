@@ -231,7 +231,8 @@ class GameState {
 
     private fun matchesDb(slot: JsonObject, dbId: String): Boolean {
         val data = slot["data"] as? JsonObject ?: return false
-        return data["databaseUserId"]?.jsonPrimitive?.contentOrNull == dbId ||
+        return data["discordUserId"]?.jsonPrimitive?.contentOrNull == dbId ||
+            data["databaseUserId"]?.jsonPrimitive?.contentOrNull == dbId ||
             data["userId"]?.jsonPrimitive?.contentOrNull == dbId
     }
 
