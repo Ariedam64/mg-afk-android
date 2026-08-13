@@ -43,11 +43,12 @@ class GameActions(private val sendFn: (String) -> Unit) {
     fun ping(id: Long = System.currentTimeMillis()) =
         game("Ping", obj("id" to JsonPrimitive(id)))
 
-    fun setSelectedGame(gameId: String = GAME) =
-        room("SetSelectedGame", obj("gameId" to JsonPrimitive(gameId)))
+    // The web client names this field `gameName`, not `gameId`.
+    fun setSelectedGame(gameName: String = GAME) =
+        room("SetSelectedGame", obj("gameName" to JsonPrimitive(gameName)))
 
-    fun voteForGame(gameId: String = GAME) =
-        room("VoteForGame", obj("gameId" to JsonPrimitive(gameId)))
+    fun voteForGame(gameName: String = GAME) =
+        room("VoteForGame", obj("gameName" to JsonPrimitive(gameName)))
 
     fun restartGame() = room("RestartGame")
 
