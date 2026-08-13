@@ -85,7 +85,7 @@ class BotClient(
         val preservedFetcher = if (isRetry) lastOpts?.versionFetcher else versionFetcher
         lastOpts = ConnectOpts(effectiveVersion, room, host, preservedFetcher)
 
-        val url = UrlBuilder.buildGuestUrl(host, effectiveVersion, room, playerId, name, avatar)
+        val url = UrlBuilder.buildGuestUrl(host, effectiveVersion, room, name, avatar)
         AppLog.d(TAG, "connect() url=$url retry=$retryCount")
 
         val token = ++socketToken

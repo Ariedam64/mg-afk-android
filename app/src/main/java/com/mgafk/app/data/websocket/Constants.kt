@@ -6,7 +6,14 @@ object Constants {
     const val TEXT_PING_MS = 2000L
     const val APP_PING_MS = 2000L
     const val GAME_NAME = "Quinoa"
-    const val DEFAULT_UA = "Mozilla/5.0"
+    /**
+     * A complete desktop Chrome UA, consistent with the `platform="desktop"`
+     * query parameter. The bare "Mozilla/5.0" we sent before also connected
+     * fine, so this is about blending in, not a requirement.
+     */
+    const val DEFAULT_UA =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
     const val RETRY_MAX = Int.MAX_VALUE
     const val RETRY_DELAY_MS = 1500L
     const val RETRY_JITTER_MS = 1000L

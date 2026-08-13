@@ -6,15 +6,25 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 object UrlBuilder {
-    fun buildUrl(host: String, version: String, room: String, playerId: String): String {
+    /**
+     * Query values are JSON-encoded (quotes included), exactly like the web client.
+     * The parameter set below mirrors a real browser connect URL: no `playerId`
+     * (the server assigns it and reports it back as `selfPlayerId` in Welcome)
+     * and no `source`, which only the manual-URL flow of the web app sends.
+     */
+    private const val SURFACE = "\"web\""
+    private const val PLATFORM = "\"desktop\""
+    private const val CAPABILITIES = "\"fbo_mipmap_unsupported\""
+    private const val LOCALE = "\"en\""
+
+    fun buildUrl(host: String, version: String, room: String): String {
         val base = "wss://$host/version/$version/api/rooms/$room/connect"
         return Uri.parse(base).buildUpon()
-            .appendQueryParameter("surface", "\"web\"")
-            .appendQueryParameter("platform", "\"desktop\"")
-            .appendQueryParameter("playerId", "\"$playerId\"")
+            .appendQueryParameter("surface", SURFACE)
+            .appendQueryParameter("platform", PLATFORM)
             .appendQueryParameter("version", "\"$version\"")
-            .appendQueryParameter("source", "\"manualUrl\"")
-            .appendQueryParameter("capabilities", "\"fbo_mipmap_ok\"")
+            .appendQueryParameter("capabilities", CAPABILITIES)
+            .appendQueryParameter("locale", LOCALE)
             .build()
             .toString()
     }
@@ -28,7 +38,6 @@ object UrlBuilder {
         host: String,
         version: String,
         room: String,
-        playerId: String,
         name: String,
         avatar: BotAvatar,
     ): String {
@@ -42,13 +51,12 @@ object UrlBuilder {
             put("name", JsonPrimitive(name))
         }.toString()
         return Uri.parse(base).buildUpon()
-            .appendQueryParameter("surface", "\"web\"")
-            .appendQueryParameter("platform", "\"desktop\"")
-            .appendQueryParameter("playerId", "\"$playerId\"")
+            .appendQueryParameter("surface", SURFACE)
+            .appendQueryParameter("platform", PLATFORM)
             .appendQueryParameter("version", "\"$version\"")
             .appendQueryParameter("anonymousUserStyle", styleJson)
-            .appendQueryParameter("source", "\"manualUrl\"")
-            .appendQueryParameter("capabilities", "\"fbo_mipmap_unsupported\"")
+            .appendQueryParameter("capabilities", CAPABILITIES)
+            .appendQueryParameter("locale", LOCALE)
             .build()
             .toString()
     }

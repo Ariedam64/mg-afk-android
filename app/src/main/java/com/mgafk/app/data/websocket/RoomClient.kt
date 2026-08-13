@@ -210,7 +210,10 @@ class RoomClient {
         this.room = nextRoom
         this.cookie = nextCookie
         this.userAgent = userAgent
-        this.playerId = IdGenerator.generatePlayerId()
+        // The connect URL no longer carries a client-generated playerId (the web
+        // client doesn't send one either). The real id arrives with Welcome as
+        // "selfPlayerId", see handleWelcome().
+        this.playerId = ""
         this.playerCount = 0
         this.connectedAt = 0
         this.welcomed = false
@@ -235,7 +238,7 @@ class RoomClient {
             versionFetcher = preservedFetcher,
         )
 
-        val url = UrlBuilder.buildUrl(this.host, this.version, this.room, this.playerId)
+        val url = UrlBuilder.buildUrl(this.host, this.version, this.room)
         AppLog.d(TAG, "connect() url=$url isRetry=$isRetry retryCount=$retryCount")
 
         state = "connecting"
