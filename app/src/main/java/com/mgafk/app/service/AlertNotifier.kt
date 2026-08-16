@@ -57,8 +57,8 @@ class AlertNotifier(private val context: Context) {
     /** Dedicated player for the in-Settings volume preview. Independent of the real alarm. */
     private var previewPlayer: MediaPlayer? = null
 
-    // Dedup tracking — cleared when the condition goes away
-    private val firedShopKeys = mutableSetOf<String>()
+    // Dedup tracking - cleared when the condition goes away
+    private val shopAlerts = ShopAlertTracker()
     private val firedHungerPets = mutableSetOf<String>()
     private var firedWeather: String = ""
     private var firedTroughLow: Boolean = false
@@ -112,20 +112,31 @@ class AlertNotifier(private val context: Context) {
         )
     }
 
-    fun checkShopItems(shops: List<ShopSnapshot>, alerts: AlertConfig) {
-        val currentKeys = mutableSetOf<String>()
+    /**
+     * @param restockedShopTypes shop types that just rolled a new stock, i.e. that are allowed to
+     *   alert again for items they were already stocking - see [ShopAlertTracker].
+     */
+    fun checkShopItems(
+        shops: List<ShopSnapshot>,
+        alerts: AlertConfig,
+        restockedShopTypes: Set<String> = emptySet(),
+    ) {
+        val stockedKeys = shops.flatMap { shop ->
+            shop.itemNames.map { ShopAlertTracker.keyOf(shop.type, it) }
+        }
+        val pending = shopAlerts.newlyStocked(stockedKeys, restockedShopTypes) {
+            alerts.items[it]?.enabled == true
+        }.toMutableSet()
+        if (pending.isEmpty()) return
+
         // Group fired items by their resolved mode so a CUSTOM section can mix
         // notification + alarm items within the same batch.
         val itemsByMode = mutableMapOf<AlertMode, MutableList<DisplayItem>>()
 
         for (shop in shops) {
             for (itemName in shop.itemNames) {
-                val key = "shop:${shop.type}:$itemName"
-                currentKeys.add(key)
-                if (key in firedShopKeys) continue
-                val alert = alerts.items[key] ?: continue
-                if (!alert.enabled) continue
-                firedShopKeys.add(key)
+                val key = ShopAlertTracker.keyOf(shop.type, itemName)
+                if (!pending.remove(key)) continue
 
                 val entry = resolveShopEntry(shop.type, itemName)
                 val display = DisplayItem(
@@ -136,7 +147,6 @@ class AlertNotifier(private val context: Context) {
                 itemsByMode.getOrPut(mode) { mutableListOf() }.add(display)
             }
         }
-        firedShopKeys.retainAll(currentKeys)
 
         for ((mode, group) in itemsByMode) {
             if (group.isNotEmpty()) {

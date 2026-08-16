@@ -124,6 +124,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
          */
         const val ON_CONNECT_COLLECT_ATTEMPTS = 20
         const val ON_CONNECT_COLLECT_RETRY_MS = 1_500L
+        /** A shop countdown may tick back up by a hair on its own; only a jump past this is a restock. */
+        const val RESTOCK_COUNTDOWN_JITTER_SEC = 30
     }
     private val repo = SessionRepository(application)
     private val alertNotifier = AlertNotifier(application)
@@ -2175,14 +2177,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is ClientEvent.ShopsChanged -> {
                 val previousShops = _state.value.sessions.find { it.id == sessionId }?.shops.orEmpty()
                 val purchases = event.shopPurchases
+                // Detect shop restock: the countdown only ever goes UP when the shop rolled a new
+                // stock. Right then shopPurchases may be stale (its reset arrives in a separate
+                // patch), and the alert/auto-buy dedup has to start a fresh cycle.
+                val restockedTypes = event.shops.filter { shop ->
+                    val prevShop = previousShops.find { it.type == shop.type } ?: return@filter false
+                    shop.secondsUntilRestock > prevShop.secondsUntilRestock + RESTOCK_COUNTDOWN_JITTER_SEC
+                }.map { it.type }.toSet()
                 val newShops = event.shops.map { shop ->
                     val initialStocks = shop.getItemStocks()
-                    // Detect shop restock: if the timer went UP, the shop just restocked
-                    // and shopPurchases may be stale (reset arrives in a separate patch)
-                    val prevShop = previousShops.find { it.type == shop.type }
-                    val justRestocked = prevShop != null &&
-                        shop.secondsUntilRestock > (prevShop.secondsUntilRestock + 30)
-                    val purchaseMap = if (justRestocked) null else purchases
+                    val purchaseMap = if (shop.type in restockedTypes) null else purchases
                         ?.get(shop.type)
                         ?.let { it as? JsonObject }
                         ?.get("purchases")
@@ -2204,11 +2208,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pendingPurchaseJobs.remove(key)?.cancel()
                 }
                 updateSession(sessionId) { it.copy(shops = newShops) }
-                // Only check alerts when actual items changed, not just the restock timer
+                // Only check alerts when actual items changed, not just the restock timer. A
+                // restock counts as a change even when it rolled the same items: the stock behind
+                // them is new, so it has to alert again.
                 val oldItems = previousShops.associate { it.type to it.itemNames }
                 val newItems = newShops.associate { it.type to it.itemNames }
-                if (oldItems != newItems) {
-                    alertNotifier.checkShopItems(newShops, _state.value.alerts)
+                if (oldItems != newItems || restockedTypes.isNotEmpty()) {
+                    alertNotifier.checkShopItems(newShops, _state.value.alerts, restockedTypes)
                 }
             }
             is ClientEvent.ChatChanged -> {
