@@ -64,7 +64,8 @@ class GameState {
 
     /**
      * Find the user slot index for the given playerId.
-     * Uses a 3-tier strategy: by playerId direct, then by data.playerId, then by databaseUserId.
+     * Uses a 2-tier strategy: by owner id ([matchesPlayer]), then by the
+     * player's database/Discord id ([matchesDb]).
      */
     fun findUserSlotIndex(playerId: String): Int? {
         val player = players[playerId] ?: return null
@@ -223,13 +224,30 @@ class GameState {
 
     // --- Slot matching helpers ---
 
+    /**
+     * The game renamed the slot's owner field from `playerId` to `userId`; the
+     * value is unchanged - the id Welcome reports as `selfPlayerId`. Slots now
+     * carry `playerId: null`, so matching on it alone silently matches nothing
+     * and every slot-backed view (garden, inventory, storage, activity logs)
+     * stays empty. Both names are accepted so an older deployment keeps working.
+     */
     private fun matchesPlayer(slot: JsonObject, playerId: String): Boolean {
+        if (playerId.isEmpty()) return false
+        if (slot["userId"]?.jsonPrimitive?.contentOrNull == playerId) return true
         if (slot["playerId"]?.jsonPrimitive?.contentOrNull == playerId) return true
         val data = slot["data"] as? JsonObject
         return data?.get("playerId")?.jsonPrimitive?.contentOrNull == playerId
     }
 
+    /**
+     * Fallback identity match, used only when [matchesPlayer] found nothing.
+     * The id fields sit at the slot's top level, but some payloads repeat them
+     * inside `data`, so both levels are checked.
+     */
     private fun matchesDb(slot: JsonObject, dbId: String): Boolean {
+        if (dbId.isEmpty()) return false
+        if (slot["discordUserId"]?.jsonPrimitive?.contentOrNull == dbId) return true
+        if (slot["databaseUserId"]?.jsonPrimitive?.contentOrNull == dbId) return true
         val data = slot["data"] as? JsonObject ?: return false
         return data["discordUserId"]?.jsonPrimitive?.contentOrNull == dbId ||
             data["databaseUserId"]?.jsonPrimitive?.contentOrNull == dbId ||

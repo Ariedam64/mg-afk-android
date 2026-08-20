@@ -24,6 +24,7 @@ import com.mgafk.app.data.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -131,8 +132,11 @@ class RoomClient {
     // Game state — managed by GameState
     val gameState = GameState()
 
-    // Actions — available after connection
-    val actions = GameActions { text -> send(text) }
+    // Numbering for the QuinoaCommand envelope, re-seeded by every Welcome
+    private val commandSequencer = CommandSequencer()
+
+    // Actions - available after connection
+    val actions = GameActions({ text -> send(text) }, commandSequencer)
 
     // Tracking for dedup
     private var welcomed = false
@@ -224,6 +228,7 @@ class RoomClient {
         this.lastEggsPayload = null
         this.lastInventoryPayload = null
         gameState.reset()
+        commandSequencer.reset()
 
         // Preserve the previously-stored versionFetcher across retry attempts:
         // retries call connect() with isRetry=true and no fetcher, so we'd lose
@@ -332,6 +337,7 @@ class RoomClient {
             when (type) {
                 "Welcome" -> handleWelcome(msg)
                 "PartialState" -> handlePartialState(msg)
+                "QuinoaCommandResult" -> handleCommandResult(msg)
             }
         } catch (e: Exception) {
             AppLog.e(TAG, "Error processing $type: ${e.message}", e)
@@ -347,6 +353,11 @@ class RoomClient {
         // inventory and storage silently never populate (no crash, just nothing).
         msg["selfPlayerId"]?.jsonPrimitive?.contentOrNull?.let { self ->
             if (self.isNotBlank() && self != playerId) playerId = self
+        }
+        // Seed the command numbering before anything can send a wrapped command.
+        // Every Welcome re-seeds, which is also what makes reconnects work.
+        msg["executedCommandSequence"]?.jsonPrimitive?.longOrNull?.let { executed ->
+            commandSequencer.seed(executed)
         }
         AppLog.d(TAG, "handleWelcome, playerId=$playerId")
         // Check auth before accepting state
@@ -407,6 +418,22 @@ class RoomClient {
             ))
             emitStatus(SessionStatus.CONNECTED, room = room, playerId = playerId)
         }
+    }
+
+    /**
+     * A rejected [GameActions] wrapped command (harvest, pot, purchase). These
+     * fail silently otherwise - the action just never happens - so surface the
+     * server's reason in the debug panel. `invalid_message` means the envelope
+     * is malformed or a field is missing; `invalid_sequence` means our
+     * `commandSequence` had a gap or a duplicate, which also breaks every
+     * later command until the next Welcome re-seeds.
+     */
+    private fun handleCommandResult(msg: JsonObject) {
+        if (msg["ok"]?.jsonPrimitive?.booleanOrNull == true) return
+        val code = msg["code"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        val commandType = msg["commandType"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        AppLog.w(TAG, "command rejected type=$commandType code=$code")
+        emit(ClientEvent.DebugLog("warn", "command rejected", "type=$commandType code=$code"))
     }
 
     private fun handlePartialState(msg: JsonObject) {

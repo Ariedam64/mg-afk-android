@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import java.util.UUID
 
 /**
  * All game actions that can be sent via WebSocket.
@@ -17,7 +18,10 @@ import kotlinx.serialization.json.buildJsonObject
  *   actions.chat("Hello!")
  *   actions.move(100.0, 200.0)
  */
-class GameActions(private val sendFn: (String) -> Unit) {
+class GameActions(
+    private val sendFn: (String) -> Unit,
+    private val sequencer: CommandSequencer = CommandSequencer(),
+) {
 
     private fun send(scopePath: List<String>, type: String, params: JsonObject = EMPTY_OBJ) {
         val msg = buildJsonObject {
@@ -35,6 +39,38 @@ class GameActions(private val sendFn: (String) -> Unit) {
 
     private fun game(type: String, params: JsonObject = EMPTY_OBJ) =
         send(GAME_SCOPE, type, params)
+
+    /**
+     * Send a command through the `QuinoaCommand` envelope the game now uses for
+     * a handful of actions - the ones it routes through its RPC sender rather
+     * than its plain message sender.
+     *
+     * Exactly five commands take this path - `HarvestCrop`, `PotPlant`,
+     * `PurchaseShopItem`, plus `Preserve` and `EquipPetCosmetic` which this
+     * class doesn't expose yet. Every other action stays a plain
+     * `{scopePath, type, ...params}` message via [game]. Sending a wrapped
+     * command plain gets it rejected with
+     * `{"type":"QuinoaCommandResult","commandType":"unknown","ok":false,"code":"invalid_message"}`
+     * - the server can't even parse the command out, so the action silently
+     * does nothing.
+     *
+     * See [CommandSequencer] for why the sequence number matters.
+     */
+    private fun quinoaCommand(type: String, params: JsonObject = EMPTY_OBJ) {
+        val msg = buildJsonObject {
+            put("scopePath", buildJsonArray { GAME_SCOPE.forEach { add(JsonPrimitive(it)) } })
+            put("type", JsonPrimitive(COMMAND_ENVELOPE))
+            put("requestId", JsonPrimitive(UUID.randomUUID().toString()))
+            put("commandSequence", JsonPrimitive(sequencer.next()))
+            put("command", buildJsonObject {
+                put("type", JsonPrimitive(type))
+                for ((k, v) in params) {
+                    put(k, v)
+                }
+            })
+        }
+        sendFn(msg.toString())
+    }
 
     // =====================
     // Session / Heartbeat
@@ -131,7 +167,7 @@ class GameActions(private val sendFn: (String) -> Unit) {
                 put(idField, JsonPrimitive(itemId))
             })
         }
-        game("PurchaseShopItem", params)
+        quinoaCommand("PurchaseShopItem", params)
     }
 
     // =====================
@@ -149,7 +185,7 @@ class GameActions(private val sendFn: (String) -> Unit) {
             put("slot", JsonPrimitive(slot))
             if (slotsIndex != null) put("slotsIndex", JsonPrimitive(slotsIndex))
         }
-        game("HarvestCrop", params)
+        quinoaCommand("HarvestCrop", params)
     }
 
     fun sellAllCrops() = game("SellAllCrops")
@@ -158,7 +194,7 @@ class GameActions(private val sendFn: (String) -> Unit) {
         game("PlantGardenPlant", obj("slot" to JsonPrimitive(slot), "itemId" to JsonPrimitive(itemId)))
 
     fun potPlant(slot: Int) =
-        game("PotPlant", obj("slot" to JsonPrimitive(slot)))
+        quinoaCommand("PotPlant", obj("slot" to JsonPrimitive(slot)))
 
     fun mutationPotion(tileObjectIdx: Int, growSlotIdx: Int, mutation: String) =
         game("MutationPotion", obj(
@@ -318,6 +354,9 @@ class GameActions(private val sendFn: (String) -> Unit) {
         private val ROOM_SCOPE = listOf("Room")
         private val GAME_SCOPE = listOf("Room", GAME)
         private val EMPTY_OBJ = JsonObject(emptyMap())
+
+        /** Envelope `type` for the commands that go through [quinoaCommand]. */
+        private const val COMMAND_ENVELOPE = "QuinoaCommand"
 
         private fun obj(vararg pairs: Pair<String, JsonElement>): JsonObject =
             JsonObject(mapOf(*pairs))
