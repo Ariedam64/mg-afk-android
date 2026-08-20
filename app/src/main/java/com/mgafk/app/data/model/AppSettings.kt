@@ -72,14 +72,14 @@ data class AppSettings(
     // Shops
     val purchaseMode: PurchaseMode = PurchaseMode.BULK,
 
-    // Storages — auto-consolidate inventory stacks into matching storage slots
+    // Storages - auto-consolidate inventory stacks into matching storage slots
     val autoStockSeedSilo: Boolean = false,
     val autoStockDecorShed: Boolean = false,
 
-    // Play in game — inject the Gemini userscript into the WebView
+    // Play in game - inject the Gemini userscript into the WebView
     val injectGeminiMod: Boolean = true,
 
-    // Gameplay — skip the egg-opening animation and show the hatched pet
+    // Gameplay - skip the egg-opening animation and show the hatched pet
     // result instantly. Off by default so the animation plays.
     val instantHatch: Boolean = false,
 

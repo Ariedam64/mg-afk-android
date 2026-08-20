@@ -13,7 +13,7 @@ import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 /**
- * Client for the Aries Mod API — public rooms listing.
+ * Client for the Aries Mod API - public rooms listing.
  */
 object AriesApi {
     private const val TAG = "AriesApi"

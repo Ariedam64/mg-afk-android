@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Reports each connected player's state to the backend (POST /collect-state)
- * so it can be persisted and used to drive the server-side "online" flag — a
+ * so it can be persisted and used to drive the server-side "online" flag - a
  * player counts as online while their last collect-state is < 6 min old, so
  * this doubles as a keep-alive.
  *
@@ -63,7 +63,7 @@ class StateCollector {
     /**
      * Evaluate one session and POST a collect-state when needed. Blocking;
      * call on an IO dispatcher. Safe to call before the session is fully
-     * welcomed — it no-ops until the player resolves (with a `databaseUserId`)
+     * welcomed - it no-ops until the player resolves (with a `databaseUserId`)
      * AND their userSlot has actually loaded.
      *
      * @return true if a request was sent and accepted.
@@ -104,7 +104,7 @@ class StateCollector {
 
     /**
      * True once the player's userSlot has actually loaded. `coinsCount` is the
-     * canonical marker that the slot's `data` is hydrated — it's also the field
+     * canonical marker that the slot's `data` is hydrated - it's also the field
      * [PlayerModel] reads coins from, so its presence guarantees both the coins
      * and the reported state sub-trees are real rather than defaults.
      */

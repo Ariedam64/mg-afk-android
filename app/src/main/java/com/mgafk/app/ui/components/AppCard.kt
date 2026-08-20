@@ -137,7 +137,7 @@ fun AppCard(
             if (collapsible) {
                 // Content always measured at full height (FlowRow layout pre-computed).
                 // When collapsed: reported height = 0, clipped, not visible.
-                // When expanded: instant reveal — no re-layout needed.
+                // When expanded: instant reveal - no re-layout needed.
                 Column(
                     modifier = Modifier
                         .clipToBounds()

@@ -150,7 +150,7 @@ private fun computeSizePercent(targetScale: Double, maxScale: Double): Double {
     }.coerceIn(0.0, 100.0)
 }
 
-/** Pre-resolved plant data — computed once per plants change, reused by filters + tiles. */
+/** Pre-resolved plant data - computed once per plants change, reused by filters + tiles. */
 private data class ResolvedPlant(
     val snapshot: GardenPlantSnapshot,
     val rarity: String?,
@@ -505,7 +505,7 @@ fun GardenCard(
         }
     }
 
-    // Single crop detail dialog — look up live data so timestamps update in real-time
+    // Single crop detail dialog - look up live data so timestamps update in real-time
     selectedCropKey?.let { (tileId, slotIndex) ->
         val liveCrop = resolved.find { it.snapshot.tileId == tileId && it.snapshot.slotIndex == slotIndex }
         if (liveCrop != null) {
@@ -531,7 +531,7 @@ fun GardenCard(
         }
     }
 
-    // Multi-slot plant detail dialog — look up live data
+    // Multi-slot plant detail dialog - look up live data
     selectedMultiPlantTileId?.let { tileId ->
         val liveEntry = entries.firstOrNull { it.tileId == tileId } as? GardenEntry.MultiSlotPlant
         if (liveEntry != null) {
@@ -1032,7 +1032,7 @@ private fun MultiSlotPlantDetailDialog(
             // Tick every second for live countdown
             val now = rememberSecondTick()
 
-            // Scrollable crop list — capped so the Pot button stays visible on
+            // Scrollable crop list - capped so the Pot button stays visible on
             // plants with many slots (e.g. 8-slot FavaBean).
             Column(
                 modifier = Modifier

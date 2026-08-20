@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* granted or not — we just need to ask */ }
+    ) { /* granted or not - we just need to ask */ }
 
     private val playLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()

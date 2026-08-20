@@ -78,7 +78,7 @@ private val RarityMythical = Color(0xFF9944A7)
 private val RarityDivine = Color(0xFFFF7835)
 private val RarityCelestial = Color(0xFFFF00FF)
 
-/** Parse ability color — returns a Brush (gradient or solid). */
+/** Parse ability color - returns a Brush (gradient or solid). */
 private fun parseAbilityBrush(raw: String?): Brush {
     if (raw == null) return SolidColor(Color(0xFF646464))
     val hexPattern = Regex("#[0-9A-Fa-f]{6}")
@@ -393,7 +393,7 @@ private fun ActivePetRow(
             }
         }
 
-        // ── Right: action column (Feed + Swap + Remove) — slides in on select ──
+        // ── Right: action column (Feed + Swap + Remove) - slides in on select ──
         val btnWidth = 52.dp
         AnimatedVisibility(
             visible = isSelected,

@@ -138,7 +138,7 @@ class GameActions(
      * the game now uses since the v2.x server update.
      *
      * `shop` is the lowercase shop key from the ShopSnapshot ("seed", "tool",
-     * "egg", "decor", "dawn", …) — passed through as-is.
+     * "egg", "decor", "dawn", …) - passed through as-is.
      *
      * The item's `itemType` is derived from where the id appears in MgApi
      * data, NOT from the shop key. The "tool" shop now mixes Tool entries

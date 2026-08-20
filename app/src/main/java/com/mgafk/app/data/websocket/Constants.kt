@@ -33,7 +33,7 @@ object Constants {
     /**
      * Fallback max-hunger values when the live game API isn't loaded yet.
      * The source of truth is `MgApi.getPets()[species].coinsToFullyReplenishHunger`
-     * — use [maxHungerFor] which checks the API first.
+     * - use [maxHungerFor] which checks the API first.
      */
     val PET_HUNGER_COSTS = mapOf(
         "worm" to 500, "snail" to 1000, "bee" to 1500, "chicken" to 3000,

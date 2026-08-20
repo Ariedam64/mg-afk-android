@@ -33,7 +33,7 @@ data class ShopModel(
 
     /**
      * Item name list. Reads each entry's `itemType` to pick the right id field
-     * — necessary since the `tool` shop now mixes Tool and Decor entries
+     * - necessary since the `tool` shop now mixes Tool and Decor entries
      * (FeedingTrough, SeedSilo, etc. are itemType=Decor but live under tool shop).
      */
     fun getItemNames(): List<String> =

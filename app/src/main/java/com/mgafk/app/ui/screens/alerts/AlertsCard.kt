@@ -72,8 +72,8 @@ private val RarityMythical = Color(0xFF9944A7)
 private val RarityDivine = Color(0xFFFF7835)
 private val RarityCelestial = Color(0xFFFF00FF)
 
-private val CustomModeColor = Color(0xFF8B5CF6) // indigo/violet — distinct from Accent (blue) and Alarm (red)
-private val AlarmModeColor = Color(0xFFF87171) // red — section/item alarm mode
+private val CustomModeColor = Color(0xFF8B5CF6) // indigo/violet - distinct from Accent (blue) and Alarm (red)
+private val AlarmModeColor = Color(0xFFF87171) // red - section/item alarm mode
 
 private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
     "common" -> RarityCommon

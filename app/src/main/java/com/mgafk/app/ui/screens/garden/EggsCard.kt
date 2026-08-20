@@ -125,7 +125,7 @@ private fun formatTimeRemaining(endTime: Long, now: Long): String {
     }
 }
 
-/** Parse ability color — returns a Brush (gradient or solid). Same as PetHungerCard. */
+/** Parse ability color - returns a Brush (gradient or solid). Same as PetHungerCard. */
 private fun parseAbilityBrush(raw: String?): Brush {
     if (raw == null) return SolidColor(Color(0xFF646464))
     val hexPattern = Regex("#[0-9A-Fa-f]{6}")
@@ -204,7 +204,7 @@ fun EggsCard(
         }
     }
 
-    // Egg detail dialog — live lookup
+    // Egg detail dialog - live lookup
     selectedEggTileId?.let { tileId ->
         val liveEgg = eggs.find { it.tileId == tileId }
         if (liveEgg != null) {
@@ -219,7 +219,7 @@ fun EggsCard(
                 onDismiss = { selectedEggTileId = null },
             )
         } else {
-            // Egg was hatched/removed — close dialog
+            // Egg was hatched/removed - close dialog
             selectedEggTileId = null
         }
     }
@@ -492,7 +492,7 @@ private fun HatchedPetDialog(
     // Run the animation sequence
     LaunchedEffect(Unit) {
         // Instant hatch: skip the animation and jump straight to the final
-        // state — egg gone, pet and info fully revealed.
+        // state - egg gone, pet and info fully revealed.
         if (instantHatch) {
             phase = PHASE_INFO
             eggAlpha.snapTo(0f)
@@ -566,7 +566,7 @@ private fun HatchedPetDialog(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Sprite area — egg or pet
+                // Sprite area - egg or pet
                 Box(
                     modifier = Modifier.size(80.dp),
                     contentAlignment = Alignment.Center,

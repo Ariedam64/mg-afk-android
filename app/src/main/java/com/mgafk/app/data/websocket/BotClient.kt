@@ -105,12 +105,12 @@ class BotClient(
             }
             override fun onMessage(webSocket: WebSocket, text: String) {
                 // The server uses an application-level ping/pong on top of the
-                // WS protocol pings — RoomClient does the same. If we don't
+                // WS protocol pings - RoomClient does the same. If we don't
                 // reply, the server closes the connection after ~30s with 4400.
                 if (text == "ping" || text == "\"ping\"") {
                     webSocket.send("pong")
                 }
-                // All other messages are ignored — bots don't observe state.
+                // All other messages are ignored - bots don't observe state.
             }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 webSocket.close(1000, null)

@@ -111,7 +111,7 @@ class AfkService : Service() {
             return START_NOT_STICKY
         }
 
-        // Activity is starting us with real config — cancel any pending
+        // Activity is starting us with real config - cancel any pending
         // self-restart alarm queued by a previous onTaskRemoved.
         cancelSelfRestart()
 
@@ -178,14 +178,14 @@ class AfkService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // Screen on/off — system broadcasts, no export flag needed
+        // Screen on/off - system broadcasts, no export flag needed
         val screenFilter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_USER_PRESENT)
         }
         registerReceiver(screenReceiver, screenFilter)
 
-        // Smart alarm — app-internal broadcast
+        // Smart alarm - app-internal broadcast
         val alarmFilter = IntentFilter(ACTION_SMART_WAKE_LOCK)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(smartAlarmReceiver, alarmFilter, RECEIVER_NOT_EXPORTED)
@@ -202,7 +202,7 @@ class AfkService : Service() {
         releaseWakeLock()
         releaseWifiLock()
         silentAudio.stop()
-        // onDestroy fires for legitimate stopService() calls — NOT for kills.
+        // onDestroy fires for legitimate stopService() calls - NOT for kills.
         // So this is the right place to bring the watchdog down with us:
         // a real shutdown should leave nothing running, while a kill leaves
         // the watchdog alive to resurrect us.
@@ -300,7 +300,7 @@ class AfkService : Service() {
     }
 
     private fun unbindAndStopWatchdog() {
-        // Tell the watchdog this is a legitimate shutdown BEFORE unbinding —
+        // Tell the watchdog this is a legitimate shutdown BEFORE unbinding -
         // otherwise its onServiceDisconnected callback would try to resurrect
         // us during the very shutdown we're performing. The flag is set in
         // the watchdog process via an intent action; a short grace window

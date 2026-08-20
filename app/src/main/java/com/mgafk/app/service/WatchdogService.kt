@@ -59,7 +59,7 @@ class WatchdogService : Service() {
     /**
      * Brief grace window before resurrecting. If the disconnect was caused by
      * a legitimate shutdown, [ACTION_SHUTDOWN] arrives during this window and
-     * flips [shuttingDown] — we skip the restart and just stop.
+     * flips [shuttingDown] - we skip the restart and just stop.
      */
     private fun scheduleAfkResurrection() {
         mainHandler.postDelayed({
@@ -121,7 +121,7 @@ class WatchdogService : Service() {
 
     private fun restartAfkService() {
         // Use ACTION_SELF_RESTART so AfkService's onStartCommand posts the
-        // "Tap to resume" notification and shuts down cleanly — we don't try
+        // "Tap to resume" notification and shuts down cleanly - we don't try
         // to keep both processes running indefinitely with no UI to drive a
         // WebSocket, we just make sure the user gets a clear signal.
         val intent = Intent(this, AfkService::class.java).setAction(AfkService.ACTION_SELF_RESTART)

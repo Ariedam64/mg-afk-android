@@ -326,7 +326,7 @@ private fun ShopItemTile(
             )
         }
 
-        // Stock badge — notification style, overlapping top-end corner.
+        // Stock badge - notification style, overlapping top-end corner.
         // Hidden when the item is unbuyable (the stock is irrelevant then).
         if (stock > 0 && !notBuyable) {
             Box(
@@ -349,7 +349,7 @@ private fun ShopItemTile(
             }
         }
 
-        // "Owned" / "Max" pill — bottom-center overlay when item can't be bought.
+        // "Owned" / "Max" pill - bottom-center overlay when item can't be bought.
         if (notBuyable) {
             val label = when (buyState) {
                 ShopItemBuyState.Owned -> "OWNED"

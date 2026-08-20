@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mgafk.app.data.repository.MgApi
 
-/** Game tile size in world pixels — slot offsets are in tile units, see sprite-utils. */
+/** Game tile size in world pixels - slot offsets are in tile units, see sprite-utils. */
 private const val TILE_SIZE_WORLD_PX = 256.0
 
 /**
@@ -34,7 +34,7 @@ data class PlantSlotRender(
  * 2. Each slot has a tile-unit offset `(x, y)`; the crop is placed at
  *    `slotOffset * TILE_SIZE_WORLD_PX` pixels from the plant texture center.
  * 3. The crop sprite also has its own anchor (e.g. `MoonCelestialCrop` anchors at
- *    (0.5, 0.88) — near the bottom). The game places the *anchor point* at the slot
+ *    (0.5, 0.88) - near the bottom). The game places the *anchor point* at the slot
  *    position, not the crop center. In Compose we center the crop on its offset, so
  *    we need to shift by `(0.5 - cropAnchor) * cropSize` to get the anchor at the
  *    slot position.

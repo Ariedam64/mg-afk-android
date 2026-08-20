@@ -3,7 +3,7 @@ package com.mgafk.app.data.repository
 import com.mgafk.app.data.model.Session
 
 /**
- * Tells whether a shop item can still be bought. The reason matters too —
+ * Tells whether a shop item can still be bought. The reason matters too -
  * the UI surfaces "Owned" vs "Max" badges differently.
  */
 enum class ShopItemBuyState {
@@ -18,7 +18,7 @@ enum class ShopItemBuyState {
  * Tools: counts what's in `inventory.tools`.
  * Decors: counts both `inventory.decors` (bought, not yet placed) AND
  *   `availableStorages` (placed in the garden as a storage structure).
- * Other shop types (seed, egg) are treated as always buyable — the API
+ * Other shop types (seed, egg) are treated as always buyable - the API
  * does not currently expose caps for them.
  */
 fun Session.buyState(itemId: String, shopType: String): ShopItemBuyState {

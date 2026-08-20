@@ -129,7 +129,7 @@ class RoomClient {
     private var cookie = ""
     private var userAgent = Constants.DEFAULT_UA
 
-    // Game state — managed by GameState
+    // Game state - managed by GameState
     val gameState = GameState()
 
     // Numbering for the QuinoaCommand envelope, re-seeded by every Welcome
@@ -682,7 +682,7 @@ class RoomClient {
     }
 
     /**
-     * Called when network becomes available again — skip the current retry delay
+     * Called when network becomes available again - skip the current retry delay
      * and reconnect immediately if we're in a retry cycle.
      */
     fun retryNow() {
@@ -710,7 +710,7 @@ class RoomClient {
 
     /**
      * Re-fetch the game version before reconnecting. If the fetcher fails or
-     * is null, fall back to the cached version — better to attempt a stale
+     * is null, fall back to the cached version - better to attempt a stale
      * reconnect than to skip retry entirely.
      */
     private suspend fun resolveFreshVersion(opts: ConnectOptions): String {

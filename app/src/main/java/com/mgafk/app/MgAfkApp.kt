@@ -27,7 +27,7 @@ class MgAfkApp : Application(), ImageLoaderFactory {
         // sound is the only one that plays). Notification channels are immutable
         // after creation, so a new id is required to change those attributes.
         const val CHANNEL_ALARMS = "mgafk_alarms_v2"
-        // Dedicated channel for the companion watchdog FGS notification — kept
+        // Dedicated channel for the companion watchdog FGS notification - kept
         // at IMPORTANCE_MIN so it stays collapsed and silent in the shade.
         const val CHANNEL_WATCHDOG = "mgafk_watchdog"
         // "Tap to resume" notifications. Own channel (separate from the loud
@@ -79,7 +79,7 @@ class MgAfkApp : Application(), ImageLoaderFactory {
             }
             .diskCache {
                 // 256 MB of persistent disk cache for sprite PNGs (base + composed).
-                // Stored in the app's internal cache dir — cleared with app data.
+                // Stored in the app's internal cache dir - cleared with app data.
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("sprite_cache"))
                     .maxSizeBytes(256L * 1024 * 1024)
@@ -114,7 +114,7 @@ class MgAfkApp : Application(), ImageLoaderFactory {
             description = "Shop items, pet hunger, weather alerts"
         }
 
-        // No sound or vibration on the channel itself — AlertNotifier owns the
+        // No sound or vibration on the channel itself - AlertNotifier owns the
         // sound (MediaPlayer with the user-chosen URI) and the vibration so
         // there's a single source of truth and no overlap with the channel.
         val alarmsChannel = NotificationChannel(

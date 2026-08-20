@@ -176,7 +176,7 @@ class AlertNotifier(private val context: Context) {
 
     /**
      * Fire a notification for a single pet ability proc, if that ability is
-     * enabled in the alert config. Always a (silent-capable) notification —
+     * enabled in the alert config. Always a (silent-capable) notification -
      * ability procs are notification-only, with no alarm/custom mode. Called
      * once per genuinely-new proc, so no dedup tracking is needed here.
      */
@@ -329,7 +329,7 @@ class AlertNotifier(private val context: Context) {
             val stream = java.net.URL(url).openStream()
             stream.use {
                 val options = BitmapFactory.Options().apply {
-                    inSampleSize = 2 // Half resolution — enough for notification icon
+                    inSampleSize = 2 // Half resolution - enough for notification icon
                     inPreferredConfig = Bitmap.Config.RGB_565 // 2 bytes/pixel instead of 4
                 }
                 BitmapFactory.decodeStream(it, null, options)

@@ -515,7 +515,7 @@ private fun AlarmCard(
         }.getOrNull() ?: "Custom"
     }
 
-    // Live "Silenced now" indicator — recompute every 30s.
+    // Live "Silenced now" indicator - recompute every 30s.
     var nowTick by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {

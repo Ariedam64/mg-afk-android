@@ -615,7 +615,7 @@ fun PetHutchCard(
     }
 }
 
-// ── Storage upgrade panel (PetHutch / SeedSilo — same upgrade pattern) ──
+// ── Storage upgrade panel (PetHutch / SeedSilo - same upgrade pattern) ──
 
 @Composable
 private fun StorageUpgradePanel(
@@ -1074,7 +1074,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
                 }
             }
         }
-        // Center content — STR goes below the name (top-right is reserved for the
+        // Center content - STR goes below the name (top-right is reserved for the
         // lock icon in the Pet Hutch card)
         Column(
             modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),

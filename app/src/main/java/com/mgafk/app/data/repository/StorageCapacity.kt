@@ -44,7 +44,7 @@ object StorageCapacity {
 
     /**
      * Can a *stackable* item (seed by species, decor by id) be added?
-     * If a slot for that id already exists the item merges in — always fits.
+     * If a slot for that id already exists the item merges in - always fits.
      * Otherwise we need a free slot.
      */
     fun canAddStackable(

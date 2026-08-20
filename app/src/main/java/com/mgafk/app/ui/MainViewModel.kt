@@ -142,7 +142,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            // Network just came back — force immediate retry on all reconnecting clients
+            // Network just came back - force immediate retry on all reconnecting clients
             clients.forEach { (_, client) -> client.retryNow() }
         }
     }
@@ -250,7 +250,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repo.setLastNotifiedVersion(release.tagName)
             }
         } catch (_: Exception) {
-            // Silent — don't crash the app over an update check
+            // Silent - don't crash the app over an update check
         }
     }
 
@@ -297,7 +297,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * (wantConnected=true). Called once after API + sprites are ready so the
      * WS handshake doesn't race with version lookups. connect() returns
      * immediately and runs the WS work inside viewModelScope, so launching
-     * them all back-to-back is safe — server-side rate-limit fallback is
+     * them all back-to-back is safe - server-side rate-limit fallback is
      * handled by [ReconnectConfig] anyway.
      */
     private fun autoReconnectPendingSessions() {
@@ -309,7 +309,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun startAfkService() {
         val app = getApplication<Application>()
-        // Watchdog is independent of the in-memory serviceRunning flag —
+        // Watchdog is independent of the in-memory serviceRunning flag -
         // scheduling is idempotent (KEEP policy) so it's safe to call every time.
         AfkWatchdogWorker.schedule(app)
         if (serviceRunning) return
@@ -330,7 +330,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!anyConnected && serviceRunning) {
             val app = getApplication<Application>()
             app.stopService(Intent(app, AfkService::class.java))
-            // Cancel the watchdog too — no live sessions, nothing to babysit.
+            // Cancel the watchdog too - no live sessions, nothing to babysit.
             AfkWatchdogWorker.cancel(app)
             serviceRunning = false
         }
@@ -401,7 +401,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Disconnect a session without stopping the foreground service even if
      * no other sessions remain connected. Used when launching [PlayActivity]
      * so the notification stays visible and the OS doesn't kill the process
-     * — restarting an FGS after returning from another activity is unreliable
+     * - restarting an FGS after returning from another activity is unreliable
      * on Android 14+ due to background-start restrictions.
      */
     fun disconnectKeepService(sessionId: String) {
@@ -412,7 +412,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         collectorJobs.remove(sessionId)?.cancel()
         stateCollector.reset(sessionId)
         clients[sessionId]?.disconnect()
-        // Bots are tied to the parent session — kill them when the user disconnects.
+        // Bots are tied to the parent session - kill them when the user disconnects.
         disconnectAllBots(sessionId)
         // Only clear wantConnected on an explicit user disconnect (stopServiceIfIdle=true).
         // For the PlayActivity flow (keepService=false) we want the auto-resume
@@ -670,7 +670,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pendingPurchaseJobs[key]?.cancel()
         pendingPurchaseJobs[key] = viewModelScope.launch {
             delay(5000)
-            // If we get here, server never confirmed — rollback
+            // If we get here, server never confirmed - rollback
             updateSession(sessionId) { s ->
                 val current = s.shops.find { it.type == shopType }
                 if (current != null) s.copy(shops = previousShops) else s
@@ -739,7 +739,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * streams patches (e.g. a pet eating an item briefly replaces the player slot), which
      * made the alert fire "0/1 items left" while the trough was actually full. Instead of
      * checking the just-received snapshot, wait a short moment for the state to settle and
-     * then evaluate the latest known trough — and only if the player actually owns a
+     * then evaluate the latest known trough - and only if the player actually owns a
      * FeedingTrough in that settled snapshot (an absent storage means an incomplete read,
      * not an empty trough).
      */
@@ -956,7 +956,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (slotIndex == null) { AppLog.w(TAG, "[FindTile] slotIndex is null"); return null }
         AppLog.d(TAG, "[FindTile] slotIndex=$slotIndex")
 
-        // Read map data — map lives in roomState, not gameState
+        // Read map data - map lives in roomState, not gameState
         val rs = client.gameState.roomState as? JsonObject
         val map = rs?.get("map") as? JsonObject
             ?: gs["map"] as? JsonObject
@@ -1315,7 +1315,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val pendingPotJobs = mutableMapOf<String, Job>()
 
-    /** Pot a plant — moves it from garden to inventory. Requires a PlanterPot tool. */
+    /** Pot a plant - moves it from garden to inventory. Requires a PlanterPot tool. */
     fun potPlant(sessionId: String, slot: Int) {
         val actions = clients[sessionId]?.actions ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
@@ -1909,7 +1909,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val slots = data["slots"] as? JsonArray ?: continue
                     for ((index, slotEl) in slots.withIndex()) {
                         val slot = slotEl as? JsonObject ?: continue
-                        // Prefer the slot's own slotId — that's what the server
+                        // Prefer the slot's own slotId - that's what the server
                         // expects back in HarvestCrop.slotsIndex and
                         // CropCleanser.growSlotIdx. Fall back to the array
                         // position only if the field is missing.
@@ -1931,7 +1931,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                 }
-                // Server confirmed garden change — cancel pending plant/water rollbacks
+                // Server confirmed garden change - cancel pending plant/water rollbacks
                 pendingPlantJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingPlantJobs.remove(key)?.cancel()
                 }
@@ -2099,7 +2099,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
-                // Server confirmed — cancel any pending rollbacks
+                // Server confirmed - cancel any pending rollbacks
                 pendingTroughJobs.values.forEach { it.cancel() }
                 pendingTroughJobs.clear()
                 pendingFeedJobs.values.forEach { it.cancel() }
@@ -2164,7 +2164,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         maturedAt = data["maturedAt"]?.jsonPrimitive?.longOrNull ?: 0L,
                     )
                 }
-                // Server confirmed egg change — cancel pending hatch/grow rollbacks
+                // Server confirmed egg change - cancel pending hatch/grow rollbacks
                 pendingHatchJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingHatchJobs.remove(key)?.cancel()
                 }
@@ -2203,7 +2203,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         secondsUntilRestock = shop.secondsUntilRestock,
                     )
                 }
-                // Server confirmed — cancel any pending rollback jobs for this session
+                // Server confirmed - cancel any pending rollback jobs for this session
                 pendingPurchaseJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
                     pendingPurchaseJobs.remove(key)?.cancel()
                 }
@@ -2261,7 +2261,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Fire an immediate collect-state for one session (e.g. right after it
      * connects). The userSlot isn't hydrated yet at connect time, so retry
-     * briefly until [StateCollector.tick] actually sends — that's when the slot
+     * briefly until [StateCollector.tick] actually sends - that's when the slot
      * (coins/garden/inventory) has loaded. The minute tick is the backstop.
      */
     private fun collectStateNow(sessionId: String) {

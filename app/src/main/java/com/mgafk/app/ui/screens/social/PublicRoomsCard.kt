@@ -75,7 +75,7 @@ fun PublicRoomsCard(
         current + others
     }
 
-    // Track which room is being joined — clear when connected
+    // Track which room is being joined - clear when connected
     var joiningRoomId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(isConnected, currentRoomId) {
         if (isConnected && joiningRoomId != null) {
@@ -206,7 +206,7 @@ private fun RoomCard(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatars — bigger, properly round, nicely spaced
+        // Avatars - bigger, properly round, nicely spaced
         Row(
             horizontalArrangement = Arrangement.spacedBy((-8).dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Native HTTP bridge exposed to the [PlayActivity] WebView so the Gemini
  * userscript can fire cross-origin requests without being blocked by browser
- * CORS — same role as Tampermonkey's `GM_xmlhttpRequest`.
+ * CORS - same role as Tampermonkey's `GM_xmlhttpRequest`.
  *
  * JS side calls `MgAfkBridge.httpRequest(method, url, headersJson, body, callbackId)`
  * synchronously, which dispatches an OkHttp call on the IO dispatcher and, on

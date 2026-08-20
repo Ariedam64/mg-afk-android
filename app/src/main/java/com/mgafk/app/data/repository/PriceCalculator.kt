@@ -174,10 +174,10 @@ object PriceCalculator {
     /**
      * Calculate the Magic Dust sell value of a pet.
      * Formula: floor(100 × rarityMult × hatchMult × mutationMult × scaleMult)
-     *   rarityMult   — from pet species rarity
-     *   hatchMult    — from pet's hatch chance in its source egg
-     *   mutationMult — Rainbow=50, Gold=25, else 1
-     *   scaleMult    — (currentStrength × targetScale) / maxStrength
+     *   rarityMult   - from pet species rarity
+     *   hatchMult    - from pet's hatch chance in its source egg
+     *   mutationMult - Rainbow=50, Gold=25, else 1
+     *   scaleMult    - (currentStrength × targetScale) / maxStrength
      */
     fun calculatePetDustValue(
         petSpecies: String,
@@ -288,7 +288,7 @@ object PriceCalculator {
 
     /**
      * Full number with thousand separators (e.g. 1,234,567). Use in detail popups
-     * where there's enough room — no rounding, no K/M/B suffix.
+     * where there's enough room - no rounding, no K/M/B suffix.
      */
     fun formatFull(value: Long): String {
         val sign = if (value < 0) "-" else ""

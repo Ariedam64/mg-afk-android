@@ -72,13 +72,13 @@ object MgApi {
         val coinsToFullyReplenishHunger: Int? = null,
         // Decor-only (PetHutch, SeedSilo, DecorShed): capacity upgrade tiers
         val upgrades: List<DecorUpgrade> = emptyList(),
-        // Shop buyability — owning >= 1 of a one-time-purchase item blocks further buys.
+        // Shop buyability - owning >= 1 of a one-time-purchase item blocks further buys.
         val isOneTimePurchase: Boolean = false,
-        // Shop buyability — null means no per-item stack cap.
+        // Shop buyability - null means no per-item stack cap.
         val maxInventoryQuantity: Int? = null,
         // Which shops the item is eligible to spawn in. Capitalized values
         // ("Seed", "Dawn", "Egg"...). Empty when the API doesn't expose it
-        // (older entries) — treat as the default shop for the category.
+        // (older entries) - treat as the default shop for the category.
         val eligibleShops: List<String> = emptyList(),
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
@@ -229,7 +229,7 @@ object MgApi {
     /**
      * URL for a composed sprite: base sprite + mutation layers rendered server-side.
      * `key` is the atlas key (e.g. `sprite/pet/Bunny`, `sprite/plant/MoonCelestialCrop`).
-     * Returns `null` if `mutations` is empty — callers should fall back to the plain sprite URL.
+     * Returns `null` if `mutations` is empty - callers should fall back to the plain sprite URL.
      */
     fun composedSpriteUrl(key: String, mutations: List<String>): String? {
         if (mutations.isEmpty()) return null

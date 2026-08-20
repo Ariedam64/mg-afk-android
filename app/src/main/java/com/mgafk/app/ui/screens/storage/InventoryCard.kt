@@ -368,7 +368,7 @@ fun InventoryCard(
         }
     }
 
-    // Seed detail dialog — look up live data from inventory so quantity updates in real-time
+    // Seed detail dialog - look up live data from inventory so quantity updates in real-time
     selectedSeedSpecies?.let { species ->
         val liveSeed = inventory.seeds.find { it.species == species }
         if (liveSeed != null) {
@@ -391,12 +391,12 @@ fun InventoryCard(
                 onDismiss = { selectedSeedSpecies = null },
             )
         } else {
-            // Seed was fully consumed — close dialog
+            // Seed was fully consumed - close dialog
             selectedSeedSpecies = null
         }
     }
 
-    // Egg detail dialog — live lookup
+    // Egg detail dialog - live lookup
     selectedEggId?.let { eggId ->
         val liveEgg = inventory.eggs.find { it.eggId == eggId }
         if (liveEgg != null) {
@@ -414,7 +414,7 @@ fun InventoryCard(
         }
     }
 
-    // Plant detail dialog — live lookup
+    // Plant detail dialog - live lookup
     selectedPlantId?.let { plantId ->
         val livePlant = inventory.plants.find { it.id == plantId }
         if (livePlant != null) {
@@ -1019,7 +1019,7 @@ private fun PlantUnpotDialog(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Crop slots list — capped so the "Plant in Garden" button stays visible
+            // Crop slots list - capped so the "Plant in Garden" button stays visible
             // on plants with many slots (e.g. 8-slot FavaBean).
             if (plant.slots.isNotEmpty()) {
                 Column(

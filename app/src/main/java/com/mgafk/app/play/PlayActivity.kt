@@ -100,7 +100,7 @@ class PlayActivity : Activity() {
             }
             cm.setAcceptThirdPartyCookies(this, true)
             // Native HTTP bridge: bypasses CORS for cross-origin requests Gemini
-            // makes to e.g. mg-api.ariedam.fr — same role as GM_xmlhttpRequest.
+            // makes to e.g. mg-api.ariedam.fr - same role as GM_xmlhttpRequest.
             addJavascriptInterface(WebBridge(this, scope), "MgAfkBridge")
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
@@ -149,7 +149,7 @@ class PlayActivity : Activity() {
         if (injectedForCurrentLoad) return
         injectedForCurrentLoad = true
         // Parse `// @version X.Y.Z` out of the userscript's metadata block so
-        // GM_info.script.version matches what we actually injected — that's what
+        // GM_info.script.version matches what we actually injected - that's what
         // Gemini's updater compares against to decide if it's up-to-date.
         val version = USERSCRIPT_VERSION_REGEX.find(script)?.groupValues?.get(1) ?: "0.0.0"
         val gmInfo = """

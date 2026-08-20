@@ -187,7 +187,7 @@ fun PetTeamCard(
     val allCandidates = remember(activePets, inventoryPets, hutchPets) {
         buildCandidateList(activePets, inventoryPets, hutchPets)
     }
-    // Lookup for current mutations by pet id — used by team rows to render composed
+    // Lookup for current mutations by pet id - used by team rows to render composed
     // sprites with each pet's actual mutations (the team itself only stores species).
     val mutationsByPetId = remember(allCandidates) {
         allCandidates.associate { it.id to it.mutations }
@@ -357,7 +357,7 @@ private fun AddTeamTile(onClick: () -> Unit) {
 }
 
 // ══════════════════════════════════════════
-// Team row — single line: drag | sprites | name | badge | edit | delete
+// Team row - single line: drag | sprites | name | badge | edit | delete
 // ══════════════════════════════════════════
 
 @Composable
@@ -397,7 +397,7 @@ private fun TeamRow(
             modifier = dragModifier.size(20.dp),
         )
 
-        // Pet sprites (only filled slots, with spacing) — composed with each pet's
+        // Pet sprites (only filled slots, with spacing) - composed with each pet's
         // current mutations when available.
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             filledSlots.forEach { (species, petId) ->
@@ -754,7 +754,7 @@ private fun PetPickerDialog(
     }
 }
 
-/** Pet tile in picker — same visual style as PetHutchCard. */
+/** Pet tile in picker - same visual style as PetHutchCard. */
 @Composable
 private fun PickerPetTile(
     candidate: TeamPetCandidate,

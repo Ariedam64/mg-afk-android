@@ -253,7 +253,7 @@ fun MainScreen(
             }
         }
 
-        // ── Loading overlay — visible until ALL sections are composed ──
+        // ── Loading overlay - visible until ALL sections are composed ──
         AnimatedVisibility(
             visible = !allReady,
             enter = fadeIn(),
@@ -412,7 +412,7 @@ private fun DrawerContent(
                 }
         }
 
-        // Mini Games, Alerts, Settings & Debug — pinned at bottom
+        // Mini Games, Alerts, Settings & Debug - pinned at bottom
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(4.dp))
         DrawerItem(
@@ -576,7 +576,7 @@ private fun SectionContent(
                 gameHost = session.gameUrl,
                 hostPlayerId = session.hostPlayerId,
             )
-            // Populate hidden for now — code kept so we can flip this back on
+            // Populate hidden for now - code kept so we can flip this back on
             // without touching MainViewModel / BotClient.
             @Suppress("KotlinConstantConditions")
             if (POPULATE_ENABLED) {
@@ -776,7 +776,7 @@ private fun SectionContent(
                 onToggle = { key, enabled ->
                     viewModel.updateAlerts { config ->
                         val items = config.items.toMutableMap()
-                        // Preserve any existing mode — only flip the enabled flag.
+                        // Preserve any existing mode - only flip the enabled flag.
                         val current = items[key] ?: AlertItem()
                         items[key] = current.copy(enabled = enabled)
                         config.copy(items = items)

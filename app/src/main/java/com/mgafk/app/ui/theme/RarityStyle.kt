@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// Shared rarity palette — game-authentic colors (mirrors Gemini's --rarity-*).
+// Shared rarity palette - game-authentic colors (mirrors Gemini's --rarity-*).
 val RarityCommonColor = Color(0xFFE7E7E7)
 val RarityUncommonColor = Color(0xFF67BD4D)
 val RarityRareColor = Color(0xFF0071C6)
@@ -32,7 +32,7 @@ val RarityDivineColor = Color(0xFFFF7835)
 // or border so the animated gradient renders instead.
 val RarityCelestialColor = Color(0xFFFF00FF)
 
-// Animated Celestial gradient — same hues as Gemini's badge, but the stops
+// Animated Celestial gradient - same hues as Gemini's badge, but the stops
 // are re-weighted to favour blue + violet (which occupy ~85% of the band)
 // with only a thin gold highlight near the end.
 private val CelestialC0 = Color(0xFF00B4D8) // cyan-blue

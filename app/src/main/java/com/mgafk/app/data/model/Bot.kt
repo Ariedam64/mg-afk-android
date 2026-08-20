@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 enum class BotStatus { CONNECTING, CONNECTED, RECONNECTING, DISCONNECTED }
 
 /**
- * Anonymous user style sent on the guest WS URL — same shape the game's
+ * Anonymous user style sent on the guest WS URL - same shape the game's
  * browser client sends when an unauthenticated user joins a room.
  */
 @Serializable
