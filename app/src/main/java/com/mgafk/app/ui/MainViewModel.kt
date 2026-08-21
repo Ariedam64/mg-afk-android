@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.repository.GardenTiles
 import com.mgafk.app.data.model.BotSnapshot
 import com.mgafk.app.data.model.BotStatus
 import com.mgafk.app.data.websocket.BotClient
@@ -1559,31 +1560,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Compute the number of free garden tiles by finding gaps in tileObjects keys.
-     * Keys in tileObjects are the occupied tile indices (0..maxKey).
-     * Free tiles = indices in 0..maxKey that are NOT in tileObjects.
-     */
+    /** Tile indices currently holding a plant/egg/decor, or null if the garden isn't known yet.
+     * Empty tiles have no entry in tileObjects at all, so this set says nothing about the
+     * garden's size - that's [GardenTiles.DIRT_TILES_PER_GARDEN]. */
+    private fun occupiedPlantTiles(client: RoomClient): Set<Int>? {
+        val me = client.gameState.getPlayer(client.playerId) ?: return null
+        val tiles = me.getGardenTiles() ?: return null
+        return tiles.keys.mapNotNull { it.toIntOrNull() }.toSet()
+    }
+
+    /** Number of empty tiles left in the player's garden. */
     private fun computeFreePlantTileCount(client: RoomClient): Int {
-        val me = client.gameState.getPlayer(client.playerId) ?: return 0
-        val tiles = me.getGardenTiles() ?: return 0
-        val occupiedKeys = tiles.keys.mapNotNull { it.toIntOrNull() }.toSet()
-        if (occupiedKeys.isEmpty()) return 0
-        val maxKey = occupiedKeys.max()
-        return (maxKey + 1) - occupiedKeys.size
+        val occupied = occupiedPlantTiles(client) ?: return 0
+        return GardenTiles.freeTileCount(occupied)
     }
 
     /** Find the first tile index not occupied by a garden object. */
     private fun findFirstFreePlantTile(client: RoomClient): Int? {
-        val me = client.gameState.getPlayer(client.playerId) ?: return null
-        val tiles = me.getGardenTiles() ?: return null
-        val occupiedKeys = tiles.keys.mapNotNull { it.toIntOrNull() }.toSet()
-        if (occupiedKeys.isEmpty()) return null
-        val maxKey = occupiedKeys.max()
-        for (i in 0..maxKey) {
-            if (i !in occupiedKeys) return i
-        }
-        return null
+        val occupied = occupiedPlantTiles(client) ?: return null
+        return GardenTiles.firstFreeTile(occupied)
     }
 
     // ---- Pet Teams ----
