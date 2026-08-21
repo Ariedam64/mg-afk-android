@@ -870,14 +870,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Swap an active pet with one from inventory or hutch.
-     * If the target pet is in the hutch, retrieve it first, then swap, then store the old pet back.
+     * If the target pet is in the hutch, do it atomically with SwapPetFromStorage
+     * (single message, capacity-neutral) instead of retrieve+swap+store.
      */
     fun swapPet(sessionId: String, activePetId: String, targetPetId: String, targetIsInHutch: Boolean) {
         val client = clients[sessionId] ?: return
         val actions = client.actions
 
         if (targetIsInHutch) {
-            actions.retrieveItemFromStorage(itemId = targetPetId, storageId = "PetHutch")
+            actions.swapPetFromStorage(petSlotId = activePetId, storagePetId = targetPetId, storageId = "PetHutch")
+            return
         }
 
         actions.swapPet(petSlotId = activePetId, petInventoryId = targetPetId)
