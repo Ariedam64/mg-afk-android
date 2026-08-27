@@ -37,19 +37,31 @@ class GameActions(
     private fun room(type: String, params: JsonObject = EMPTY_OBJ) =
         send(ROOM_SCOPE, type, params)
 
+    /**
+     * Send a Quinoa gameplay action. Every one of them now travels inside the
+     * `QuinoaCommand` envelope, which is what feeds the server's
+     * prediction/rollback system. The flat `{scopePath, type, ...params}` form
+     * is still honoured but the game devs are removing it.
+     *
+     * The two Quinoa messages that are NOT commands go through [rawGame].
+     */
     private fun game(type: String, params: JsonObject = EMPTY_OBJ) =
+        quinoaCommand(type, params)
+
+    /**
+     * The Quinoa messages that never were commands: `Ping` has its own Pong
+     * reply and `PlayerPosition` feeds the movement snapshot channel, so
+     * neither goes near the command pipeline. Wrapping one would break it in
+     * the other direction.
+     */
+    private fun rawGame(type: String, params: JsonObject = EMPTY_OBJ) =
         send(GAME_SCOPE, type, params)
 
     /**
-     * Send a command through the `QuinoaCommand` envelope the game now uses for
-     * a handful of actions - the ones it routes through its RPC sender rather
-     * than its plain message sender.
+     * Wrap [type] in the envelope the server expects:
+     * `{scopePath, type: "QuinoaCommand", requestId, commandSequence, command}`.
      *
-     * Exactly five commands take this path - `HarvestCrop`, `PotPlant`,
-     * `PurchaseShopItem`, plus `Preserve` and `EquipPetCosmetic` which this
-     * class doesn't expose yet. Every other action stays a plain
-     * `{scopePath, type, ...params}` message via [game]. Sending a wrapped
-     * command plain gets it rejected with
+     * Sending a command flat gets it rejected with
      * `{"type":"QuinoaCommandResult","commandType":"unknown","ok":false,"code":"invalid_message"}`
      * - the server can't even parse the command out, so the action silently
      * does nothing.
@@ -77,7 +89,7 @@ class GameActions(
     // =====================
 
     fun ping(id: Long = System.currentTimeMillis()) =
-        game("Ping", obj("id" to JsonPrimitive(id)))
+        rawGame("Ping", obj("id" to JsonPrimitive(id)))
 
     // The web client names this field `gameName`, not `gameId`.
     fun setSelectedGame(gameName: String = GAME) =
@@ -86,7 +98,9 @@ class GameActions(
     fun voteForGame(gameName: String = GAME) =
         room("VoteForGame", obj("gameName" to JsonPrimitive(gameName)))
 
-    fun restartGame() = room("RestartGame")
+    // Room-scoped, and it names the game to restart in `name` (not `gameName`).
+    fun restartGame(gameName: String = GAME) =
+        room("RestartGame", obj("name" to JsonPrimitive(gameName)))
 
     fun checkWeatherStatus() = game("CheckWeatherStatus")
 
@@ -103,8 +117,8 @@ class GameActions(
     fun wish(itemId: String) =
         game("Wish", obj("itemId" to JsonPrimitive(itemId)))
 
-    fun kickPlayer(playerId: String) =
-        room("KickPlayer", obj("playerId" to JsonPrimitive(playerId)))
+    fun kickPlayer(targetPlayerId: String) =
+        room("KickPlayer", obj("targetPlayerId" to JsonPrimitive(targetPlayerId)))
 
     fun setPlayerData(name: String? = null, cosmetic: JsonElement? = null) {
         val params = buildJsonObject {
@@ -114,16 +128,17 @@ class GameActions(
         room("SetPlayerData", params)
     }
 
-    fun usurpHost() = game("UsurpHost")
+    fun usurpHost() = room("UsurpHost")
 
-    fun reportSpeakingStart() = game("ReportSpeakingStart")
+    // Voice-chat signalling, not gameplay: absent from the command pipeline.
+    fun reportSpeakingStart() = rawGame("ReportSpeakingStart")
 
     // =====================
     // Movement
     // =====================
 
     fun move(x: Double, y: Double) =
-        game("PlayerPosition", obj("position" to position(x, y)))
+        rawGame("PlayerPosition", obj("position" to position(x, y)))
 
     fun teleport(x: Double, y: Double) =
         game("Teleport", obj("position" to position(x, y)))
@@ -167,7 +182,7 @@ class GameActions(
                 put(idField, JsonPrimitive(itemId))
             })
         }
-        quinoaCommand("PurchaseShopItem", params)
+        game("PurchaseShopItem", params)
     }
 
     // =====================
@@ -185,7 +200,7 @@ class GameActions(
             put("slot", JsonPrimitive(slot))
             if (slotsIndex != null) put("slotsIndex", JsonPrimitive(slotsIndex))
         }
-        quinoaCommand("HarvestCrop", params)
+        game("HarvestCrop", params)
     }
 
     fun sellAllCrops() = game("SellAllCrops")
@@ -194,7 +209,7 @@ class GameActions(
         game("PlantGardenPlant", obj("slot" to JsonPrimitive(slot), "itemId" to JsonPrimitive(itemId)))
 
     fun potPlant(slot: Int) =
-        quinoaCommand("PotPlant", obj("slot" to JsonPrimitive(slot)))
+        game("PotPlant", obj("slot" to JsonPrimitive(slot)))
 
     fun mutationPotion(tileObjectIdx: Int, growSlotIdx: Int, mutation: String) =
         game("MutationPotion", obj(
@@ -275,8 +290,9 @@ class GameActions(
     fun movePetSlot(movePetSlotId: String, toPetSlotIndex: Int) =
         game("MovePetSlot", obj("movePetSlotId" to JsonPrimitive(movePetSlotId), "toPetSlotIndex" to JsonPrimitive(toPetSlotIndex)))
 
+    // The pet counterpart of [move]: a position snapshot, not a command.
     fun petPositions(petPositions: JsonElement) =
-        game("PetPositions", obj("petPositions" to petPositions))
+        rawGame("PetPositions", obj("petPositions" to petPositions))
 
     fun growEgg(slot: Int, eggId: String) =
         game("GrowEgg", obj("slot" to JsonPrimitive(slot), "eggId" to JsonPrimitive(eggId)))
@@ -297,11 +313,12 @@ class GameActions(
     fun toggleLockItem(itemId: String) =
         game("ToggleLockItem", obj("itemId" to JsonPrimitive(itemId)))
 
-    fun dropObject(slotIndex: Int) =
-        game("DropObject", obj("slotIndex" to JsonPrimitive(slotIndex)))
+    // Both act on whatever the player is currently holding or standing on, so
+    // the game sends them without any parameter - an extra field would only get
+    // the command rejected as malformed.
+    fun dropObject() = game("DropObject")
 
-    fun pickupObject(objectId: String) =
-        game("PickupObject", obj("objectId" to JsonPrimitive(objectId)))
+    fun pickupObject() = game("PickupObject")
 
     fun putItemInStorage(itemId: String, storageId: String, toStorageIndex: Int? = null, quantity: Int? = null) {
         val params = buildJsonObject {
