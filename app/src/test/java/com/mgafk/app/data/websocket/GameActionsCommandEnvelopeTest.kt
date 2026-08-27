@@ -32,6 +32,8 @@ class GameActionsCommandEnvelopeTest {
 
     private fun lastMessage() = json.parseToJsonElement(sent.last()).jsonObject
 
+    private fun lastCommand() = lastMessage()["command"]!!.jsonObject
+
     private fun assertWrapped(commandType: String) {
         val msg = lastMessage()
         assertEquals("QuinoaCommand", msg["type"]?.jsonPrimitive?.contentOrNull)
@@ -154,6 +156,37 @@ class GameActionsCommandEnvelopeTest {
         val msg = lastMessage()
         assertEquals("KickPlayer", msg["type"]?.jsonPrimitive?.contentOrNull)
         assertEquals("p_123", msg["targetPlayerId"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    @Test fun `actions added from the live bundle carry its field names`() {
+        actions.preserve(itemId = "i1", growSlotIdx = 2)
+        assertWrapped("Preserve")
+        assertEquals(2, lastCommand()["growSlotIdx"]?.jsonPrimitive?.intOrNull)
+
+        actions.swapItemWithStorage(storageId = "PetHutch", inventoryItemId = "i1", storageItemId = "s1")
+        assertWrapped("SwapItemWithStorage")
+        assertEquals("s1", lastCommand()["storageItemId"]?.jsonPrimitive?.contentOrNull)
+
+        actions.applyPetTeam(teamId = "t1")
+        assertWrapped("ApplyPetTeam")
+        assertEquals("t1", lastCommand()["teamId"]?.jsonPrimitive?.contentOrNull)
+
+        actions.savePetTeam(teamId = "t1", name = "A", petIds = listOf("p1", "p2"))
+        assertWrapped("SavePetTeam")
+        assertEquals(2, lastCommand()["petIds"]?.jsonArray?.size)
+
+        actions.equipPetCosmetic(petItemId = "p1", slotCategory = "Hat", cosmeticId = "c1")
+        assertWrapped("EquipPetCosmetic")
+        assertEquals("Hat", lastCommand()["slotCategory"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    @Test fun `markChatRead is room scoped`() {
+        actions.markChatRead(seq = 12)
+
+        val msg = lastMessage()
+        assertEquals("MarkChatRead", msg["type"]?.jsonPrimitive?.contentOrNull)
+        assertEquals(listOf("Room"), msg["scopePath"]?.jsonArray?.map { it.jsonPrimitive.content })
+        assertEquals(12, msg["seq"]?.jsonPrimitive?.intOrNull)
     }
 
     @Test fun `sequence numbers stay contiguous across wrapped commands`() {

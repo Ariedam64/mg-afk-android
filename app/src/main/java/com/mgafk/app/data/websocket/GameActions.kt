@@ -130,8 +130,8 @@ class GameActions(
 
     fun usurpHost() = room("UsurpHost")
 
-    // Voice-chat signalling, not gameplay: absent from the command pipeline.
-    fun reportSpeakingStart() = rawGame("ReportSpeakingStart")
+    fun markChatRead(seq: Int) =
+        room("MarkChatRead", obj("seq" to JsonPrimitive(seq)))
 
     // =====================
     // Movement
@@ -227,6 +227,24 @@ class GameActions(
     fun removeGardenObject(slot: Int, slotType: String) =
         game("RemoveGardenObject", obj("slot" to JsonPrimitive(slot), "slotType" to JsonPrimitive(slotType)))
 
+    /** Turns the harvested crop [itemId] into a preserve at the Preservation Station. */
+    fun preserve(itemId: String, growSlotIdx: Int) =
+        game("Preserve", obj("itemId" to JsonPrimitive(itemId), "growSlotIdx" to JsonPrimitive(growSlotIdx)))
+
+    /** Puts a harvested crop on display on a garden or boardwalk tile. */
+    fun displayCrop(tileType: String, localTileIndex: Int, itemId: String) =
+        game("DisplayCrop", obj(
+            "tileType" to JsonPrimitive(tileType),
+            "localTileIndex" to JsonPrimitive(localTileIndex),
+            "itemId" to JsonPrimitive(itemId),
+        ))
+
+    fun pickupDisplayedCrop(tileType: String, localTileIndex: Int) =
+        game("PickupDisplayedCrop", obj(
+            "tileType" to JsonPrimitive(tileType),
+            "localTileIndex" to JsonPrimitive(localTileIndex),
+        ))
+
     // =====================
     // Decor
     // =====================
@@ -268,6 +286,29 @@ class GameActions(
     fun sellPet(itemId: String) =
         game("SellPet", obj("itemId" to JsonPrimitive(itemId)))
 
+    /** Consumes one XP Potion to level [petItemId] up. */
+    fun xpPotion(petItemId: String) =
+        game("XPPotion", obj("petItemId" to JsonPrimitive(petItemId)))
+
+    /** Triggers the Thundercharger's ability at [x]/[y] (tile-grid coords). Requires riding
+     * [petItemId] and being off cooldown. */
+    fun thundercharge(petItemId: String, x: Double, y: Double) =
+        game("Thundercharge", obj(
+            "petItemId" to JsonPrimitive(petItemId),
+            "position" to position(x, y),
+        ))
+
+    /** Asks nearby pets to greet the player at [x]/[y]. */
+    fun requestPetGreet(x: Double, y: Double) =
+        game("RequestPetGreet", obj("position" to position(x, y)))
+
+    fun equipPetCosmetic(petItemId: String, slotCategory: String, cosmeticId: String) =
+        game("EquipPetCosmetic", obj(
+            "petItemId" to JsonPrimitive(petItemId),
+            "slotCategory" to JsonPrimitive(slotCategory),
+            "cosmeticId" to JsonPrimitive(cosmeticId),
+        ))
+
     fun upgradePetHutch() = game("UpgradePetHutch")
 
     fun upgradeSeedSilo() = game("UpgradeSeedSilo")
@@ -290,15 +331,37 @@ class GameActions(
     fun movePetSlot(movePetSlotId: String, toPetSlotIndex: Int) =
         game("MovePetSlot", obj("movePetSlotId" to JsonPrimitive(movePetSlotId), "toPetSlotIndex" to JsonPrimitive(toPetSlotIndex)))
 
-    // The pet counterpart of [move]: a position snapshot, not a command.
-    fun petPositions(petPositions: JsonElement) =
-        rawGame("PetPositions", obj("petPositions" to petPositions))
-
     fun growEgg(slot: Int, eggId: String) =
         game("GrowEgg", obj("slot" to JsonPrimitive(slot), "eggId" to JsonPrimitive(eggId)))
 
     fun hatchEgg(slot: Int) =
         game("HatchEgg", obj("slot" to JsonPrimitive(slot)))
+
+    // =====================
+    // Pet teams
+    // =====================
+
+    fun savePetTeam(teamId: String, name: String, petIds: List<String>) =
+        game("SavePetTeam", obj(
+            "teamId" to JsonPrimitive(teamId),
+            "name" to JsonPrimitive(name),
+            "petIds" to buildJsonArray { petIds.forEach { add(JsonPrimitive(it)) } },
+        ))
+
+    fun applyPetTeam(teamId: String) =
+        game("ApplyPetTeam", obj("teamId" to JsonPrimitive(teamId)))
+
+    fun deletePetTeam(teamId: String) =
+        game("DeletePetTeam", obj("teamId" to JsonPrimitive(teamId)))
+
+    fun movePetTeam(movePetTeamId: String, toPetTeamIndex: Int) =
+        game("MovePetTeam", obj(
+            "movePetTeamId" to JsonPrimitive(movePetTeamId),
+            "toPetTeamIndex" to JsonPrimitive(toPetTeamIndex),
+        ))
+
+    fun setPetTeamEmblem(teamId: String, emblem: String) =
+        game("SetPetTeamEmblem", obj("teamId" to JsonPrimitive(teamId), "emblem" to JsonPrimitive(emblem)))
 
     // =====================
     // Inventory / Storage
@@ -347,6 +410,15 @@ class GameActions(
             "toStorageIndex" to JsonPrimitive(toStorageIndex),
         ))
 
+    /** Exchanges an inventory item for a stored one in a single action, which keeps both
+     * capacities unchanged (unlike a retrieve followed by a put). */
+    fun swapItemWithStorage(storageId: String, inventoryItemId: String, storageItemId: String) =
+        game("SwapItemWithStorage", obj(
+            "storageId" to JsonPrimitive(storageId),
+            "inventoryItemId" to JsonPrimitive(inventoryItemId),
+            "storageItemId" to JsonPrimitive(storageItemId),
+        ))
+
     fun logItems() = game("LogItems")
 
     // =====================
@@ -356,6 +428,8 @@ class GameActions(
     fun throwSnowball() = game("ThrowSnowball")
 
     fun checkFriendBonus() = game("CheckFriendBonus")
+
+    fun quinoaTutorialSkipped() = game("QuinoaTutorialSkipped")
 
     // =====================
     // Helpers
