@@ -15,15 +15,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Every Quinoa gameplay action now travels inside a `QuinoaCommand` envelope
- * carrying a requestId and a contiguous `commandSequence` - that pair is what
- * feeds the server's prediction/rollback system. The flat
- * `{scopePath, type, ...params}` form is still honoured but is being removed.
+ * Quinoa gameplay actions travel inside a `QuinoaCommand` envelope carrying a
+ * requestId and a contiguous `commandSequence` - that pair is what feeds the
+ * server's prediction/rollback system.
  *
- * Two exceptions stay flat: `Ping` has its own Pong reply and `PlayerPosition`
- * feeds the movement snapshot channel, neither goes through the command
- * pipeline. Room-scoped messages (Chat, VoteForGame, RestartGame, ...) are not
- * Quinoa commands at all and are never wrapped.
+ * Not all of them, though: the game is migrating its messages one release at a
+ * time, and what it still sends flat has to stay flat here too (see
+ * GameActions.RAW_MESSAGE_TYPES). Room-scoped messages (Chat, VoteForGame,
+ * RestartGame, ...) are not Quinoa commands at all and are never wrapped.
  */
 class GameActionsCommandEnvelopeTest {
 
@@ -114,9 +113,6 @@ class GameActionsCommandEnvelopeTest {
         actions.feedPet(petItemId = "pet_1", cropItemId = "crop_1")
         assertWrapped("FeedPet")
 
-        actions.teleport(x = 10.0, y = 20.0)
-        assertWrapped("Teleport")
-
         actions.sellAllCrops()
         assertWrapped("SellAllCrops")
 
@@ -130,23 +126,71 @@ class GameActionsCommandEnvelopeTest {
         assertWrapped("GrowEgg")
     }
 
+    private fun assertFlat(type: String) {
+        val msg = lastMessage()
+        assertEquals(type, msg["type"]?.jsonPrimitive?.contentOrNull)
+        assertEquals(
+            listOf("Room", "Quinoa"),
+            msg["scopePath"]?.jsonArray?.map { it.jsonPrimitive.content },
+        )
+        assertNull(msg["command"])
+        assertNull(msg["commandSequence"])
+    }
+
     @Test fun `ping stays a plain message`() {
         actions.ping(id = 1234L)
 
-        val msg = lastMessage()
-        assertEquals("Ping", msg["type"]?.jsonPrimitive?.contentOrNull)
-        assertEquals(1234L, msg["id"]?.jsonPrimitive?.longOrNull)
-        assertNull(msg["command"])
-        assertNull(msg["commandSequence"])
+        assertFlat("Ping")
+        assertEquals(1234L, lastMessage()["id"]?.jsonPrimitive?.longOrNull)
     }
 
     @Test fun `player position stays a plain message`() {
         actions.move(x = 5.0, y = 6.0)
 
-        val msg = lastMessage()
-        assertEquals("PlayerPosition", msg["type"]?.jsonPrimitive?.contentOrNull)
-        assertNull(msg["command"])
-        assertNull(msg["commandSequence"])
+        assertFlat("PlayerPosition")
+    }
+
+    /**
+     * The game has not migrated these to the envelope yet, so neither do we - wrapping one
+     * would bet on the server having registered it as a command. Re-derive from the bundle
+     * when the game moves them (see GameActions.RAW_MESSAGE_TYPES).
+     */
+    @Test fun `actions the game still sends flat are not wrapped`() {
+        actions.teleport(x = 1.0, y = 2.0)
+        assertFlat("Teleport")
+
+        actions.setSelectedItem(itemIndex = 3)
+        assertFlat("SetSelectedItem")
+
+        actions.checkWeatherStatus()
+        assertFlat("CheckWeatherStatus")
+
+        actions.checkFriendBonus()
+        assertFlat("CheckFriendBonus")
+
+        actions.throwSnowball()
+        assertFlat("ThrowSnowball")
+
+        actions.quinoaTutorialSkipped()
+        assertFlat("QuinoaTutorialSkipped")
+
+        actions.requestPetGreet(x = 1.0, y = 2.0)
+        assertFlat("RequestPetGreet")
+
+        actions.dropObject()
+        assertFlat("DropObject")
+
+        actions.pickupObject()
+        assertFlat("PickupObject")
+
+        actions.upgradePetHutch()
+        assertFlat("UpgradePetHutch")
+
+        actions.upgradeSeedSilo()
+        assertFlat("UpgradeSeedSilo")
+
+        actions.upgradeDecorShed()
+        assertFlat("UpgradeDecorShed")
     }
 
     @Test fun `room scoped messages are never wrapped`() {
@@ -233,6 +277,7 @@ class GameActionsCommandEnvelopeTest {
         actions.harvestCrop(slot = 1)
         actions.ping(id = 1L)
         actions.move(x = 1.0, y = 1.0)
+        actions.teleport(x = 1.0, y = 1.0)
         actions.chat("hi")
         actions.harvestCrop(slot = 3)
 

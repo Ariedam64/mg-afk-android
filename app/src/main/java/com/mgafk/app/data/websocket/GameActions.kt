@@ -38,24 +38,18 @@ class GameActions(
         send(ROOM_SCOPE, type, params)
 
     /**
-     * Send a Quinoa gameplay action. Every one of them now travels inside the
-     * `QuinoaCommand` envelope, which is what feeds the server's
-     * prediction/rollback system. The flat `{scopePath, type, ...params}` form
-     * is still honoured but the game devs are removing it.
+     * Send a Quinoa action the way the game itself sends it: inside the
+     * `QuinoaCommand` envelope, unless it is one of the [RAW_MESSAGE_TYPES]
+     * the game still sends flat.
      *
-     * The two Quinoa messages that are NOT commands go through [rawGame].
+     * The envelope is what feeds the server's prediction/rollback system, and
+     * the flat form is on its way out - but only for the actions the game has
+     * already migrated. Wrapping one it has not is a bet that the server
+     * registered it as a command, and a losing bet fails silently.
      */
     private fun game(type: String, params: JsonObject = EMPTY_OBJ) =
-        quinoaCommand(type, params)
-
-    /**
-     * The Quinoa messages that never were commands: `Ping` has its own Pong
-     * reply and `PlayerPosition` feeds the movement snapshot channel, so
-     * neither goes near the command pipeline. Wrapping one would break it in
-     * the other direction.
-     */
-    private fun rawGame(type: String, params: JsonObject = EMPTY_OBJ) =
-        send(GAME_SCOPE, type, params)
+        if (type in RAW_MESSAGE_TYPES) send(GAME_SCOPE, type, params)
+        else quinoaCommand(type, params)
 
     /**
      * Wrap [type] in the envelope the server expects:
@@ -89,7 +83,7 @@ class GameActions(
     // =====================
 
     fun ping(id: Long = System.currentTimeMillis()) =
-        rawGame("Ping", obj("id" to JsonPrimitive(id)))
+        game("Ping", obj("id" to JsonPrimitive(id)))
 
     // The web client names this field `gameName`, not `gameId`.
     fun setSelectedGame(gameName: String = GAME) =
@@ -140,7 +134,7 @@ class GameActions(
     // =====================
 
     fun move(x: Double, y: Double) =
-        rawGame("PlayerPosition", obj("position" to position(x, y)))
+        game("PlayerPosition", obj("position" to position(x, y)))
 
     fun teleport(x: Double, y: Double) =
         game("Teleport", obj("position" to position(x, y)))
@@ -506,6 +500,33 @@ class GameActions(
 
         /** Envelope `type` for the commands that go through [quinoaCommand]. */
         private const val COMMAND_ENVELOPE = "QuinoaCommand"
+
+        /**
+         * Quinoa messages the game still sends flat, as of client version 1029.
+         *
+         * `Ping` answers Pong and `PlayerPosition` feeds the movement snapshot channel, so
+         * those two are not commands by nature; the rest simply have not been migrated yet.
+         * The game is moving them across one release at a time, so re-derive this list from
+         * the bundle when a newly muted action shows up: the flat sender is
+         * `sendMessage({scopePath:["Room","Quinoa"], ...msg})`, the command sender wraps the
+         * message in a `QuinoaCommand` envelope.
+         */
+        private val RAW_MESSAGE_TYPES = setOf(
+            "Ping",
+            "PlayerPosition",
+            "Teleport",
+            "SetSelectedItem",
+            "CheckWeatherStatus",
+            "CheckFriendBonus",
+            "ThrowSnowball",
+            "QuinoaTutorialSkipped",
+            "RequestPetGreet",
+            "DropObject",
+            "PickupObject",
+            "UpgradePetHutch",
+            "UpgradeSeedSilo",
+            "UpgradeDecorShed",
+        )
 
         private fun obj(vararg pairs: Pair<String, JsonElement>): JsonObject =
             JsonObject(mapOf(*pairs))
