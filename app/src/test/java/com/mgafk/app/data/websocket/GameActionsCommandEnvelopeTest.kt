@@ -1,6 +1,7 @@
 package com.mgafk.app.data.websocket
 
 import com.mgafk.app.data.AppJson
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -8,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -66,6 +68,29 @@ class GameActionsCommandEnvelopeTest {
 
         assertWrapped("PotPlant")
         assertEquals(1L, lastMessage()["commandSequence"]?.jsonPrimitive?.longOrNull)
+    }
+
+    @Test fun `potting mints the id the potted plant will carry`() {
+        actions.potPlant(slot = 4)
+        val first = lastCommand()
+        assertEquals(4, first["slot"]?.jsonPrimitive?.intOrNull)
+        val mintedId = first["plantItemId"]?.jsonPrimitive?.contentOrNull
+        assertTrue(mintedId.orEmpty().isNotBlank())
+
+        // A caller that already knows the id (to plant the pot straight back) can pass it.
+        actions.potPlant(slot = 5, plantItemId = "fixed-id")
+        assertEquals("fixed-id", lastCommand()["plantItemId"]?.jsonPrimitive?.contentOrNull)
+
+        // Otherwise every pot gets its own.
+        actions.potPlant(slot = 6)
+        assertNotEquals(mintedId, lastCommand()["plantItemId"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    @Test fun `savePetTeam says whether the team is new`() {
+        actions.savePetTeam(teamId = "t1", name = "A", petIds = listOf("p1"), isCreate = true)
+
+        assertWrapped("SavePetTeam")
+        assertEquals(true, lastCommand()["isCreate"]?.jsonPrimitive?.booleanOrNull)
     }
 
     @Test fun `planting is wrapped`() {
@@ -171,7 +196,7 @@ class GameActionsCommandEnvelopeTest {
         assertWrapped("ApplyPetTeam")
         assertEquals("t1", lastCommand()["teamId"]?.jsonPrimitive?.contentOrNull)
 
-        actions.savePetTeam(teamId = "t1", name = "A", petIds = listOf("p1", "p2"))
+        actions.savePetTeam(teamId = "t1", name = "A", petIds = listOf("p1", "p2"), isCreate = false)
         assertWrapped("SavePetTeam")
         assertEquals(2, lastCommand()["petIds"]?.jsonArray?.size)
 

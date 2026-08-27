@@ -210,8 +210,19 @@ class GameActions(
     fun plantGardenPlant(slot: Int, itemId: String) =
         game("PlantGardenPlant", obj("slot" to JsonPrimitive(slot), "itemId" to JsonPrimitive(itemId)))
 
-    fun potPlant(slot: Int) =
-        game("PotPlant", obj("slot" to JsonPrimitive(slot)))
+    /**
+     * Pots the plant standing on [slot], moving it into the inventory as a Plant item.
+     *
+     * [plantItemId] is the id that new inventory item will carry: the client mints it and the
+     * server honours it, which is what lets the caller reference the pot right away (to plant
+     * it back with [plantGardenPlant], say) instead of waiting for the inventory patch. The
+     * server rejects a PotPlant without it.
+     */
+    fun potPlant(slot: Int, plantItemId: String = UUID.randomUUID().toString()) =
+        game("PotPlant", obj(
+            "slot" to JsonPrimitive(slot),
+            "plantItemId" to JsonPrimitive(plantItemId),
+        ))
 
     fun mutationPotion(tileObjectIdx: Int, growSlotIdx: Int, mutation: String) =
         game("MutationPotion", obj(
@@ -362,9 +373,11 @@ class GameActions(
     // Pet teams
     // =====================
 
-    fun savePetTeam(teamId: String, name: String, petIds: List<String>) =
+    /** [isCreate] tells the server this is a brand new team rather than an edit of [teamId]. */
+    fun savePetTeam(teamId: String, name: String, petIds: List<String>, isCreate: Boolean) =
         game("SavePetTeam", obj(
             "teamId" to JsonPrimitive(teamId),
+            "isCreate" to JsonPrimitive(isCreate),
             "name" to JsonPrimitive(name),
             "petIds" to buildJsonArray { petIds.forEach { add(JsonPrimitive(it)) } },
         ))
