@@ -114,8 +114,10 @@ class GameActions(
     fun emote(emoteType: String) =
         room("Emote", obj("emoteType" to JsonPrimitive(emoteType)))
 
-    fun wish(itemId: String) =
-        game("Wish", obj("itemId" to JsonPrimitive(itemId)))
+    /** Throws a coin in the wishing well. [itemId] wishes for that specific item; the game
+     * omits it entirely for an untargeted wish. */
+    fun wish(itemId: String? = null) =
+        game("Wish", if (itemId == null) EMPTY_OBJ else obj("itemId" to JsonPrimitive(itemId)))
 
     fun kickPlayer(targetPlayerId: String) =
         room("KickPlayer", obj("targetPlayerId" to JsonPrimitive(targetPlayerId)))
@@ -283,8 +285,27 @@ class GameActions(
     fun feedPet(petItemId: String, cropItemId: String) =
         game("FeedPet", obj("petItemId" to JsonPrimitive(petItemId), "cropItemId" to JsonPrimitive(cropItemId)))
 
+    /** Consumes one Replenish Potion to fully restore [petItemId]'s hunger. Requires the
+     * player to be standing on the pet's tile (see [teleport]). */
+    fun useReplenishPotion(petItemId: String) =
+        game("ReplenishPotion", obj("petItemId" to JsonPrimitive(petItemId)))
+
     fun sellPet(itemId: String) =
         game("SellPet", obj("itemId" to JsonPrimitive(itemId)))
+
+    /** Mounts [petItemId] - required before [dawnCapture] (or any other rideable ability). */
+    fun ridePet(petItemId: String) =
+        game("RidePet", obj("petItemId" to JsonPrimitive(petItemId)))
+
+    fun dismountPet() = game("DismountPet")
+
+    /** Triggers the Ostrich's Dawn Capture ability at [x]/[y] (tile-grid coords). Requires
+     * riding [petItemId] and being off cooldown. */
+    fun dawnCapture(petItemId: String, x: Double, y: Double) =
+        game("DawnCapture", obj(
+            "petItemId" to JsonPrimitive(petItemId),
+            "position" to position(x, y),
+        ))
 
     /** Consumes one XP Potion to level [petItemId] up. */
     fun xpPotion(petItemId: String) =
@@ -383,6 +404,9 @@ class GameActions(
 
     fun pickupObject() = game("PickupObject")
 
+    // toStorageIndex and quantity are both optional on the wire: the game leaves the index out
+    // when the item goes to the end of the storage, and only sends a quantity when moving part
+    // of a stack.
     fun putItemInStorage(itemId: String, storageId: String, toStorageIndex: Int? = null, quantity: Int? = null) {
         val params = buildJsonObject {
             put("itemId", JsonPrimitive(itemId))
@@ -410,14 +434,35 @@ class GameActions(
             "toStorageIndex" to JsonPrimitive(toStorageIndex),
         ))
 
-    /** Exchanges an inventory item for a stored one in a single action, which keeps both
-     * capacities unchanged (unlike a retrieve followed by a put). */
-    fun swapItemWithStorage(storageId: String, inventoryItemId: String, storageItemId: String) =
-        game("SwapItemWithStorage", obj(
-            "storageId" to JsonPrimitive(storageId),
-            "inventoryItemId" to JsonPrimitive(inventoryItemId),
-            "storageItemId" to JsonPrimitive(storageItemId),
-        ))
+    /**
+     * Exchanges an inventory item for a stored one in a single action, which keeps both
+     * capacities unchanged (unlike a retrieve followed by a put).
+     *
+     * [draggedQuantity] splits a stack: the game only sends it when the player drags part of
+     * one, and always alongside [draggedFromInventory] (which side the drag started on).
+     */
+    fun swapItemWithStorage(
+        storageId: String,
+        inventoryItemId: String,
+        storageItemId: String,
+        toStorageIndex: Int? = null,
+        toInventoryIndex: Int? = null,
+        draggedQuantity: Int? = null,
+        draggedFromInventory: Boolean = false,
+    ) {
+        val params = buildJsonObject {
+            put("storageId", JsonPrimitive(storageId))
+            put("inventoryItemId", JsonPrimitive(inventoryItemId))
+            put("storageItemId", JsonPrimitive(storageItemId))
+            if (toStorageIndex != null) put("toStorageIndex", JsonPrimitive(toStorageIndex))
+            if (toInventoryIndex != null) put("toInventoryIndex", JsonPrimitive(toInventoryIndex))
+            if (draggedQuantity != null) {
+                put("draggedQuantity", JsonPrimitive(draggedQuantity))
+                put("draggedFromInventory", JsonPrimitive(draggedFromInventory))
+            }
+        }
+        game("SwapItemWithStorage", params)
+    }
 
     fun logItems() = game("LogItems")
 
