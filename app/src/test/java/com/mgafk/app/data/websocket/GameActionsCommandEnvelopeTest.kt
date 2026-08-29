@@ -191,6 +191,9 @@ class GameActionsCommandEnvelopeTest {
 
         actions.upgradeDecorShed()
         assertFlat("UpgradeDecorShed")
+
+        actions.upgradeToolShack()
+        assertFlat("UpgradeToolShack")
     }
 
     @Test fun `room scoped messages are never wrapped`() {

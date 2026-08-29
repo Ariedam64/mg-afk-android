@@ -528,6 +528,7 @@ class GameActions(
             "UpgradePetHutch",
             "UpgradeSeedSilo",
             "UpgradeDecorShed",
+            "UpgradeToolShack",
         )
 
         private fun obj(vararg pairs: Pair<String, JsonElement>): JsonObject =
