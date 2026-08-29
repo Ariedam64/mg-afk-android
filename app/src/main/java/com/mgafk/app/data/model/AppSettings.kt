@@ -2,6 +2,7 @@ package com.mgafk.app.data.model
 
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Serializable
 enum class WakeLockMode {
@@ -24,23 +25,30 @@ enum class PurchaseMode {
 }
 
 /**
- * Time window during which alarms are downgraded to silent notifications.
+ * One time window during which alarms are downgraded to silent notifications.
  *
  * `startMinute` and `endMinute` are minutes since midnight (0..1439).
  * If `startMinute > endMinute`, the window wraps midnight; the start day
  * (per [activeDays]) is the day used to evaluate membership.
  *
  * `activeDays` uses ISO day-of-week values: 1=Monday..7=Sunday.
+ *
+ * A single window shares one time range across every day it covers, which cannot
+ * express e.g. work nights and weekend lie-ins at once - hence the list in
+ * [AppSettings.alarmSchedules], where each window carries its own hours, days and
+ * [label].
  */
 @Serializable
 data class AlarmSchedule(
+    val id: String = UUID.randomUUID().toString(),
+    val label: String = "",
     val enabled: Boolean = false,
     val startMinute: Int = 22 * 60, // 22:00
     val endMinute: Int = 7 * 60,    // 07:00
     val activeDays: Set<Int> = setOf(1, 2, 3, 4, 5, 6, 7),
 )
 
-/** True iff alarms should be silenced right now. */
+/** True iff this single window silences alarms right now. */
 fun AlarmSchedule.isSilentAt(now: LocalDateTime): Boolean {
     if (!enabled) return false
     if (activeDays.isEmpty()) return false
@@ -55,6 +63,9 @@ fun AlarmSchedule.isSilentAt(now: LocalDateTime): Boolean {
             (yesterday in activeDays && minutesNow < endMinute)
     }
 }
+
+/** True iff any configured window silences alarms right now. */
+fun List<AlarmSchedule>.isSilentAt(now: LocalDateTime): Boolean = any { it.isSilentAt(now) }
 
 @Serializable
 data class AppSettings(
@@ -90,9 +101,28 @@ data class AppSettings(
     // App-side alarm volume multiplier (0..1). Multiplied on top of the system alarm stream volume.
     val alarmVolume: Float = 1f,
 
-    // Alarm silence schedule (alarms downgraded to silent notifications during the window)
-    val alarmSchedule: AlarmSchedule = AlarmSchedule(),
+    // Alarm silence windows (alarms downgraded to silent notifications while one is active)
+    val alarmSchedules: List<AlarmSchedule> = emptyList(),
+    /** Pre-multi-window setting. Read once by [migrated] and then left null - never read it
+     * directly, the live value is [alarmSchedules]. */
+    val alarmSchedule: AlarmSchedule? = null,
 
     // Developer
     val showDebugMenu: Boolean = false,
 )
+
+/**
+ * Folds settings persisted by an older build into their current shape. Stored JSON is
+ * decoded with `ignoreUnknownKeys`, so a field that simply changed name would come back
+ * as its default and silently drop what the user had configured.
+ *
+ * Carries the single pre-multi-window alarm schedule over as the first window.
+ */
+fun AppSettings.migrated(): AppSettings {
+    val legacy = alarmSchedule ?: return this
+    if (alarmSchedules.isNotEmpty()) return copy(alarmSchedule = null)
+    return copy(
+        alarmSchedules = listOf(legacy.copy(label = legacy.label.ifBlank { "Schedule 1" })),
+        alarmSchedule = null,
+    )
+}

@@ -166,7 +166,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val petTipDismissed = repo.isPetTipDismissed()
             val settings = repo.loadSettings()
             alertNotifier.alarmSoundUri = settings.alarmSoundUri
-            alertNotifier.alarmSchedule = settings.alarmSchedule
+            alertNotifier.alarmSchedules = settings.alarmSchedules
             alertNotifier.alarmVolume = settings.alarmVolume
             // Legacy migration: pet teams used to be a single global list. Seed each
             // session that has none yet from the old global one, so the previous behaviour
@@ -1779,7 +1779,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun applySettings(settings: AppSettings) {
         // Push the chosen alarm sound URI to the notifier so the next alarm uses it.
         alertNotifier.alarmSoundUri = settings.alarmSoundUri
-        alertNotifier.alarmSchedule = settings.alarmSchedule
+        alertNotifier.alarmSchedules = settings.alarmSchedules
         alertNotifier.alarmVolume = settings.alarmVolume
         // Update AfkService locks if service is running
         if (serviceRunning) {

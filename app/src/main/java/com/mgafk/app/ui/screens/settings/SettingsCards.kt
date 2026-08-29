@@ -29,9 +29,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -502,7 +506,7 @@ private fun AlarmCard(
     onStopPreviewAlarm: () -> Unit,
 ) {
     val context = LocalContext.current
-    val schedule = settings.alarmSchedule
+    val schedules = settings.alarmSchedules
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -535,7 +539,11 @@ private fun AlarmCard(
             delay(30_000L)
         }
     }
-    val silencedNow = schedule.isSilentAt(nowTick)
+    val silencedNow = schedules.isSilentAt(nowTick)
+
+    fun replaceSchedule(updated: AlarmSchedule) {
+        onUpdate(settings.copy(alarmSchedules = schedules.map { if (it.id == updated.id) updated else it }))
+    }
 
     AppCard(title = "Alarm", collapsible = true, persistKey = "settings_alarm") {
         // ── Sound subsection ──
@@ -641,7 +649,8 @@ private fun AlarmCard(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            "Mute alarms during these hours. Notifications still arrive silently.",
+            "Mute alarms during these hours. Notifications still arrive silently. " +
+                "Add a window per routine - work nights and weekend lie-ins need different hours.",
             fontSize = 11.sp,
             color = TextMuted,
             lineHeight = 15.sp,
@@ -649,17 +658,118 @@ private fun AlarmCard(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        ToggleRow(
-            title = "Mute alarms",
-            description = if (silencedNow) "Currently muted." else "Will mute when active.",
-            checked = schedule.enabled,
-            onCheckedChange = { onUpdate(settings.copy(alarmSchedule = schedule.copy(enabled = it))) },
-        )
+        if (schedules.isEmpty()) {
+            Text(
+                "No mute window yet. Alarms always ring.",
+                fontSize = 11.sp,
+                color = TextMuted,
+            )
+        }
 
-        // Greyed-out controls when the toggle is off
-        val controlsAlpha = if (schedule.enabled) 1f else 0.4f
+        schedules.forEachIndexed { index, schedule ->
+            if (index > 0) Spacer(modifier = Modifier.height(10.dp))
+            AlarmScheduleBlock(
+                schedule = schedule,
+                fallbackLabel = "Schedule ${index + 1}",
+                mutedNow = schedule.isSilentAt(nowTick),
+                context = context,
+                onChange = { updated -> replaceSchedule(updated) },
+                onDelete = {
+                    onUpdate(settings.copy(alarmSchedules = schedules.filter { it.id != schedule.id }))
+                },
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Accent.copy(alpha = 0.12f))
+                .border(1.dp, Accent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .clickable {
+                    val next = AlarmSchedule(
+                        label = "Schedule ${schedules.size + 1}",
+                        enabled = true,
+                    )
+                    onUpdate(settings.copy(alarmSchedules = schedules + next))
+                }
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("+ Add window", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (silencedNow) "Silenced now: yes" else "Silenced now: no",
+            fontSize = 11.sp,
+            color = if (silencedNow) Accent else TextMuted,
+        )
+    }
+}
+
+/** One mute window: name, on/off, hours, active days. */
+@Composable
+private fun AlarmScheduleBlock(
+    schedule: AlarmSchedule,
+    fallbackLabel: String,
+    mutedNow: Boolean,
+    context: android.content.Context,
+    onChange: (AlarmSchedule) -> Unit,
+    onDelete: () -> Unit,
+) {
+    // Greyed-out controls when the window is off
+    val controlsAlpha = if (schedule.enabled) 1f else 0.4f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .padding(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = schedule.label,
+                onValueChange = { onChange(schedule.copy(label = it)) },
+                placeholder = { Text(fallbackLabel, fontSize = 12.sp, color = TextMuted) },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = SurfaceBorder,
+                    cursorColor = Accent,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                ),
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = schedule.enabled,
+                onCheckedChange = { onChange(schedule.copy(enabled = it)) },
+                colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+            )
+            Icon(
+                imageVector = Icons.Outlined.Delete,
+                contentDescription = "Delete window",
+                tint = TextMuted,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onDelete() }
+                    .padding(6.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -672,9 +782,7 @@ private fun AlarmCard(
                 enabled = schedule.enabled,
                 alpha = controlsAlpha,
                 modifier = Modifier.weight(1f),
-                onPick = { picked ->
-                    onUpdate(settings.copy(alarmSchedule = schedule.copy(startMinute = picked)))
-                },
+                onPick = { picked -> onChange(schedule.copy(startMinute = picked)) },
                 context = context,
             )
             TimePickerBox(
@@ -684,14 +792,12 @@ private fun AlarmCard(
                 alpha = controlsAlpha,
                 modifier = Modifier.weight(1f),
                 suffix = if (schedule.startMinute > schedule.endMinute) " (overnight)" else null,
-                onPick = { picked ->
-                    onUpdate(settings.copy(alarmSchedule = schedule.copy(endMinute = picked)))
-                },
+                onPick = { picked -> onChange(schedule.copy(endMinute = picked)) },
                 context = context,
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text("Active days", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
 
@@ -721,7 +827,7 @@ private fun AlarmCard(
                         .clickable(enabled = schedule.enabled) {
                             val newDays = if (isSelected) schedule.activeDays - dayValue
                             else schedule.activeDays + dayValue
-                            onUpdate(settings.copy(alarmSchedule = schedule.copy(activeDays = newDays)))
+                            onChange(schedule.copy(activeDays = newDays))
                         }
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center,
@@ -737,13 +843,10 @@ private fun AlarmCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = if (silencedNow) "Silenced now: yes" else "Silenced now: no",
-            fontSize = 11.sp,
-            color = if (silencedNow) Accent else TextMuted,
-        )
+        if (mutedNow) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Muting now", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent)
+        }
     }
 }
 

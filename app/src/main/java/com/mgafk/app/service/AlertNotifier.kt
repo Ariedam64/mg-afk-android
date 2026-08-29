@@ -46,9 +46,9 @@ class AlertNotifier(private val context: Context) {
     @Volatile
     var alarmSoundUri: String = ""
 
-    /** Active alarm silence schedule. Updated from AppSettings. */
+    /** Active alarm silence windows. Updated from AppSettings. */
     @Volatile
-    var alarmSchedule: AlarmSchedule = AlarmSchedule()
+    var alarmSchedules: List<AlarmSchedule> = emptyList()
 
     /** App-side volume multiplier for the alarm sound (0..1). */
     @Volatile
@@ -272,8 +272,8 @@ class AlertNotifier(private val context: Context) {
     }
 
     private fun dispatchAlert(title: String, items: List<DisplayItem>, mode: AlertMode) {
-        // Downgrade ALARM → silent NOTIFICATION when the silence window is active.
-        val effectiveMode = if (mode == AlertMode.ALARM && alarmSchedule.isSilentAt(LocalDateTime.now()))
+        // Downgrade ALARM → silent NOTIFICATION while any silence window is active.
+        val effectiveMode = if (mode == AlertMode.ALARM && alarmSchedules.isSilentAt(LocalDateTime.now()))
             AlertMode.NOTIFICATION
         else mode
 

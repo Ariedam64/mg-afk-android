@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.model.migrated
 import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.model.Session
 import kotlinx.coroutines.flow.first
@@ -141,7 +142,7 @@ class SessionRepository(private val context: Context) {
         val raw = context.dataStore.data.map { it[KEY_SETTINGS] }.first()
         if (raw.isNullOrBlank()) return AppSettings()
         return try {
-            json.decodeFromString<AppSettings>(raw)
+            json.decodeFromString<AppSettings>(raw).migrated()
         } catch (_: Exception) {
             AppSettings()
         }
