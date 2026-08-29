@@ -429,11 +429,12 @@ private fun StoragesCard(
 ) {
     val hasSilo = "SeedSilo" in availableStorages
     val hasShed = "DecorShed" in availableStorages
+    val hasShack = "ToolShack" in availableStorages
 
     AppCard(title = "Storages", collapsible = true, persistKey = "settings_storages") {
-        if (!hasSilo && !hasShed) {
+        if (!hasSilo && !hasShed && !hasShack) {
             Text(
-                "Place a Seed Silo or Decor Shed in your garden to enable auto-stock features.",
+                "Place a Seed Silo, Decor Shed or Tool Shack in your garden to enable auto-stock features.",
                 fontSize = 11.sp,
                 color = TextMuted,
                 lineHeight = 15.sp,
@@ -458,6 +459,17 @@ private fun StoragesCard(
                 description = "Whenever a decor in your inventory matches a decor already in the shed, move it in automatically.",
                 checked = settings.autoStockDecorShed,
                 onCheckedChange = { onUpdate(settings.copy(autoStockDecorShed = it)) },
+            )
+        }
+
+        if ((hasSilo || hasShed) && hasShack) Spacer(modifier = Modifier.height(10.dp))
+
+        if (hasShack) {
+            ToggleRow(
+                title = "Auto-stock Tool Shack",
+                description = "Whenever a tool in your inventory matches a tool already in the shack, move it in automatically.",
+                checked = settings.autoStockToolShack,
+                onCheckedChange = { onUpdate(settings.copy(autoStockToolShack = it)) },
             )
         }
     }

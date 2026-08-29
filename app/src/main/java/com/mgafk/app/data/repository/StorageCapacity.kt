@@ -9,6 +9,7 @@ package com.mgafk.app.data.repository
  *   DecorShed    → 10 base, upgradable ("capacitySlots" on the storage)
  *   FeedingTrough→ 9
  *   PetHutch     → 10 base, upgradable ("capacitySlots" on the storage)
+ *   ToolShack    → 10 base, upgradable ("capacitySlots" on the storage)
  *   Inventory    → 100 items total (stackable items merge with existing slots)
  */
 object StorageCapacity {
@@ -18,18 +19,21 @@ object StorageCapacity {
 
     /**
      * Max items the named storage can currently hold. For upgradable storages
-     * (PetHutch, SeedSilo, DecorShed) pass the "capacitySlots" value read from the game.
+     * (PetHutch, SeedSilo, DecorShed, ToolShack) pass the "capacitySlots" value read
+     * from the game.
      */
     fun maxItems(
         storageId: String,
         hutchCapacitySlots: Int = PriceCalculator.HUTCH_BASE_CAPACITY,
         siloCapacitySlots: Int = PriceCalculator.SILO_BASE_CAPACITY,
         decorShedCapacitySlots: Int = PriceCalculator.DECOR_SHED_BASE_CAPACITY,
+        toolShackCapacitySlots: Int = PriceCalculator.TOOL_SHACK_BASE_CAPACITY,
     ): Int = when (storageId) {
         "SeedSilo" -> siloCapacitySlots
         "DecorShed" -> decorShedCapacitySlots
         "FeedingTrough" -> FEEDING_TROUGH_LIMIT
         "PetHutch" -> hutchCapacitySlots
+        "ToolShack" -> toolShackCapacitySlots
         else -> Int.MAX_VALUE
     }
 

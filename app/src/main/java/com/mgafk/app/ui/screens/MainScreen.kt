@@ -95,6 +95,7 @@ import com.mgafk.app.ui.screens.storage.FeedingTroughCard
 import com.mgafk.app.ui.screens.storage.InventoryCard
 import com.mgafk.app.ui.screens.storage.PetHutchCard
 import com.mgafk.app.ui.screens.storage.SeedSiloCard
+import com.mgafk.app.ui.screens.storage.ToolShackCard
 import com.mgafk.app.ui.screens.pets.ActivePetsCard
 import com.mgafk.app.ui.screens.pets.PetTeamCard
 import com.mgafk.app.ui.screens.shops.ShopsCards
@@ -690,24 +691,41 @@ private fun SectionContent(
             val hutchMax = session.hutchCapacitySlots
             val siloMax = session.siloCapacitySlots
             val decorShedMax = session.decorShedCapacitySlots
+            val toolShackMax = session.toolShackCapacitySlots
+            // Storage cards and their "move to storage" buttons only make sense for
+            // structures the player has actually placed in the garden.
+            val hasSeedSilo = "SeedSilo" in session.availableStorages
+            val hasDecorShed = "DecorShed" in session.availableStorages
+            val hasPetHutch = "PetHutch" in session.availableStorages
+            val hasFeedingTrough = "FeedingTrough" in session.availableStorages
+            val hasToolShack = "ToolShack" in session.availableStorages
             val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
             val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
+            val toolShackToolIds = remember(session.toolShack) { session.toolShack.map { it.toolId }.toSet() }
             val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
             val invDecorIds = remember(inv.decors) { inv.decors.map { it.decorId }.toSet() }
+            val invToolIds = remember(inv.tools) { inv.tools.map { it.toolId }.toSet() }
 
             InventoryCard(
                 inventory = session.inventory,
                 apiReady = state.apiReady,
                 freePlantTiles = session.freePlantTiles,
                 favoritedItemIds = session.favoritedItemIds,
+                hasPetHutch = hasPetHutch,
                 petHutchCount = session.petHutch.size,
                 petHutchMax = hutchMax,
+                hasSeedSilo = hasSeedSilo,
                 seedSiloCount = session.seedSilo.size,
                 seedSiloMax = siloMax,
                 seedSiloSpecies = seedSiloSpecies,
+                hasDecorShed = hasDecorShed,
                 decorShedCount = session.decorShed.size,
                 decorShedMax = decorShedMax,
                 decorShedDecorIds = decorShedIds,
+                hasToolShack = hasToolShack,
+                toolShackCount = session.toolShack.size,
+                toolShackMax = toolShackMax,
+                toolShackToolIds = toolShackToolIds,
                 onPlantSeed = { species -> viewModel.plantSeed(session.id, species) },
                 onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
                 onPlantGardenPlant = { itemId -> viewModel.plantGardenPlant(session.id, itemId) },
@@ -719,45 +737,64 @@ private fun SectionContent(
                 onMovePetToHutch = { petId -> viewModel.movePetToHutch(session.id, petId) },
                 onMoveSeedToSilo = { species -> viewModel.moveSeedToSilo(session.id, species) },
                 onMoveDecorToShed = { decorId -> viewModel.moveDecorToShed(session.id, decorId) },
+                onMoveToolToShack = { toolId -> viewModel.moveToolToShack(session.id, toolId) },
                 playerCount = session.players,
             )
-            SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                inventorySeedSpecies = invSeedSpecies,
-                inventoryItemCount = totalInventoryItems,
-                magicDust = session.magicDust,
-                capacitySlots = siloMax,
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
-                onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
-            DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                inventoryDecorIds = invDecorIds,
-                inventoryItemCount = totalInventoryItems,
-                magicDust = session.magicDust,
-                capacitySlots = decorShedMax,
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) },
-                onUpgrade = { viewModel.upgradeDecorShed(session.id) })
-            PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                magicDust = session.magicDust,
-                capacitySlots = hutchMax,
-                inventoryItemCount = totalInventoryItems,
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
-                onUpgrade = { viewModel.upgradePetHutch(session.id) },
-                onMoveToInventory = { petId -> viewModel.movePetFromHutch(session.id, petId) })
-            FeedingTroughCard(
-                crops = session.feedingTrough,
-                produce = session.inventory.produce,
-                apiReady = state.apiReady,
-                showTip = state.showTroughTip,
-                onDismissTip = { viewModel.dismissTroughTip() },
-                onAddItems = { items ->
-                    viewModel.putItemsInFeedingTrough(session.id, items)
-                },
-                onRemoveItem = { itemId ->
-                    viewModel.removeItemFromFeedingTrough(session.id, itemId)
-                },
-            )
+            if (hasSeedSilo) {
+                SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                    inventorySeedSpecies = invSeedSpecies,
+                    inventoryItemCount = totalInventoryItems,
+                    magicDust = session.magicDust,
+                    capacitySlots = siloMax,
+                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                    onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
+                    onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
+            }
+            if (hasDecorShed) {
+                DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                    inventoryDecorIds = invDecorIds,
+                    inventoryItemCount = totalInventoryItems,
+                    magicDust = session.magicDust,
+                    capacitySlots = decorShedMax,
+                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                    onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) },
+                    onUpgrade = { viewModel.upgradeDecorShed(session.id) })
+            }
+            if (hasToolShack) {
+                ToolShackCard(tools = session.toolShack, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                    inventoryToolIds = invToolIds,
+                    inventoryItemCount = totalInventoryItems,
+                    magicDust = session.magicDust,
+                    capacitySlots = toolShackMax,
+                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                    onMoveToInventory = { toolId -> viewModel.moveToolFromShack(session.id, toolId) },
+                    onUpgrade = { viewModel.upgradeToolShack(session.id) })
+            }
+            if (hasPetHutch) {
+                PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
+                    magicDust = session.magicDust,
+                    capacitySlots = hutchMax,
+                    inventoryItemCount = totalInventoryItems,
+                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
+                    onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
+                    onUpgrade = { viewModel.upgradePetHutch(session.id) },
+                    onMoveToInventory = { petId -> viewModel.movePetFromHutch(session.id, petId) })
+            }
+            if (hasFeedingTrough) {
+                FeedingTroughCard(
+                    crops = session.feedingTrough,
+                    produce = session.inventory.produce,
+                    apiReady = state.apiReady,
+                    showTip = state.showTroughTip,
+                    onDismissTip = { viewModel.dismissTroughTip() },
+                    onAddItems = { items ->
+                        viewModel.putItemsInFeedingTrough(session.id, items)
+                    },
+                    onRemoveItem = { itemId ->
+                        viewModel.removeItemFromFeedingTrough(session.id, itemId)
+                    },
+                )
+            }
         }
         NavSection.SOCIAL -> {
             com.mgafk.app.ui.screens.social.PublicRoomsCard(

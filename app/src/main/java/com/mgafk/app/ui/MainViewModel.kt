@@ -1099,6 +1099,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         clients[sessionId]?.actions?.upgradeDecorShed()
     }
 
+    /** Upgrade the tool shack capacity by one level (server uses caller's dust). */
+    fun upgradeToolShack(sessionId: String) {
+        clients[sessionId]?.actions?.upgradeToolShack()
+    }
+
     // ─── Move items between inventory and dedicated storages ────────────────
 
     /** Move a pet from inventory into the Pet Hutch. */
@@ -1167,6 +1172,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    /** Move a tool (whole stack) from inventory into the Tool Shack. */
+    fun moveToolToShack(sessionId: String, toolId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.putItemInStorage(
+            itemId = toolId,
+            storageId = "ToolShack",
+            toStorageIndex = session.toolShack.size,
+        )
+    }
+
+    /** Move a tool (whole stack) from the Tool Shack back to inventory. */
+    fun moveToolFromShack(sessionId: String, toolId: String) {
+        val actions = clients[sessionId]?.actions ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        actions.retrieveItemFromStorage(
+            itemId = toolId,
+            storageId = "ToolShack",
+            toInventoryIndex = totalInventoryCount(session),
+        )
+    }
+
     private fun totalInventoryCount(session: Session): Int {
         val inv = session.inventory
         return inv.seeds.size + inv.eggs.size + inv.produce.size + inv.plants.size +
@@ -1186,8 +1213,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sessionId: String,
         invSeeds: List<InventorySeedItem>,
         invDecors: List<InventoryDecorItem>,
+        invTools: List<InventoryToolItem>,
         siloSeeds: List<InventorySeedItem>,
         shedDecors: List<InventoryDecorItem>,
+        shackTools: List<InventoryToolItem>,
         availableStorages: Set<String>,
     ) {
         val actions = clients[sessionId]?.actions ?: return
@@ -1213,6 +1242,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     itemId = decor.decorId,
                     storageId = "DecorShed",
                     toStorageIndex = shedDecors.size,
+                )
+            }
+        }
+
+        if (settings.autoStockToolShack && "ToolShack" in availableStorages) {
+            val shackIds = shackTools.map { it.toolId }.toSet()
+            val toMove = invTools.filter { it.toolId in shackIds }
+            for (tool in toMove) {
+                actions.putItemInStorage(
+                    itemId = tool.toolId,
+                    storageId = "ToolShack",
+                    toStorageIndex = shackTools.size,
                 )
             }
         }
@@ -2037,9 +2078,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val shedDecors = mutableListOf<InventoryDecorItem>()
                 val hutchPets = mutableListOf<InventoryPetItem>()
                 val troughCrops = mutableListOf<InventoryCropsItem>()
+                val shackTools = mutableListOf<InventoryToolItem>()
                 var hutchCapacitySlots = existingSession?.hutchCapacitySlots ?: PriceCalculator.HUTCH_BASE_CAPACITY
                 var siloCapacitySlots = existingSession?.siloCapacitySlots ?: PriceCalculator.SILO_BASE_CAPACITY
                 var decorShedCapacitySlots = existingSession?.decorShedCapacitySlots ?: PriceCalculator.DECOR_SHED_BASE_CAPACITY
+                var toolShackCapacitySlots = existingSession?.toolShackCapacitySlots ?: PriceCalculator.TOOL_SHACK_BASE_CAPACITY
                 // Owned storages never go away - only grow this set, don't reset it, so a
                 // partial event doesn't make an already-purchased storage look unowned.
                 val availableStorages = existingSession?.availableStorages?.toMutableSet() ?: mutableSetOf()
@@ -2059,6 +2102,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             slots ?: PriceCalculator.calculateSiloCapacity(legacyLevel)
                         "DecorShed" -> decorShedCapacitySlots =
                             slots ?: PriceCalculator.calculateDecorShedCapacity(legacyLevel)
+                        "ToolShack" -> toolShackCapacitySlots =
+                            slots ?: PriceCalculator.calculateToolShackCapacity(legacyLevel)
                     }
                     val storageItems = storage["items"] as? JsonArray ?: continue
                     for (el in storageItems) {
@@ -2084,6 +2129,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 abilities = (obj["abilities"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                                 sourceEggId = obj["sourceEggId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            ))
+                            "ToolShack" -> shackTools.add(InventoryToolItem(
+                                toolId = obj["toolId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                                quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
                             ))
                             "FeedingTrough" -> troughCrops.add(InventoryCropsItem(
                                 id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -2130,7 +2179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     allNewPets.firstOrNull { it.id !in previousPetIds }
                 } else null
 
-                AppLog.d(TAG, "[Storage] availableStorages=$availableStorages hutch=$hutchCapacitySlots silo=$siloCapacitySlots decorShed=$decorShedCapacitySlots")
+                AppLog.d(TAG, "[Storage] availableStorages=$availableStorages hutch=$hutchCapacitySlots silo=$siloCapacitySlots decorShed=$decorShedCapacitySlots toolShack=$toolShackCapacitySlots")
 
                 updateSession(sessionId) {
                     it.copy(
@@ -2139,17 +2188,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         decorShed = shedDecors,
                         petHutch = hutchPets,
                         feedingTrough = troughCrops,
+                        toolShack = shackTools,
                         favoritedItemIds = event.favoritedItemIds.toSet(),
                         lastHatchedPet = hatchedPet ?: it.lastHatchedPet,
                         magicDust = event.magicDust,
                         hutchCapacitySlots = hutchCapacitySlots,
                         siloCapacitySlots = siloCapacitySlots,
                         decorShedCapacitySlots = decorShedCapacitySlots,
+                        toolShackCapacitySlots = toolShackCapacitySlots,
                         availableStorages = availableStorages,
                     )
                 }
                 scheduleTroughAlertCheck(sessionId)
-                runAutoStock(sessionId, seeds, decors, siloSeeds, shedDecors, availableStorages)
+                runAutoStock(sessionId, seeds, decors, tools, siloSeeds, shedDecors, shackTools, availableStorages)
             }
             is ClientEvent.EggsChanged -> {
                 val newEggs = event.eggs.map { tile ->

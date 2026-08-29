@@ -341,6 +341,8 @@ class GameActions(
 
     fun upgradeDecorShed() = game("UpgradeDecorShed")
 
+    fun upgradeToolShack() = game("UpgradeToolShack")
+
     fun namePet(petItemId: String, name: String) =
         game("NamePet", obj("petItemId" to JsonPrimitive(petItemId), "name" to JsonPrimitive(name)))
 

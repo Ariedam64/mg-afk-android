@@ -219,7 +219,7 @@ object PriceCalculator {
         return if (raw.isFinite()) floor(raw).toLong().coerceAtLeast(0) else null
     }
 
-    // ── Storage upgrade tiers (PetHutch, SeedSilo, DecorShed) ──
+    // ── Storage upgrade tiers (PetHutch, SeedSilo, DecorShed, ToolShack) ──
     // Each decor's `upgrades` list (from `/data/decors`) is a chain of tiers keyed by
     // capacity, e.g. {fromCapacitySlots:10, toCapacitySlots:15, dustCost}. "Level" here
     // is just how many tiers of that chain have been applied (0 = base capacity).
@@ -227,8 +227,9 @@ object PriceCalculator {
     const val HUTCH_BASE_CAPACITY = 10
     const val SILO_BASE_CAPACITY = 10
     const val DECOR_SHED_BASE_CAPACITY = 10
+    const val TOOL_SHACK_BASE_CAPACITY = 10
 
-    /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo, DecorShed). */
+    /** Next upgrade tier for a leveled storage (PetHutch, SeedSilo, DecorShed, ToolShack). */
     data class StorageUpgradeInfo(
         val targetLevel: Int,
         val dustCost: Long,
@@ -242,6 +243,7 @@ object PriceCalculator {
         "PetHutch" -> HUTCH_BASE_CAPACITY
         "SeedSilo" -> SILO_BASE_CAPACITY
         "DecorShed" -> DECOR_SHED_BASE_CAPACITY
+        "ToolShack" -> TOOL_SHACK_BASE_CAPACITY
         else -> 0
     }
 
@@ -277,14 +279,17 @@ object PriceCalculator {
     fun calculateHutchCapacity(capacityLevel: Int): Int = storageCapacity("PetHutch", capacityLevel)
     fun calculateSiloCapacity(capacityLevel: Int): Int = storageCapacity("SeedSilo", capacityLevel)
     fun calculateDecorShedCapacity(capacityLevel: Int): Int = storageCapacity("DecorShed", capacityLevel)
+    fun calculateToolShackCapacity(capacityLevel: Int): Int = storageCapacity("ToolShack", capacityLevel)
 
     fun hutchLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("PetHutch", capacitySlots)
     fun siloLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("SeedSilo", capacitySlots)
     fun decorShedLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("DecorShed", capacitySlots)
+    fun toolShackLevelForCapacity(capacitySlots: Int): Int = storageLevelForCapacity("ToolShack", capacitySlots)
 
     fun getNextHutchUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("PetHutch", capacityLevel)
     fun getNextSiloUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("SeedSilo", capacityLevel)
     fun getNextDecorShedUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("DecorShed", capacityLevel)
+    fun getNextToolShackUpgrade(capacityLevel: Int): StorageUpgradeInfo? = getNextStorageUpgrade("ToolShack", capacityLevel)
 
     /**
      * Full number with thousand separators (e.g. 1,234,567). Use in detail popups

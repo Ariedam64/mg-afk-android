@@ -40,6 +40,7 @@ data class Session(
     val decorShed: List<InventoryDecorItem> = emptyList(),
     val petHutch: List<InventoryPetItem> = emptyList(),
     val feedingTrough: List<InventoryCropsItem> = emptyList(),
+    val toolShack: List<InventoryToolItem> = emptyList(),
     val chatMessages: List<ChatMessage> = emptyList(),
     val playersList: List<PlayerSnapshot> = emptyList(),
     val gameVersion: String = "",
@@ -53,6 +54,7 @@ data class Session(
     val hutchCapacitySlots: Int = PriceCalculator.HUTCH_BASE_CAPACITY,
     val siloCapacitySlots: Int = PriceCalculator.SILO_BASE_CAPACITY,
     val decorShedCapacitySlots: Int = PriceCalculator.DECOR_SHED_BASE_CAPACITY,
+    val toolShackCapacitySlots: Int = PriceCalculator.TOOL_SHACK_BASE_CAPACITY,
     /** Storage decor ids the player currently owns (e.g. "SeedSilo", "DecorShed", "PetHutch"). */
     val availableStorages: Set<String> = emptySet(),
     /** Player id of the room host (empty until known). Used to gate Populate. */

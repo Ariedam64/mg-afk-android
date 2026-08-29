@@ -70,7 +70,7 @@ object MgApi {
         // Pet-only: also the pet's max hunger value (hunger drops from this
         // down to 0). Source-of-truth for the hunger bar % display.
         val coinsToFullyReplenishHunger: Int? = null,
-        // Decor-only (PetHutch, SeedSilo, DecorShed): capacity upgrade tiers
+        // Decor-only (PetHutch, SeedSilo, DecorShed, ToolShack): capacity upgrade tiers
         val upgrades: List<DecorUpgrade> = emptyList(),
         // Shop buyability - owning >= 1 of a one-time-purchase item blocks further buys.
         val isOneTimePurchase: Boolean = false,
@@ -182,7 +182,7 @@ object MgApi {
     /** One-shot diagnostic: confirms the upgrade-tier chain parsed correctly for each
      * leveled storage decor - helps spot API schema drift without guessing. */
     private fun logStorageUpgradeCounts(decors: Map<String, GameEntry>) {
-        for (id in listOf("PetHutch", "SeedSilo", "DecorShed")) {
+        for (id in listOf("PetHutch", "SeedSilo", "DecorShed", "ToolShack")) {
             val upgrades = decors[id]?.upgrades ?: emptyList()
             AppLog.d(TAG, "$id upgrades: ${upgrades.size} tiers ${upgrades.map { "${it.fromCapacitySlots}->${it.toCapacitySlots}" }}")
         }

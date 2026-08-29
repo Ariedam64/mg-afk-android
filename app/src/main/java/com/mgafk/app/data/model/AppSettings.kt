@@ -75,6 +75,7 @@ data class AppSettings(
     // Storages - auto-consolidate inventory stacks into matching storage slots
     val autoStockSeedSilo: Boolean = false,
     val autoStockDecorShed: Boolean = false,
+    val autoStockToolShack: Boolean = false,
 
     // Play in game - inject the Gemini userscript into the WebView
     val injectGeminiMod: Boolean = true,

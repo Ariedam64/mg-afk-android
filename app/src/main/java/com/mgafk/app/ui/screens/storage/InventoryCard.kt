@@ -162,14 +162,21 @@ fun InventoryCard(
     apiReady: Boolean = false,
     freePlantTiles: Int = 0,
     favoritedItemIds: Set<String> = emptySet(),
+    hasPetHutch: Boolean = false,
     petHutchCount: Int = 0,
     petHutchMax: Int = 25,
+    hasSeedSilo: Boolean = false,
     seedSiloCount: Int = 0,
     seedSiloMax: Int = 25,
     seedSiloSpecies: Set<String> = emptySet(),
+    hasDecorShed: Boolean = false,
     decorShedCount: Int = 0,
     decorShedMax: Int = 25,
     decorShedDecorIds: Set<String> = emptySet(),
+    hasToolShack: Boolean = false,
+    toolShackCount: Int = 0,
+    toolShackMax: Int = 10,
+    toolShackToolIds: Set<String> = emptySet(),
     onPlantSeed: (species: String) -> Unit = {},
     onGrowEgg: (eggId: String) -> Unit = {},
     onPlantGardenPlant: (itemId: String) -> Unit = {},
@@ -181,6 +188,7 @@ fun InventoryCard(
     onMovePetToHutch: (petId: String) -> Unit = {},
     onMoveSeedToSilo: (species: String) -> Unit = {},
     onMoveDecorToShed: (decorId: String) -> Unit = {},
+    onMoveToolToShack: (toolId: String) -> Unit = {},
     playerCount: Int = 1,
 ) {
     val totalItems = inventory.seeds.size + inventory.eggs.size + inventory.produce.size +
@@ -377,6 +385,7 @@ fun InventoryCard(
                 apiReady = apiReady,
                 freePlantTiles = freePlantTiles,
                 isLocked = species in favoritedItemIds,
+                hasSeedSilo = hasSeedSilo,
                 canMoveToSilo = StorageCapacity.canAddStackable(
                     currentCount = seedSiloCount,
                     max = seedSiloMax,
@@ -442,6 +451,11 @@ fun InventoryCard(
     selectedToolId?.let { toolId ->
         val liveTool = inventory.tools.find { it.toolId == toolId }
         if (liveTool != null) {
+            val canMoveToShack = StorageCapacity.canAddStackable(
+                currentCount = toolShackCount,
+                max = toolShackMax,
+                stackExists = toolId in toolShackToolIds,
+            )
             ItemDetailDialog(
                 itemId = toolId,
                 apiReady = apiReady,
@@ -449,6 +463,27 @@ fun InventoryCard(
                 isLocked = toolId in favoritedItemIds,
                 onToggleLock = { onToggleLock(toolId) },
                 onDismiss = { selectedToolId = null },
+                extraContent = if (!hasToolShack) null else ({
+                    Button(
+                        onClick = {
+                            onMoveToolToShack(toolId)
+                            selectedToolId = null
+                        },
+                        enabled = canMoveToShack,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Accent,
+                            disabledContainerColor = SurfaceDark,
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            if (canMoveToShack) "Move to Tool Shack" else "Tool Shack full",
+                            fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            color = if (canMoveToShack) Color.White else TextMuted,
+                        )
+                    }
+                }),
             )
         } else {
             selectedToolId = null
@@ -495,7 +530,7 @@ fun InventoryCard(
                 isLocked = decorId in favoritedItemIds,
                 onToggleLock = { onToggleLock(decorId) },
                 onDismiss = { selectedDecorId = null },
-                extraContent = {
+                extraContent = if (!hasDecorShed) null else ({
                     Button(
                         onClick = {
                             onMoveDecorToShed(decorId)
@@ -515,7 +550,7 @@ fun InventoryCard(
                             color = if (canMoveToShed) Color.White else TextMuted,
                         )
                     }
-                },
+                }),
             )
         } else {
             selectedDecorId = null
@@ -533,6 +568,7 @@ fun InventoryCard(
                 pet = livePet,
                 apiReady = apiReady,
                 isLocked = petLockId in favoritedItemIds,
+                hasPetHutch = hasPetHutch,
                 canMoveToHutch = StorageCapacity.hasFreeSlot(petHutchCount, petHutchMax),
                 onToggleLock = { onToggleLock(petLockId) },
                 onSell = {
@@ -1264,6 +1300,7 @@ private fun SeedDetailDialog(
     apiReady: Boolean,
     freePlantTiles: Int,
     isLocked: Boolean,
+    hasSeedSilo: Boolean,
     canMoveToSilo: Boolean,
     onPlantSeed: () -> Unit,
     onToggleLock: () -> Unit,
@@ -1366,23 +1403,26 @@ private fun SeedDetailDialog(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Only when the player owns a Seed Silo
+            if (hasSeedSilo) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = onMoveToSilo,
-                enabled = canMoveToSilo,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Accent,
-                    disabledContainerColor = SurfaceDark,
-                ),
-                shape = RoundedCornerShape(10.dp),
-            ) {
-                Text(
-                    if (canMoveToSilo) "Move to Seed Silo" else "Seed Silo full",
-                    fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                    color = if (canMoveToSilo) Color.White else TextMuted,
-                )
+                Button(
+                    onClick = onMoveToSilo,
+                    enabled = canMoveToSilo,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Accent,
+                        disabledContainerColor = SurfaceDark,
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        if (canMoveToSilo) "Move to Seed Silo" else "Seed Silo full",
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = if (canMoveToSilo) Color.White else TextMuted,
+                    )
+                }
             }
 
         }
@@ -1881,6 +1921,7 @@ private fun PetDetailDialog(
     pet: InventoryPetItem,
     apiReady: Boolean,
     isLocked: Boolean,
+    hasPetHutch: Boolean,
     canMoveToHutch: Boolean,
     onToggleLock: () -> Unit,
     onSell: () -> Unit,
@@ -2093,25 +2134,27 @@ private fun PetDetailDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Move to hutch button
-                Button(
-                    onClick = onMoveToHutch,
-                    enabled = canMoveToHutch,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Accent,
-                        disabledContainerColor = SurfaceDark,
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                ) {
-                    Text(
-                        if (canMoveToHutch) "Move to Pet Hutch" else "Pet Hutch full",
-                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToHutch) Color.White else TextMuted,
-                    )
-                }
+                // Move to hutch button - only when the player owns a Pet Hutch
+                if (hasPetHutch) {
+                    Button(
+                        onClick = onMoveToHutch,
+                        enabled = canMoveToHutch,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Accent,
+                            disabledContainerColor = SurfaceDark,
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            if (canMoveToHutch) "Move to Pet Hutch" else "Pet Hutch full",
+                            fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            color = if (canMoveToHutch) Color.White else TextMuted,
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
                 // Sell button
                 Button(

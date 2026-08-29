@@ -88,6 +88,7 @@ data class PlayerModel(
     fun getSeedSilo(): JsonArray = getStorageItems("SeedSilo")
     fun getDecorShed(): JsonArray = getStorageItems("DecorShed")
     fun getFeedingTrough(): JsonArray = getStorageItems("FeedingTrough")
+    fun getToolShack(): JsonArray = getStorageItems("ToolShack")
 
     // --- Garden helpers ---
 

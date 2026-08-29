@@ -51,6 +51,7 @@ import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryPlantItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
+import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.theme.SurfaceCard
@@ -277,6 +278,90 @@ fun DecorShedCard(
             )
         } else {
             selectedDecorId = null
+        }
+    }
+}
+
+// ── Tool Shack ──
+
+@Composable
+fun ToolShackCard(
+    tools: List<InventoryToolItem>,
+    apiReady: Boolean,
+    favoritedItemIds: Set<String> = emptySet(),
+    inventoryToolIds: Set<String> = emptySet(),
+    inventoryItemCount: Int = 0,
+    magicDust: Double = 0.0,
+    capacitySlots: Int = PriceCalculator.TOOL_SHACK_BASE_CAPACITY,
+    onToggleLock: (String) -> Unit = {},
+    onMoveToInventory: (String) -> Unit = {},
+    onUpgrade: () -> Unit = {},
+) {
+    val sorted = remember(tools, apiReady) { tools.sortedBy { raritySort(it.toolId) } }
+    var selectedToolId by remember { mutableStateOf<String?>(null) }
+    var selectedRarity by remember { mutableStateOf<String?>(null) }
+    val availableRarities = remember(sorted, apiReady) {
+        MgApi.RARITY_ORDER.filter { r -> sorted.any { MgApi.findItem(it.toolId)?.rarity.equals(r, ignoreCase = true) } }
+    }
+    val visible = remember(sorted, selectedRarity) {
+        if (selectedRarity == null) sorted
+        else sorted.filter { MgApi.findItem(it.toolId)?.rarity.equals(selectedRarity, ignoreCase = true) }
+    }
+    val maxItems = capacitySlots
+    val capacityLevel = remember(capacitySlots, apiReady) { PriceCalculator.toolShackLevelForCapacity(capacitySlots) }
+    val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextToolShackUpgrade(capacityLevel) }
+
+    AppCard(title = "Tool Shack", collapsible = true, persistKey = "storage.toolShack", trailing = {
+        Text("${tools.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+    }) {
+        StorageUpgradePanel(
+            entityLabel = "Tool Shack",
+            magicDust = magicDust,
+            capacityLevel = capacityLevel,
+            maxLevel = remember(apiReady) { PriceCalculator.storageMaxLevel("ToolShack") },
+            currentCapacity = maxItems,
+            nextUpgrade = nextUpgrade,
+            onUpgrade = onUpgrade,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (sorted.isEmpty()) {
+            Text("Empty", fontSize = 12.sp, color = TextMuted)
+        } else {
+            RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
+            Spacer(modifier = Modifier.height(8.dp))
+            GridOf(visible.size) { i ->
+                Box(modifier = Modifier.clickable { selectedToolId = visible[i].toolId }) {
+                    LockOverlay(isLocked = visible[i].toolId in favoritedItemIds) {
+                        QtyTile(visible[i].toolId, visible[i].quantity, apiReady)
+                    }
+                }
+            }
+        }
+    }
+
+    selectedToolId?.let { toolId ->
+        val liveTool = tools.find { it.toolId == toolId }
+        if (liveTool != null) {
+            val canMoveBack = StorageCapacity.canAddStackable(
+                currentCount = inventoryItemCount,
+                max = StorageCapacity.INVENTORY_LIMIT,
+                stackExists = toolId in inventoryToolIds,
+            )
+            StorageItemDetailDialog(
+                itemId = toolId,
+                apiReady = apiReady,
+                quantity = liveTool.quantity,
+                isLocked = toolId in favoritedItemIds,
+                canMoveToInventory = canMoveBack,
+                onToggleLock = { onToggleLock(toolId) },
+                onMoveToInventory = {
+                    onMoveToInventory(toolId)
+                    selectedToolId = null
+                },
+                onDismiss = { selectedToolId = null },
+            )
+        } else {
+            selectedToolId = null
         }
     }
 }
@@ -615,7 +700,7 @@ fun PetHutchCard(
     }
 }
 
-// ── Storage upgrade panel (PetHutch / SeedSilo - same upgrade pattern) ──
+// ── Storage upgrade panel (PetHutch / SeedSilo / DecorShed / ToolShack - same pattern) ──
 
 @Composable
 private fun StorageUpgradePanel(
