@@ -190,7 +190,8 @@ fun ShopsCards(
     shops.filter { it.type !in CORE_SHOP_KEYS }.forEach { shop ->
         val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock > 0
         if (!isActive) return@forEach
-        val label = shop.type.replaceFirstChar { it.uppercase() }
+        // Alerts and Autobuy label these "Rain Shop", "Amber Shop"... - match them.
+        val label = "${shop.type.replaceFirstChar { it.uppercase() }} Shop"
         ShopCategoryCard(
             label = label,
             shop = shop,
@@ -235,8 +236,8 @@ private fun ShopCategoryCard(
                 items.forEach { itemName ->
                     val initialStock = shop?.initialStocks?.get(itemName) ?: 0
                     val remaining = shop?.itemStocks?.get(itemName) ?: 0
-                    val buyState = remember(itemName, shopType, session.inventory, session.availableStorages, apiReady) {
-                        if (apiReady) session.buyState(itemName, shopType) else ShopItemBuyState.Buyable
+                    val buyState = remember(itemName, session.inventory, session.availableStorages, apiReady) {
+                        if (apiReady) session.buyState(itemName) else ShopItemBuyState.Buyable
                     }
                     ShopItemTile(
                         itemName = itemName,

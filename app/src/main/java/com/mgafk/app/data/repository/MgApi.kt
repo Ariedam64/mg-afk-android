@@ -288,6 +288,29 @@ object MgApi {
         return null
     }
 
+    /**
+     * Which data category an item id belongs to ("plants", "items", "eggs", "decors"),
+     * or null when the id is unknown. Same lookup order and case-insensitive fallback as
+     * [findItem] - use this instead of the shop an item happens to be sold in, since the
+     * game now sells the same kinds of item across several shops (ward shards are `items`
+     * sold in the weather shops, storages are `decors` sold in the tool shop).
+     */
+    fun categoryOf(itemId: String): String? {
+        val categories = listOf(
+            "plants" to ::getPlants,
+            "items" to ::getItems,
+            "eggs" to ::getEggs,
+            "decors" to ::getDecors,
+        )
+        for ((name, getter) in categories) {
+            if (getter().containsKey(itemId)) return name
+        }
+        for ((name, getter) in categories) {
+            if (getter().keys.any { it.equals(itemId, ignoreCase = true) }) return name
+        }
+        return null
+    }
+
     /** Display name for an item id. */
     fun itemDisplayName(itemId: String): String = findItem(itemId)?.name ?: itemId
 

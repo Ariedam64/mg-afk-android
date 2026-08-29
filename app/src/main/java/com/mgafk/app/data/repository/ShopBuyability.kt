@@ -18,15 +18,20 @@ enum class ShopItemBuyState {
  * Tools: counts what's in `inventory.tools`.
  * Decors: counts both `inventory.decors` (bought, not yet placed) AND
  *   `availableStorages` (placed in the garden as a storage structure).
- * Other shop types (seed, egg) are treated as always buyable - the API
- * does not currently expose caps for them.
+ * Seeds and eggs are treated as always buyable - the API does not currently
+ * expose caps for them.
+ *
+ * The count keys off the item's own data category, not the shop it is sold in:
+ * the same kind of item now shows up in several shops (ward shards are tools sold
+ * in the weather shops, storages are decors sold in the tool shop), so trusting
+ * `shopType` would silently skip the cap check.
  */
-fun Session.buyState(itemId: String, shopType: String): ShopItemBuyState {
+fun Session.buyState(itemId: String): ShopItemBuyState {
     val entry = MgApi.findItem(itemId) ?: return ShopItemBuyState.Buyable
 
-    val owned: Int = when (shopType) {
-        "tool" -> inventory.tools.find { it.toolId == itemId }?.quantity ?: 0
-        "decor" -> {
+    val owned: Int = when (MgApi.categoryOf(itemId)) {
+        "items" -> inventory.tools.find { it.toolId == itemId }?.quantity ?: 0
+        "decors" -> {
             val inInventory = inventory.decors.find { it.decorId == itemId }?.quantity ?: 0
             val placedInGarden = if (itemId in availableStorages) 1 else 0
             inInventory + placedInGarden
