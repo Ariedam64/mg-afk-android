@@ -49,6 +49,7 @@ import androidx.compose.ui.window.Dialog
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.PetSnapshot
+import com.mgafk.app.data.model.REPLENISH_POTION_ID
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.websocket.Constants
@@ -182,7 +183,12 @@ fun ActivePetsCard(
     apiReady: Boolean = false,
     showTip: Boolean = false,
     onDismissTip: () -> Unit = {},
+    /** Hunger Potions sitting in the inventory, usable straight away. */
+    potionsInInventory: Int = 0,
+    /** Hunger Potions sitting in the Tool Shack, retrieved on demand before use. */
+    potionsInShack: Int = 0,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit = { _, _ -> },
+    onUsePotionOnPet: (petItemId: String) -> Unit = {},
     onSwapPet: (activePetId: String, targetPetId: String, targetIsInHutch: Boolean) -> Unit = { _, _, _ -> },
     onEquipPet: (targetPetId: String, targetIsInHutch: Boolean) -> Unit = { _, _ -> },
     onUnequipPet: (petId: String) -> Unit = {},
@@ -241,7 +247,10 @@ fun ActivePetsCard(
                     apiReady = apiReady,
                     isSelected = selectedPetId == pet.id,
                     onSelect = { selectedPetId = if (selectedPetId == pet.id) null else pet.id },
+                    potionsInInventory = potionsInInventory,
+                    potionsInShack = potionsInShack,
                     onFeedPet = onFeedPet,
+                    onUsePotionOnPet = onUsePotionOnPet,
                     onSwapPet = onSwapPet,
                     onUnequipPet = onUnequipPet,
                 )
@@ -266,7 +275,10 @@ private fun ActivePetRow(
     apiReady: Boolean,
     isSelected: Boolean,
     onSelect: () -> Unit,
+    potionsInInventory: Int,
+    potionsInShack: Int,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit,
+    onUsePotionOnPet: (petItemId: String) -> Unit,
     onSwapPet: (activePetId: String, targetPetId: String, targetIsInHutch: Boolean) -> Unit,
     onUnequipPet: (petId: String) -> Unit,
 ) {
@@ -456,9 +468,15 @@ private fun ActivePetRow(
             pet = pet,
             produce = produce,
             apiReady = apiReady,
+            potionsInInventory = potionsInInventory,
+            potionsInShack = potionsInShack,
             onConfirm = { selectedIds ->
                 showFeedPicker = false
                 if (selectedIds.isNotEmpty()) onFeedPet(pet.id, selectedIds)
+            },
+            onUsePotion = {
+                showFeedPicker = false
+                onUsePotionOnPet(pet.id)
             },
             onDismiss = { showFeedPicker = false },
         )
@@ -660,7 +678,10 @@ private fun FeedPetPickerDialog(
     pet: PetSnapshot,
     produce: List<InventoryProduceItem>,
     apiReady: Boolean,
+    potionsInInventory: Int,
+    potionsInShack: Int,
     onConfirm: (List<String>) -> Unit,
+    onUsePotion: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val petEntry = remember(pet.species, apiReady) { MgApi.findPet(pet.species) }
@@ -703,6 +724,18 @@ private fun FeedPetPickerDialog(
                 color = if (selected.isNotEmpty()) StatusConnected else TextMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
             )
+
+            // A potion restores hunger in full on its own, so it is an immediate action
+            // rather than another entry in the multi-select grid below.
+            if (potionsInInventory + potionsInShack > 0) {
+                HungerPotionRow(
+                    inInventory = potionsInInventory,
+                    inShack = potionsInShack,
+                    apiReady = apiReady,
+                    onClick = onUsePotion,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             if (compatible.isEmpty()) {
                 Text(
@@ -754,6 +787,46 @@ private fun FeedPetPickerDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * One-tap Hunger Potion action inside the feed picker. Shown only when the player owns at
+ * least one, counting both the inventory and the Tool Shack: a potion still in the shack is
+ * retrieved before use, which the caller handles.
+ */
+@Composable
+private fun HungerPotionRow(
+    inInventory: Int,
+    inShack: Int,
+    apiReady: Boolean,
+    onClick: () -> Unit,
+) {
+    val entry = remember(apiReady) { MgApi.findItem(REPLENISH_POTION_ID) }
+    val name = entry?.name ?: "Hunger Potion"
+    val stockText = when {
+        inInventory > 0 && inShack > 0 -> "x$inInventory in inventory, x$inShack in Tool Shack"
+        inInventory > 0 -> "x$inInventory in inventory"
+        else -> "x$inShack in Tool Shack, retrieved on use"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.5.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .background(Accent.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
+        }
+        Text("Use", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Accent)
     }
 }
 

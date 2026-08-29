@@ -36,6 +36,8 @@ import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.model.InventorySnapshot
 import com.mgafk.app.data.model.InventoryToolItem
+import com.mgafk.app.data.model.POTION_STORAGE_ID
+import com.mgafk.app.data.model.REPLENISH_POTION_ID
 import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.PetSnapshot
@@ -67,9 +69,11 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -116,6 +120,8 @@ data class UiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private companion object {
         const val TAG = "MainViewModel"
+        /** How long a Hunger Potion pulled from the Tool Shack is awaited before giving up on using it. */
+        const val POTION_RETRIEVAL_TIMEOUT_MS = 6_000L
         /** How often each connected session is evaluated for a collect-state send. */
         const val STATE_COLLECT_INTERVAL_MS = 60_000L
         /**
@@ -864,6 +870,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             pendingFeedJobs.remove(key)
         }
+    }
+
+    /**
+     * Uses one Hunger Potion on [petItemId], pulling it out of the Tool Shack first when the
+     * inventory has none left. The potion only applies to the pet the player is standing on,
+     * so this teleports there first - same sequence the auto-feed uses.
+     *
+     * The retrieval is a separate round trip, so this waits for the server to confirm the
+     * potion in the inventory before drinking it. If that confirmation never lands the potion
+     * simply stays where it is, retrieved but unused: nothing is consumed on a guess.
+     */
+    fun useReplenishPotionOnPet(sessionId: String, petItemId: String) {
+        viewModelScope.launch {
+            val client = clients[sessionId] ?: return@launch
+            val session = _state.value.sessions.find { it.id == sessionId } ?: return@launch
+
+            if (potionCountIn(session.inventory.tools) == 0) {
+                if (potionCountIn(session.toolShack) == 0) return@launch
+                client.actions.retrieveItemFromStorage(
+                    itemId = REPLENISH_POTION_ID,
+                    storageId = POTION_STORAGE_ID,
+                    toInventoryIndex = totalInventoryCount(session),
+                )
+                val arrived = withTimeoutOrNull(POTION_RETRIEVAL_TIMEOUT_MS) {
+                    _state.first { state ->
+                        val tools = state.sessions.find { it.id == sessionId }?.inventory?.tools
+                        potionCountIn(tools.orEmpty()) > 0
+                    }
+                }
+                if (arrived == null) {
+                    AppLog.d(TAG, "[Potion] Retrieval from $POTION_STORAGE_ID not confirmed for $sessionId")
+                    return@launch
+                }
+            }
+
+            val position = findPetPosition(client, petItemId) ?: return@launch
+            client.actions.teleport(position.first, position.second)
+            client.actions.useReplenishPotion(petItemId)
+        }
+    }
+
+    private fun potionCountIn(tools: List<InventoryToolItem>): Int =
+        tools.find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0
+
+    /**
+     * Reads the pet's current tile position from the player's own live petSlotInfos.
+     * The game has used two shapes for this over time - `{ motion: { at: {x,y} } }`
+     * (current) and a flatter `{ position: {x,y} }` (older) - so both are checked.
+     */
+    private fun findPetPosition(client: RoomClient, petId: String): Pair<Double, Double>? {
+        val me = client.gameState.getPlayer(client.playerId) ?: return null
+        val info = me.petSlotInfos?.get(petId) as? JsonObject ?: return null
+        val posObj = (info["motion"] as? JsonObject)?.get("at") as? JsonObject
+            ?: info["position"] as? JsonObject
+            ?: return null
+        val x = posObj["x"]?.jsonPrimitive?.doubleOrNull ?: return null
+        val y = posObj["y"]?.jsonPrimitive?.doubleOrNull ?: return null
+        return x to y
     }
 
     // ---- Pet swap / equip / unequip ----
