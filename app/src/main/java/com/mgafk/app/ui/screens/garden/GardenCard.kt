@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mgafk.app.data.model.GardenEggSnapshot
 import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
@@ -151,7 +152,7 @@ private fun computeSizePercent(targetScale: Double, maxScale: Double): Double {
 }
 
 /** Pre-resolved plant data - computed once per plants change, reused by filters + tiles. */
-private data class ResolvedPlant(
+internal data class ResolvedPlant(
     val snapshot: GardenPlantSnapshot,
     val rarity: String?,
     val cropSprite: String?,
@@ -161,7 +162,7 @@ private data class ResolvedPlant(
 )
 
 /** A garden entry is either a single crop or a multi-slot plant grouping multiple crops. */
-private sealed class GardenEntry {
+internal sealed class GardenEntry {
     abstract val tileId: Int
     abstract val rarity: String?
     abstract val displayName: String
@@ -206,6 +207,8 @@ private fun GardenEntry.sizePercent(): Double = when (this) {
 fun GardenCard(
     plants: List<GardenPlantSnapshot>,
     apiReady: Boolean = false,
+    /** Only used by the map view, to mark the tiles they occupy. */
+    gardenEggs: List<GardenEggSnapshot> = emptyList(),
     onHarvest: (slot: Int, slotIndex: Int) -> Unit = { _, _ -> },
     onWater: (slot: Int) -> Unit = {},
     onPot: (slot: Int) -> Unit = {},
@@ -223,6 +226,7 @@ fun GardenCard(
     var selectedCropKey by remember { mutableStateOf<Pair<Int, Int>?>(null) } // tileId to slotIndex
     var selectedMultiPlantTileId by remember { mutableStateOf<Int?>(null) }
     var sortModeName by rememberSaveable { mutableStateOf("NONE") }
+    var mapView by rememberSaveable { mutableStateOf(false) }
     val sortMode = remember(sortModeName) { SortMode.entries.find { it.name == sortModeName } ?: SortMode.NONE }
     var minSizePercent by rememberSaveable { mutableStateOf(0f) }
 
@@ -461,8 +465,50 @@ fun GardenCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Garden grid ──
-            if (sorted.isEmpty()) {
+            // ── View switch ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ViewModeChip(label = "List", selected = !mapView) { mapView = false }
+                ViewModeChip(label = "Map", selected = mapView) { mapView = true }
+                if (mapView) {
+                    Text(
+                        "Drag to move, pinch to zoom.",
+                        fontSize = 10.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (mapView) {
+                // Filters dim tiles here instead of removing them: the point of this view is
+                // where things sit, and a hole would read as free dirt.
+                val entriesByTile = remember(entries) { entries.associateBy { it.tileId } }
+                val matchingTileIds = remember(sorted) { sorted.map { it.tileId }.toSet() }
+                val eggSpriteByTile = remember(gardenEggs, apiReady) {
+                    gardenEggs.associate { it.tileId to MgApi.findItem(it.eggId)?.sprite }
+                }
+                GardenLayoutGrid(
+                    entriesByTile = entriesByTile,
+                    matchingTileIds = matchingTileIds,
+                    filtersActive = activeFilterCount > 0 || searchQuery.isNotBlank(),
+                    eggSpriteByTile = eggSpriteByTile,
+                    // This build does not track garden decor, so decor tiles read as free here.
+                    decorSpriteByTile = emptyMap(),
+                    onSelectPlant = { entry ->
+                        when (entry) {
+                            is GardenEntry.SingleCrop ->
+                                selectedCropKey = entry.plant.snapshot.tileId to entry.plant.snapshot.slotIndex
+                            is GardenEntry.MultiSlotPlant -> selectedMultiPlantTileId = entry.tileId
+                        }
+                    },
+                )
+            } else if (sorted.isEmpty()) {
                 Text("No plants match filters.", fontSize = 12.sp, color = TextMuted)
             } else {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -550,6 +596,28 @@ fun GardenCard(
             selectedMultiPlantTileId = null
         }
     }
+}
+
+/** List/Map switch above the plants, styled like the sort chips next to it. */
+@Composable
+private fun ViewModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        text = label,
+        fontSize = 10.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        color = if (selected) Accent else TextSecondary,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .border(
+                1.dp,
+                if (selected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
+                RoundedCornerShape(12.dp),
+            )
+            .background(if (selected) Accent.copy(alpha = 0.18f) else SurfaceCard)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    )
 }
 
 // ── Single crop tile (unchanged) ──

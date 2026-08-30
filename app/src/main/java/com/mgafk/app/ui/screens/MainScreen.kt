@@ -608,6 +608,7 @@ private fun SectionContent(
             GardenCard(
                 plants = session.garden,
                 apiReady = state.apiReady,
+                gardenEggs = session.gardenEggs,
                 onHarvest = { slot, slotIndex -> viewModel.harvestCrop(session.id, slot, slotIndex) },
                 onWater = { slot -> viewModel.waterPlant(session.id, slot) },
                 onPot = { slot -> viewModel.potPlant(session.id, slot) },
