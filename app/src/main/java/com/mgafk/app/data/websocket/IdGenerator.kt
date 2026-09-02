@@ -1,6 +1,7 @@
 package com.mgafk.app.data.websocket
 
 import java.security.SecureRandom
+import java.util.UUID
 
 object IdGenerator {
     private const val BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -23,6 +24,12 @@ object IdGenerator {
             LOWER_ALPHA[(byte.toInt() and 0xFF) % LOWER_ALPHA.length].toString()
         }
     }
+
+    /**
+     * Identifies one client "document" (a tab, for the web client) to the
+     * server. Stable for a whole session, regenerated for each new one.
+     */
+    fun generateDocumentId(): String = UUID.randomUUID().toString()
 
     fun normalizeCookie(cookie: String?): String {
         val trimmed = cookie?.trim().orEmpty()

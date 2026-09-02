@@ -152,6 +152,15 @@ class RoomClient {
     private var lastChatSize = -1
     private var lastPlayersPayload: ClientEvent.PlayersListChanged? = null
 
+    // Client context sent in the connect URL. The document id identifies this
+    // session to the server and stays stable across auto-retries while
+    // connectionAttempt counts up; lastCloseCode decides whether we ask to
+    // reclaim a session that was superseded elsewhere.
+    private var documentId = IdGenerator.generateDocumentId()
+    private var connectionAttempt = 1
+    private var navigationType = NavigationType.NAVIGATE
+    private var lastCloseCode: Int? = null
+
     // Retry state
     private var retryCount = 0
     private var retryCode: Int? = null
@@ -204,7 +213,12 @@ class RoomClient {
             retryCount = 0
             retryCode = null
             initialConnectFastRetry = !hasEverWelcomed
+            documentId = IdGenerator.generateDocumentId()
         }
+        // retryCount was already incremented by scheduleReconnect, so the first
+        // retry is attempt 2 - same numbering as the web client.
+        connectionAttempt = if (isRetry) retryCount + 1 else 1
+        navigationType = if (isRetry) NavigationType.RELOAD else NavigationType.NAVIGATE
         cancelRetryJob()
 
         if (reconnect != null) this.reconnectConfig = reconnect
@@ -243,7 +257,17 @@ class RoomClient {
             versionFetcher = preservedFetcher,
         )
 
-        val url = UrlBuilder.buildUrl(this.host, this.version, this.room)
+        val url = UrlBuilder.buildUrl(
+            this.host,
+            this.version,
+            this.room,
+            ClientContext(
+                documentId = documentId,
+                connectionAttempt = connectionAttempt,
+                navigationType = navigationType,
+                reclaimSupersededSession = lastCloseCode?.let { it in Constants.SUPERSEDED_CODES } == true,
+            ),
+        )
         AppLog.d(TAG, "connect() url=$url isRetry=$isRetry retryCount=$retryCount")
 
         state = "connecting"
@@ -408,6 +432,7 @@ class RoomClient {
             val wasRetry = retryCount > 0
             retryCount = 0
             retryCode = null
+            lastCloseCode = null
             hasEverWelcomed = true
             initialConnectFastRetry = false
             cancelRetryJob()
@@ -565,6 +590,7 @@ class RoomClient {
 
     private fun handleClose(code: Int, reason: String) {
         AppLog.w(TAG, "onClose code=$code reason=$reason manualClose=$manualClose")
+        lastCloseCode = code
         state = "disconnected"
         connectedAt = 0
         welcomed = false

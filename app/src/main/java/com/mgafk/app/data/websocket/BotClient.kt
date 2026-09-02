@@ -55,6 +55,11 @@ class BotClient(
     private var socketToken = 0
     private var lastOpts: ConnectOpts? = null
 
+    // Each bot is its own client "document" for the server: a fresh id per
+    // connect, kept across this bot's auto-retries. See [ClientContext].
+    private var documentId = IdGenerator.generateDocumentId()
+    private var lastCloseCode: Int? = null
+
     var reconnectConfig: ReconnectConfig = ReconnectConfig()
 
     private val _events = MutableSharedFlow<BotEvent>(extraBufferCapacity = 16)
@@ -75,7 +80,10 @@ class BotClient(
         isRetry: Boolean = false,
     ) {
         webSocket?.let { it.close(1000, null); webSocket = null }
-        if (!isRetry) retryCount = 0
+        if (!isRetry) {
+            retryCount = 0
+            documentId = IdGenerator.generateDocumentId()
+        }
         cancelRetryJob()
         manualClose = false
 
@@ -85,7 +93,15 @@ class BotClient(
         val preservedFetcher = if (isRetry) lastOpts?.versionFetcher else versionFetcher
         lastOpts = ConnectOpts(effectiveVersion, room, host, preservedFetcher)
 
-        val url = UrlBuilder.buildGuestUrl(host, effectiveVersion, room, name, avatar)
+        // retryCount was already incremented by scheduleReconnect, so the first
+        // retry is attempt 2 - same numbering as the web client.
+        val client = ClientContext(
+            documentId = documentId,
+            connectionAttempt = if (isRetry) retryCount + 1 else 1,
+            navigationType = if (isRetry) NavigationType.RELOAD else NavigationType.NAVIGATE,
+            reclaimSupersededSession = lastCloseCode?.let { it in Constants.SUPERSEDED_CODES } == true,
+        )
+        val url = UrlBuilder.buildGuestUrl(host, effectiveVersion, room, name, avatar, client)
         AppLog.d(TAG, "connect() url=$url retry=$retryCount")
 
         val token = ++socketToken
@@ -101,6 +117,7 @@ class BotClient(
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 if (token != socketToken) return
                 retryCount = 0
+                lastCloseCode = null
                 emit(BotEvent.StatusChanged(BotStatus.CONNECTED))
             }
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -137,6 +154,7 @@ class BotClient(
     }
 
     private fun handleClose(code: Int, reason: String) {
+        lastCloseCode = code
         if (manualClose) {
             emit(BotEvent.StatusChanged(BotStatus.DISCONNECTED, "code $code"))
             return
