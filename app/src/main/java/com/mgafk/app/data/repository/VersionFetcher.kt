@@ -29,6 +29,46 @@ object VersionFetcher {
     }
 
     /**
+     * The version a given room runs on, or null when the page can't be read or
+     * carries no version. Rooms are not migrated in lockstep with the platform,
+     * so connecting with the latest global version is rejected ("version
+     * expired") on a room still running an older build.
+     */
+    suspend fun fetchRoomVersion(host: String = "magicgarden.gg", room: String): String? =
+        withContext(Dispatchers.IO) {
+            val trimmedRoom = room.trim()
+            if (trimmedRoom.isEmpty()) return@withContext null
+            try {
+                val request = Request.Builder()
+                    .url("https://$host/r/$trimmedRoom")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    parseRoomVersion(response.body?.string().orEmpty())
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    /**
+     * The version to connect [room] with: its own, falling back to the latest
+     * platform version so a failed page fetch never blocks a connection.
+     */
+    suspend fun fetchVersionForRoom(host: String = "magicgarden.gg", room: String): String =
+        fetchRoomVersion(host, room) ?: fetchGameVersion(host)
+
+    /**
+     * A room page references `/version/<v>/` from a dozen places (icons,
+     * manifest, thumbnails); the `/assets/` bundle is the one the room
+     * actually runs. Matches both numeric ids and the older hash format.
+     */
+    private val ROOM_VERSION_REGEX = Regex("""/version/([^/"]+)/assets/""")
+
+    internal fun parseRoomVersion(html: String): String? =
+        ROOM_VERSION_REGEX.find(html)?.groupValues?.get(1)
+
+    /**
      * Fetch the latest GitHub release for the app.
      * Returns null if the request fails (no crash on network error).
      */

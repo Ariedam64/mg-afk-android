@@ -352,8 +352,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
-                val version = VersionFetcher.fetchGameVersion(
-                    host = session.gameUrl.removePrefix("https://").removePrefix("http://").ifBlank { "magicgarden.gg" }
+                val version = VersionFetcher.fetchVersionForRoom(
+                    host = session.gameUrl.removePrefix("https://").removePrefix("http://").ifBlank { "magicgarden.gg" },
+                    room = session.room,
                 )
 
                 updateSession(sessionId) { it.copy(gameVersion = version) }
@@ -386,7 +387,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     room = session.room,
                     host = host,
                     reconnect = reconnectWithSettings,
-                    versionFetcher = { VersionFetcher.fetchGameVersion(host = host) },
+                    versionFetcher = { VersionFetcher.fetchVersionForRoom(host = host, room = session.room) },
                 )
             } catch (e: Exception) {
                 updateSession(sessionId) {
@@ -504,7 +505,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 version = version,
                 room = session.room,
                 host = host,
-                versionFetcher = { VersionFetcher.fetchGameVersion(host = host) },
+                versionFetcher = { VersionFetcher.fetchVersionForRoom(host = host, room = session.room) },
             )
         }
     }
