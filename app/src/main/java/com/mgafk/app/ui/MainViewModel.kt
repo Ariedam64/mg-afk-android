@@ -33,6 +33,12 @@ import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.model.InventoryEggItem
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryPlantItem
+import com.mgafk.app.data.model.CrystalType
+import com.mgafk.app.data.model.GardenTileRef
+import com.mgafk.app.data.model.GardenTileType
+import com.mgafk.app.data.model.PlacedCrystal
+import com.mgafk.app.data.repository.CrystalParser
+import com.mgafk.app.data.repository.Crystals
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.InventorySeedItem
@@ -987,6 +993,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val x = posObj["x"]?.jsonPrimitive?.doubleOrNull ?: return null
         val y = posObj["y"]?.jsonPrimitive?.doubleOrNull ?: return null
         return x to y
+    }
+
+    // ---- Crystals ----
+
+    /** Reads the crystals standing in [sessionId]'s garden, from both tile maps. */
+    private fun readCrystals(sessionId: String): List<PlacedCrystal> {
+        val client = clients[sessionId] ?: return emptyList()
+        val me = client.gameState.getPlayer(client.playerId) ?: return emptyList()
+        return CrystalParser.parse(me.getGardenTiles(), me.getBoardwalkTiles())
+    }
+
+    /** Every tile of [sessionId]'s garden that already holds something. */
+    private fun readOccupiedTiles(sessionId: String): Set<GardenTileRef> {
+        val client = clients[sessionId] ?: return emptySet()
+        val me = client.gameState.getPlayer(client.playerId) ?: return emptySet()
+        return CrystalParser.occupiedTiles(me.getGardenTiles(), me.getBoardwalkTiles())
+    }
+
+    /**
+     * Plants one [type] shard on an empty tile, dirt or boardwalk.
+     *
+     * Which shard gets spent is [Crystals.chooseForPlace]'s call. Nothing is sent when the
+     * player owns none, or when the garden already holds as many of that kind as it may.
+     */
+    fun placeCrystal(
+        sessionId: String,
+        type: CrystalType,
+        tileType: GardenTileType,
+        localTileIndex: Int,
+    ) {
+        val client = clients[sessionId] ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        if (!Crystals.canPlace(type, session.crystals)) {
+            AppLog.d(TAG, "[Crystal] ${type.id} is at its per-garden limit for $sessionId")
+            return
+        }
+        val shard = Crystals.chooseForPlace(Crystals.ownedShards(type, session.inventory.tools))
+        if (shard == null) {
+            AppLog.d(TAG, "[Crystal] no ${type.toolId} to plant for $sessionId")
+            return
+        }
+        client.actions.placeCrystal(shard.ref, tileType, localTileIndex)
+    }
+
+    /**
+     * Fuses a shard into [target], extending it by whatever fits under the ceiling.
+     *
+     * The gain is computed here rather than trusted from the UI, because the server rejects a
+     * gain larger than what is left, and the crystal may have ticked down since it was drawn.
+     */
+    fun fuseCrystal(sessionId: String, target: PlacedCrystal) {
+        val client = clients[sessionId] ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val shards = Crystals.ownedShards(target.type, session.inventory.tools)
+        val shard = Crystals.chooseForFuse(shards, target.remainingSeconds) ?: return
+        val gain = Crystals.mergeGainSeconds(target.remainingSeconds, shard.seconds)
+        if (gain <= 0) return
+        client.actions.fuseCrystal(shard.ref, target.tileType, target.localTileIndex, gain)
+    }
+
+    /** Takes [crystal] back into the inventory, keeping whatever time it has left. */
+    fun pickupCrystal(sessionId: String, crystal: PlacedCrystal) {
+        clients[sessionId]?.actions?.pickupCrystal(
+            crystalType = crystal.type,
+            tileType = crystal.tileType,
+            localTileIndex = crystal.localTileIndex,
+        )
     }
 
     // ---- Pet swap / equip / unequip ----
@@ -2098,7 +2171,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pendingCleanseJobs.remove(key)?.cancel()
                 }
                 val freeTiles = clients[sessionId]?.let { computeFreePlantTileCount(it) } ?: 0
-                updateSession(sessionId) { it.copy(garden = newGarden, freePlantTiles = freeTiles) }
+                val crystals = readCrystals(sessionId)
+                val occupied = readOccupiedTiles(sessionId)
+                updateSession(sessionId) {
+                    it.copy(
+                        garden = newGarden,
+                        freePlantTiles = freeTiles,
+                        crystals = crystals,
+                        occupiedTiles = occupied,
+                        crystalsReadAtMs = System.currentTimeMillis(),
+                    )
+                }
             }
             is ClientEvent.InventoryChanged -> {
                 val seeds = mutableListOf<InventorySeedItem>()
@@ -2172,6 +2255,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         "Tool" -> tools.add(InventoryToolItem(
                             toolId = obj["toolId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                             quantity = obj["quantity"]?.jsonPrimitive?.intOrNull ?: 1,
+                            id = obj["id"]?.jsonPrimitive?.contentOrNull,
+                            remainingActiveSeconds = obj["remainingActiveSeconds"]?.jsonPrimitive?.intOrNull,
                         ))
                         "Decor" -> decors.add(InventoryDecorItem(
                             decorId = obj["decorId"]?.jsonPrimitive?.contentOrNull.orEmpty(),

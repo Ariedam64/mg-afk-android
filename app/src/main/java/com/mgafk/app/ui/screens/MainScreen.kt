@@ -90,6 +90,7 @@ import com.mgafk.app.ui.screens.room.ChatCard
 import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.room.PopulateCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
+import com.mgafk.app.ui.screens.garden.CrystalsCard
 import com.mgafk.app.ui.screens.garden.EggsCard
 import com.mgafk.app.ui.screens.garden.GardenCard
 import com.mgafk.app.ui.screens.storage.DecorShedCard
@@ -628,6 +629,19 @@ private fun SectionContent(
                 lastHatchedEggId = session.lastHatchedEggId,
                 instantHatch = state.settings.instantHatch,
                 onDismissHatchedPet = { viewModel.clearHatchedPet(session.id) },
+            )
+            CrystalsCard(
+                crystals = session.crystals,
+                tools = session.inventory.tools,
+                connected = session.status == SessionStatus.CONNECTED,
+                crystalsReadAtMs = session.crystalsReadAtMs,
+                occupiedTiles = session.occupiedTiles,
+                apiReady = state.apiReady,
+                onPlant = { type, ref ->
+                    viewModel.placeCrystal(session.id, type, ref.tileType, ref.index)
+                },
+                onFuse = { crystal -> viewModel.fuseCrystal(session.id, crystal) },
+                onPickup = { crystal -> viewModel.pickupCrystal(session.id, crystal) },
             )
         }
         NavSection.PETS -> {
