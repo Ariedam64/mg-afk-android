@@ -658,8 +658,8 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
             )
         }
 
-        if (rp.snapshot.mutations.isNotEmpty()) {
-            MutationIcons(mutations = rp.snapshot.mutations)
+        if (rp.snapshot.mutations.isNotEmpty() || rp.snapshot.preserved) {
+            MutationIcons(mutations = rp.snapshot.mutations, preserved = rp.snapshot.preserved)
         }
     }
 }
@@ -756,11 +756,20 @@ private fun SizeBar(percent: Double, color: Color, showLabel: Boolean = true) {
 // ── Mutation icons ──
 
 @Composable
-private fun MutationIcons(mutations: List<String>) {
+private fun MutationIcons(mutations: List<String>, preserved: Boolean = false) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(1.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // First, and outside the four-mutation cap: preservation is what decides whether those
+        // mutations can still change, so it is the one badge that must never be crowded out.
+        if (preserved) {
+            SpriteImage(
+                url = MgApi.preservationSpriteUrl,
+                size = 12.dp,
+                contentDescription = "Preserved",
+            )
+        }
         sortMutations(mutations).take(4).forEach { mutation ->
             SpriteImage(
                 url = mutationSpriteUrl(mutation),
@@ -865,6 +874,23 @@ private fun PlantDetailDialog(
                 ) {
                     Text("Tile", fontSize = 12.sp, color = TextSecondary)
                     Text("#${plant.snapshot.tileId}", fontSize = 12.sp, color = TextPrimary)
+                }
+
+                if (plant.snapshot.preserved) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Preserved", fontSize = 12.sp, color = TextSecondary)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("weather cannot change it", fontSize = 11.sp, color = TextMuted)
+                            SpriteImage(url = MgApi.preservationSpriteUrl, size = 16.dp, contentDescription = "Preserved")
+                        }
+                    }
                 }
 
                 // Mutations
@@ -1201,8 +1227,11 @@ private fun CropSlotRow(
                         Text(remaining, fontSize = 9.sp, color = TextSecondary)
                     }
                 }
-                if (crop.snapshot.mutations.isNotEmpty()) {
+                if (crop.snapshot.mutations.isNotEmpty() || crop.snapshot.preserved) {
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        if (crop.snapshot.preserved) {
+                            SpriteImage(url = MgApi.preservationSpriteUrl, size = 14.dp, contentDescription = "Preserved")
+                        }
                         sortMutations(crop.snapshot.mutations).forEach { mutation ->
                             SpriteImage(url = mutationSpriteUrl(mutation), size = 14.dp, contentDescription = mutation)
                         }

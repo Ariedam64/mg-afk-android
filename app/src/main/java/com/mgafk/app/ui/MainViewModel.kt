@@ -68,6 +68,7 @@ import com.mgafk.app.service.AlertNotifier
 import com.mgafk.app.service.cancelResumeNotification
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -2151,6 +2152,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             mutations = mutations,
                             startTime = slot["startTime"]?.jsonPrimitive?.longOrNull ?: 0L,
                             endTime = slot["endTime"]?.jsonPrimitive?.longOrNull ?: 0L,
+                            preserved = slot["preserved"]?.jsonPrimitive?.booleanOrNull == true,
                         )
                     }
                 }

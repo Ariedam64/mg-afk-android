@@ -254,6 +254,11 @@ data class GardenPlantSnapshot(
     val mutations: List<String> = emptyList(),
     val startTime: Long = 0,
     val endTime: Long = 0,
+    /**
+     * Preserved at the Preservation Station: the game's weather passes skip such a crop, so
+     * its mutations are locked in and can no longer change.
+     */
+    val preserved: Boolean = false,
 )
 
 /** Serializable snapshot of a shop for Session persistence */

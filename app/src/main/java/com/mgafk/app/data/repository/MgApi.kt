@@ -256,6 +256,9 @@ object MgApi {
     val unlockSpriteUrl: String get() = uiSpriteUrl("Unlocked")
     val magicDustUrl: String get() = spriteUrl("items", "MagicDust")
 
+    /** Badge for a crop preserved at the Preservation Station. */
+    val preservationSpriteUrl: String get() = uiSpriteUrl("PreservationIcon")
+
     /** URL for a rarity tier's badge sprite (e.g. "Common", "Divine"). */
     fun raritySpriteUrl(rarity: String): String = uiSpriteUrl("Rarity$rarity")
 
