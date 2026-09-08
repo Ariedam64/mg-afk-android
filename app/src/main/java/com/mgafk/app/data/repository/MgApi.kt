@@ -53,6 +53,9 @@ object MgApi {
         val rarity: String? = null,
         val cropSprite: String? = null,
         val maxScale: Double? = null,
+        /** Crops only: what a size-100 crop multiplies base value and weight by (V30+).
+         * Pets keep [maxScale]; the two are not interchangeable. */
+        val maxSizeMultiplier: Double? = null,
         val baseSellPrice: Double? = null,
         val hoursToMature: Double? = null,
         val maturitySellPrice: Double? = null,
@@ -208,6 +211,15 @@ object MgApi {
     fun uiSpriteUrl(name: String): String = spriteUrl("ui", name)
 
     /** URL for a plant sprite (e.g. "Carrot", "Starweaver"). */
+    /**
+     * What a crop of [species] at [size] multiplies its base value, weight and drawn size by.
+     *
+     * 1.0 for an unknown species, so a crop the API has no data for renders at its base size
+     * instead of vanishing.
+     */
+    fun cropSizeMultiplier(species: String, size: Int): Double =
+        CropSize.multiplier(size, getPlants()[species]?.maxSizeMultiplier ?: 1.0)
+
     fun plantSpriteUrl(name: String): String = spriteUrl("plants", name)
 
     val coinBagUrl: String get() = uiSpriteUrl("CoinBag")
@@ -438,7 +450,7 @@ object MgApi {
                     sprite = seedObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     rarity = seedObj?.get("rarity")?.jsonPrimitive?.contentOrNull,
                     cropSprite = cropObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
-                    maxScale = cropObj?.get("maxScale")?.jsonPrimitive?.doubleOrNull,
+                    maxSizeMultiplier = cropObj?.get("maxSizeMultiplier")?.jsonPrimitive?.doubleOrNull,
                     baseSellPrice = cropObj?.get("baseSellPrice")?.jsonPrimitive?.doubleOrNull,
                     plantSprite = plantObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     plantSlotOffsets = slotOffsets,

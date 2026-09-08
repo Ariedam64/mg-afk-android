@@ -140,14 +140,16 @@ data class InventoryEggItem(
 data class InventoryProduceItem(
     val id: String = "",
     val species: String = "",
-    val scale: Double = 0.0,
+    /** Whole 50..100, see CropSize. */
+    val size: Int = com.mgafk.app.data.repository.CropSize.MIN,
     val mutations: List<String> = emptyList(),
 )
 
 @Serializable
 data class InventoryPlantSlot(
     val species: String = "",
-    val targetScale: Double = 0.0,
+    /** Whole 50..100, see CropSize. */
+    val size: Int = com.mgafk.app.data.repository.CropSize.MIN,
     val mutations: List<String> = emptyList(),
 )
 
@@ -164,7 +166,8 @@ data class InventoryPlantItem(
 data class InventoryCropsItem(
     val id: String = "",
     val species: String = "",
-    val scale: Double = 0.0,
+    /** Whole 50..100, see CropSize. */
+    val size: Int = com.mgafk.app.data.repository.CropSize.MIN,
     val mutations: List<String> = emptyList(),
 )
 
@@ -230,7 +233,8 @@ data class GardenPlantSnapshot(
     val tileId: Int = 0,
     val slotIndex: Int = 0,
     val species: String = "",
-    val targetScale: Double = 0.0,
+    /** Whole 50..100, see CropSize. */
+    val size: Int = com.mgafk.app.data.repository.CropSize.MIN,
     val mutations: List<String> = emptyList(),
     val startTime: Long = 0,
     val endTime: Long = 0,

@@ -121,11 +121,11 @@ object AbilityFormatter {
 
             // ── Produce Scale Boost ────────────────────────────────────────
             "ProduceScaleBoost", "ProduceScaleBoostII", "ProduceScaleBoostIII", "SnowyCropSizeBoost" -> {
-                val raw = p["scaleIncreasePercentage"]
-                val pct = raw?.toDoubleOrNull()?.toInt()?.toString() ?: (raw ?: "?")
+                val raw = p["sizeIncrease"]
+                val amount = raw?.toDoubleOrNull()?.toInt()?.toString() ?: (raw ?: "?")
                 val count = p["numPlantsAffected"] ?: "0"
                 val label = if (count == "1") "crop" else "crops"
-                "Boosted $count $label size by +$pct%"
+                "Boosted $count $label size by +$amount"
             }
 
             // ── Pet Mutation Boost (kept for back-compat with older states) ─

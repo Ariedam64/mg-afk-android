@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.repository.CropSize
 import com.mgafk.app.data.repository.PetTeams
 import com.mgafk.app.data.repository.GardenTiles
 import com.mgafk.app.data.model.BotSnapshot
@@ -775,7 +776,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateSession(sessionId) { s ->
             s.copy(
                 feedingTrough = s.feedingTrough + toAdd.map { p ->
-                    InventoryCropsItem(id = p.id, species = p.species, scale = p.scale, mutations = p.mutations)
+                    InventoryCropsItem(id = p.id, species = p.species, size = p.size, mutations = p.mutations)
                 },
                 inventory = s.inventory.copy(
                     produce = s.inventory.produce.filter { it.id !in addedIds }
@@ -818,7 +819,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 inventory = s.inventory.copy(
                     produce = s.inventory.produce + InventoryProduceItem(
                         id = removed.id, species = removed.species,
-                        scale = removed.scale, mutations = removed.mutations,
+                        size = removed.size, mutations = removed.mutations,
                     )
                 ),
             )
@@ -1994,7 +1995,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             tileId = tile.tileId,
                             slotIndex = slotId,
                             species = species,
-                            targetScale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            size = CropSize.clamp(slot["size"]?.jsonPrimitive?.doubleOrNull ?: 0.0),
                             mutations = mutations,
                             startTime = slot["startTime"]?.jsonPrimitive?.longOrNull ?: 0L,
                             endTime = slot["endTime"]?.jsonPrimitive?.longOrNull ?: 0L,
@@ -2043,7 +2044,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         "Produce" -> produce.add(InventoryProduceItem(
                             id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                             species = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                            scale = obj["scale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                            size = CropSize.clamp(obj["size"]?.jsonPrimitive?.doubleOrNull ?: 0.0),
                             mutations = (obj["mutations"] as? JsonArray)
                                 ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                                 ?.filter { it.isNotBlank() } ?: emptyList(),
@@ -2057,14 +2058,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val slot = slotEl as? JsonObject ?: return@forEach
                                 val slotSpecies = slot["species"]?.jsonPrimitive?.contentOrNull
                                     ?: plantSpecies
-                                val scale = slot["targetScale"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                                val size = CropSize.clamp(slot["size"]?.jsonPrimitive?.doubleOrNull ?: 0.0)
                                 val muts = (slot["mutations"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                                     ?.filter { it.isNotBlank() } ?: emptyList()
-                                plantPrice += PriceCalculator.calculateCropSellPrice(slotSpecies, scale, muts) ?: 0L
+                                plantPrice += PriceCalculator.calculateCropSellPrice(slotSpecies, size, muts) ?: 0L
                                 parsedSlots.add(com.mgafk.app.data.model.InventoryPlantSlot(
                                     species = slotSpecies,
-                                    targetScale = scale,
+                                    size = size,
                                     mutations = muts,
                                 ))
                             }
@@ -2169,7 +2170,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             "FeedingTrough" -> troughCrops.add(InventoryCropsItem(
                                 id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                                 species = obj["species"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                                scale = obj["scale"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                                size = CropSize.clamp(obj["size"]?.jsonPrimitive?.doubleOrNull ?: 0.0),
                                 mutations = (obj["mutations"] as? JsonArray)
                                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                                     ?.filter { it.isNotBlank() } ?: emptyList(),

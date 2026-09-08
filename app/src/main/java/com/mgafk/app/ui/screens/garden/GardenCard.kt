@@ -142,21 +142,11 @@ private fun fmtQty(q: Int): String = when {
     else -> "$q"
 }
 
-private fun computeSizePercent(targetScale: Double, maxScale: Double): Double {
-    if (maxScale <= 1.0) return if (targetScale >= 1.0) 100.0 else targetScale * 100.0
-    return if (targetScale <= 1.0) {
-        targetScale * 50.0
-    } else {
-        50.0 + (targetScale - 1.0) / (maxScale - 1.0) * 50.0
-    }.coerceIn(0.0, 100.0)
-}
-
 /** Pre-resolved plant data - computed once per plants change, reused by filters + tiles. */
 internal data class ResolvedPlant(
     val snapshot: GardenPlantSnapshot,
     val rarity: String?,
     val cropSprite: String?,
-    val maxScale: Double,
     val displayName: String,
     val sellPrice: Long?,
 )
@@ -195,10 +185,10 @@ private enum class SortMode(val label: String) {
 }
 
 private fun GardenEntry.sizePercent(): Double = when (this) {
-    is GardenEntry.SingleCrop -> computeSizePercent(plant.snapshot.targetScale, plant.maxScale)
+    is GardenEntry.SingleCrop -> plant.snapshot.size.toDouble()
     is GardenEntry.MultiSlotPlant -> {
         if (crops.isEmpty()) 0.0
-        else crops.map { computeSizePercent(it.snapshot.targetScale, it.maxScale) }.average()
+        else crops.map { it.snapshot.size.toDouble() }.average()
     }
 }
 
@@ -238,9 +228,8 @@ fun GardenCard(
                 snapshot = plant,
                 rarity = entry?.rarity,
                 cropSprite = entry?.cropSprite,
-                maxScale = entry?.maxScale ?: 1.0,
                 displayName = entry?.name?.removeSuffix(" Seed") ?: plant.species,
-                sellPrice = PriceCalculator.calculateCropSellPrice(plant.species, plant.targetScale, plant.mutations),
+                sellPrice = PriceCalculator.calculateCropSellPrice(plant.species, plant.size, plant.mutations),
             )
         }
     }
@@ -625,7 +614,7 @@ private fun ViewModeChip(label: String, selected: Boolean, onClick: () -> Unit) 
 @Composable
 private fun GardenPlantTile(rp: ResolvedPlant) {
     val color = rarityColor(rp.rarity)
-    val sizePercent = computeSizePercent(rp.snapshot.targetScale, rp.maxScale)
+    val sizePercent = rp.snapshot.size.toDouble()
 
     Column(
         modifier = Modifier
@@ -682,7 +671,7 @@ private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
     val color = rarityColor(entry.rarity)
     val species = remember(entry.tileId) { entry.crops.firstOrNull()?.snapshot?.species ?: "" }
     val slots = remember(entry.crops) {
-        entry.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, it.snapshot.targetScale) }
+        entry.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, MgApi.cropSizeMultiplier(it.snapshot.species, it.snapshot.size)) }
     }
 
     Column(
@@ -797,7 +786,7 @@ private fun PlantDetailDialog(
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
-    val sizePercent = computeSizePercent(plant.snapshot.targetScale, plant.maxScale)
+    val sizePercent = plant.snapshot.size.toDouble()
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -849,7 +838,7 @@ private fun PlantDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("Size", fontSize = 12.sp, color = TextSecondary)
-                    Text("${sizePercent.toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text("${sizePercent.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
                 SizeBar(percent = sizePercent, color = color, showLabel = false)
 
@@ -1037,7 +1026,7 @@ private fun MultiSlotPlantDetailDialog(
     val color = rarityColor(plant.rarity)
     val species = remember(plant.tileId) { plant.crops.firstOrNull()?.snapshot?.species ?: "" }
     val headerSlots = remember(plant.crops) {
-        plant.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, it.snapshot.targetScale) }
+        plant.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, MgApi.cropSizeMultiplier(it.snapshot.species, it.snapshot.size)) }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1174,7 +1163,7 @@ private fun CropSlotRow(
     onWater: () -> Unit,
     onCleanse: () -> Unit,
 ) {
-    val sizePercent = computeSizePercent(crop.snapshot.targetScale, crop.maxScale)
+    val sizePercent = crop.snapshot.size.toDouble()
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
     val canCleanse = cropCleansers > 0 && crop.snapshot.mutations.isNotEmpty()
@@ -1228,7 +1217,7 @@ private fun CropSlotRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("${sizePercent.toInt()}%", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
+            Text("${sizePercent.toInt()}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
             Box(modifier = Modifier.weight(1f)) {
                 SizeBar(percent = sizePercent, color = color, showLabel = false)
             }

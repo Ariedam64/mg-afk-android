@@ -123,14 +123,6 @@ private fun curStr(species: String, xp: Double, max: Int): Int {
     return ((max - STR_GAINED) + gained).toInt()
 }
 
-// ── Size percent ──
-
-private fun sizePercent(scale: Double, maxScale: Double): Double {
-    if (maxScale <= 1.0) return if (scale >= 1.0) 100.0 else scale * 100.0
-    return if (scale <= 1.0) scale * 50.0
-    else (50.0 + (scale - 1.0) / (maxScale - 1.0) * 50.0).coerceIn(0.0, 100.0)
-}
-
 private val RARITY_ORDER = listOf("Celestial", "Divine", "Mythic", "Mythical", "Legendary", "Rare", "Uncommon", "Common")
 
 /** Rarity index for sorting (lower = rarer = first). Unknown rarities go last. */
@@ -300,7 +292,7 @@ fun InventoryCard(
                 if (filteredProduce.isNotEmpty()) {
                     val totalProduceValue = remember(filteredProduce, apiReady, playerCount) {
                         filteredProduce.sumOf { p ->
-                            PriceCalculator.calculateCropSellPrice(p.species, p.scale, p.mutations, playerCount) ?: 0L
+                            PriceCalculator.calculateCropSellPrice(p.species, p.size, p.mutations, playerCount) ?: 0L
                         }
                     }
                     // Scoped to the full (unfiltered) inventory - matches the sell-all dialog
@@ -694,12 +686,11 @@ private fun QuantityTile(itemId: String, quantity: Int, apiReady: Boolean) {
 private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCount: Int = 1) {
     val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
     val color = rarityColor(entry?.rarity)
-    val maxS = entry?.maxScale ?: 1.0
-    val pct = sizePercent(item.scale, maxS)
+    val pct = item.size.toDouble()
     val fraction = (pct / 100.0).toFloat().coerceIn(0f, 1f)
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
-    val price = remember(item.species, item.scale, item.mutations, apiReady, playerCount) {
-        PriceCalculator.calculateCropSellPrice(item.species, item.scale, item.mutations, playerCount)
+    val price = remember(item.species, item.size, item.mutations, apiReady, playerCount) {
+        PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations, playerCount)
     }
 
     Column(
@@ -720,7 +711,7 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCou
                 Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(color.copy(0.8f)))
             }
             Spacer(Modifier.width(3.dp))
-            Text("${pct.toInt()}%", fontSize = 7.sp, color = TextSecondary, fontWeight = FontWeight.Medium, lineHeight = 8.sp)
+            Text("${pct.toInt()}", fontSize = 7.sp, color = TextSecondary, fontWeight = FontWeight.Medium, lineHeight = 8.sp)
         }
         if (price != null) {
             Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
@@ -742,7 +733,7 @@ private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
     val color = rarityColor(entry?.rarity)
     val slots = remember(item.slots) {
-        item.slots.map { PlantSlotRender(it.species, it.mutations, it.targetScale) }
+        item.slots.map { PlantSlotRender(it.species, it.mutations, MgApi.cropSizeMultiplier(it.species, it.size)) }
     }
 
     Column(
@@ -1008,7 +999,7 @@ private fun PlantUnpotDialog(
     val maxScale = entry?.maxScale ?: 1.0
     val canPlant = freePlantTiles > 0
     val headerSlots = remember(plant.slots) {
-        plant.slots.map { PlantSlotRender(it.species, it.mutations, it.targetScale) }
+        plant.slots.map { PlantSlotRender(it.species, it.mutations, MgApi.cropSizeMultiplier(it.species, it.size)) }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1130,10 +1121,10 @@ private fun PlantSlotRow(
     maxScale: Double,
     apiReady: Boolean,
 ) {
-    val sizePercent = sizePercent(slot.targetScale, maxScale)
+    val sizePercent = slot.size.toDouble()
     val fraction = (sizePercent / 100.0).toFloat().coerceIn(0f, 1f)
-    val price = remember(slot.species, slot.targetScale, slot.mutations, apiReady) {
-        PriceCalculator.calculateCropSellPrice(slot.species, slot.targetScale, slot.mutations)
+    val price = remember(slot.species, slot.size, slot.mutations, apiReady) {
+        PriceCalculator.calculateCropSellPrice(slot.species, slot.size, slot.mutations)
     }
 
     Row(
@@ -1174,7 +1165,7 @@ private fun PlantSlotRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("${sizePercent.toInt()}%", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
+                Text("${sizePercent.toInt()}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
                 Box(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier.fillMaxWidth().height(4.dp)
@@ -1631,7 +1622,7 @@ private fun SellAllCropsDialog(
         produce.map { item ->
             val entry = MgApi.findItem(item.species)
             val name = entry?.name?.removeSuffix(" Seed") ?: item.species
-            val price = PriceCalculator.calculateCropSellPrice(item.species, item.scale, item.mutations, playerCount) ?: 0L
+            val price = PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations, playerCount) ?: 0L
             Triple(item, name, price)
         }
     }
@@ -2187,11 +2178,10 @@ private fun ProduceDetailDialog(
     val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
     val color = rarityColor(entry?.rarity)
-    val maxS = entry?.maxScale ?: 1.0
-    val pct = sizePercent(item.scale, maxS)
+    val pct = item.size.toDouble()
     val fraction = (pct / 100.0).toFloat().coerceIn(0f, 1f)
-    val price = remember(item.species, item.scale, item.mutations, apiReady, playerCount) {
-        PriceCalculator.calculateCropSellPrice(item.species, item.scale, item.mutations, playerCount)
+    val price = remember(item.species, item.size, item.mutations, apiReady, playerCount) {
+        PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations, playerCount)
     }
 
     var showConfirm by remember { mutableStateOf(false) }
@@ -2268,7 +2258,7 @@ private fun ProduceDetailDialog(
                     // Size
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Size", fontSize = 12.sp, color = TextSecondary)
-                        Text("${pct.toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text("${pct.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     }
                     Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(color.copy(0.15f))) {
                         Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(color.copy(0.8f)))

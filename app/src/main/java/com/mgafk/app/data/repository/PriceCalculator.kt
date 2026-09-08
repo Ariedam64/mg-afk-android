@@ -9,7 +9,7 @@ import kotlin.math.roundToLong
  * Crop sell price calculator.
  * Port of Gemini's modules/calculators/logic/crop.ts + mutation.ts
  *
- * Formula: baseSellPrice × targetScale × mutationMultiplier
+ * Crops: baseSellPrice x sizeMultiplier x mutationMultiplier (see CropSize)
  */
 object PriceCalculator {
 
@@ -88,9 +88,18 @@ object PriceCalculator {
     fun friendsMultiplier(playerCount: Int): Double =
         (1.0 + (playerCount.coerceIn(1, 6) - 1) * 0.1)
 
+    /**
+     * Sell price of a crop: `baseSellPrice x sizeMultiplier x mutations x friends`.
+     *
+     * Since schema V30 the wire carries a whole [size] (50..100), not the multiplier itself,
+     * so the multiplier is derived from the species' `maxSizeMultiplier` (see [CropSize]).
+     * Feeding the raw size in here instead would overprice everything about fiftyfold.
+     *
+     * @return null when the species has no price data yet (API not loaded).
+     */
     fun calculateCropSellPrice(
         species: String,
-        targetScale: Double,
+        size: Int,
         mutations: List<String>,
         playerCount: Int = 1,
     ): Long? {
@@ -98,9 +107,10 @@ object PriceCalculator {
         val baseSellPrice = entry.baseSellPrice ?: return null
         if (baseSellPrice <= 0) return null
 
+        val sizeMultiplier = CropSize.multiplier(size, entry.maxSizeMultiplier ?: 1.0)
         val mutMultiplier = calculateMutationMultiplier(mutations)
         val friends = friendsMultiplier(playerCount)
-        return (baseSellPrice * targetScale * mutMultiplier * friends).roundToLong()
+        return (baseSellPrice * sizeMultiplier * mutMultiplier * friends).roundToLong()
     }
 
     /**

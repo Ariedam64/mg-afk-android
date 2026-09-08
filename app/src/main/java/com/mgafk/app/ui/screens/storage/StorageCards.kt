@@ -553,8 +553,8 @@ private fun PickerProduceTile(
     val color = rarityColor(entry?.rarity)
     val borderColor = if (isSelected) StatusConnected else color.copy(alpha = 0.5f)
     val borderWidth = if (isSelected) 2.5.dp else 1.5.dp
-    val price = remember(item.species, item.scale, item.mutations, apiReady) {
-        PriceCalculator.calculateCropSellPrice(item.species, item.scale, item.mutations)
+    val price = remember(item.species, item.size, item.mutations, apiReady) {
+        PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations)
     }
 
     Column(

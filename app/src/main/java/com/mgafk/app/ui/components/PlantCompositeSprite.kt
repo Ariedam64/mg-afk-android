@@ -23,6 +23,8 @@ private const val TILE_SIZE_WORLD_PX = 256.0
 data class PlantSlotRender(
     val species: String,
     val mutations: List<String>,
+    /** Size multiplier (1.0 at size 50, up to the species' maxSizeMultiplier at 100). Build it
+     * with [com.mgafk.app.data.repository.CropSize.multiplier], never from the raw size. */
     val scale: Double = 1.0,
 )
 
