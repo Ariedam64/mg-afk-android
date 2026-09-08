@@ -29,3 +29,6 @@ desktop.ini
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Claude Code personal settings
+.claude/settings.local.json
