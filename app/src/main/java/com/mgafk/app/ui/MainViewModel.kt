@@ -40,6 +40,7 @@ import com.mgafk.app.data.model.InventorySnapshot
 import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.model.POTION_STORAGE_ID
 import com.mgafk.app.data.model.REPLENISH_POTION_ID
+import com.mgafk.app.data.model.XP_POTION_ID
 import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.PetSnapshot
@@ -881,46 +882,96 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Uses one Hunger Potion on [petItemId], pulling it out of the Tool Shack first when the
-     * inventory has none left. The potion only applies to the pet the player is standing on,
-     * so this teleports there first - same sequence the auto-feed uses.
+     * Uses one Hunger Potion on [petItemId] to refill its hunger.
      *
-     * The retrieval is a separate round trip, so this waits for the server to confirm the
-     * potion in the inventory before drinking it. If that confirmation never lands the potion
-     * simply stays where it is, retrieved but unused: nothing is consumed on a guess.
+     * See [usePotionOnPet] for the sequence both pet potions share.
      */
     fun useReplenishPotionOnPet(sessionId: String, petItemId: String) {
+        usePotionOnPet(sessionId, petItemId, REPLENISH_POTION_ID) { client ->
+            client.actions.useReplenishPotion(petItemId)
+        }
+    }
+
+    /**
+     * Uses one XP Potion on [petItemId].
+     *
+     * A pet that has already reached its strength ceiling is left alone: the game's reducer
+     * refuses the potion on it and returns without consuming anything, so sending the command
+     * would only cost the round trip. The caller hides the action in that case; this is the
+     * guard for a pet that matures between the tap and the send.
+     */
+    fun useXpPotionOnPet(sessionId: String, petItemId: String) {
+        val pet = _state.value.sessions.find { it.id == sessionId }
+            ?.pets?.find { it.id == petItemId }
+        if (pet != null && isPetFullyGrown(pet)) {
+            AppLog.d(TAG, "[Potion] $petItemId is already fully grown, XP Potion not used")
+            return
+        }
+        usePotionOnPet(sessionId, petItemId, XP_POTION_ID) { client ->
+            client.actions.xpPotion(petItemId)
+        }
+    }
+
+    /**
+     * Runs the sequence a pet potion needs: make sure one sits in the inventory, pulling it out
+     * of the Tool Shack when it does not, then walk over to the pet and drink it. A pet potion
+     * only applies to the pet the player is standing on, hence the teleport - the same sequence
+     * the auto-feed uses.
+     *
+     * The retrieval is a separate round trip, so this waits for the server to confirm the potion
+     * in the inventory before using it. If that confirmation never lands the potion simply stays
+     * where it is, retrieved but unused: nothing is consumed on a guess.
+     */
+    private fun usePotionOnPet(
+        sessionId: String,
+        petItemId: String,
+        potionId: String,
+        use: (RoomClient) -> Unit,
+    ) {
         viewModelScope.launch {
             val client = clients[sessionId] ?: return@launch
             val session = _state.value.sessions.find { it.id == sessionId } ?: return@launch
 
-            if (potionCountIn(session.inventory.tools) == 0) {
-                if (potionCountIn(session.toolShack) == 0) return@launch
+            if (potionCountIn(session.inventory.tools, potionId) == 0) {
+                if (potionCountIn(session.toolShack, potionId) == 0) return@launch
                 client.actions.retrieveItemFromStorage(
-                    itemId = REPLENISH_POTION_ID,
+                    itemId = potionId,
                     storageId = POTION_STORAGE_ID,
                     toInventoryIndex = totalInventoryCount(session),
                 )
                 val arrived = withTimeoutOrNull(POTION_RETRIEVAL_TIMEOUT_MS) {
                     _state.first { state ->
                         val tools = state.sessions.find { it.id == sessionId }?.inventory?.tools
-                        potionCountIn(tools.orEmpty()) > 0
+                        potionCountIn(tools.orEmpty(), potionId) > 0
                     }
                 }
                 if (arrived == null) {
-                    AppLog.d(TAG, "[Potion] Retrieval from $POTION_STORAGE_ID not confirmed for $sessionId")
+                    AppLog.d(TAG, "[Potion] Retrieval of $potionId from $POTION_STORAGE_ID not confirmed for $sessionId")
                     return@launch
                 }
             }
 
             val position = findPetPosition(client, petItemId) ?: return@launch
             client.actions.teleport(position.first, position.second)
-            client.actions.useReplenishPotion(petItemId)
+            use(client)
         }
     }
 
-    private fun potionCountIn(tools: List<InventoryToolItem>): Int =
-        tools.find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0
+    private fun potionCountIn(
+        tools: List<InventoryToolItem>,
+        potionId: String = REPLENISH_POTION_ID,
+    ): Int = tools.find { it.toolId == potionId }?.quantity ?: 0
+
+    /** Whether [pet] sits at its strength ceiling, which is what makes an XP Potion a no-op. */
+    private fun isPetFullyGrown(pet: PetSnapshot): Boolean {
+        val entry = MgApi.findPet(pet.species) ?: return false
+        return PriceCalculator.isPetMaxStrength(
+            xp = pet.xp,
+            targetScale = pet.targetScale,
+            maxScale = entry.maxScale ?: 1.0,
+            hoursToMature = entry.hoursToMature ?: 1.0,
+        )
+    }
 
     /**
      * Reads the pet's current tile position from the player's own live petSlotInfos.

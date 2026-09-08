@@ -50,6 +50,9 @@ import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.REPLENISH_POTION_ID
+import com.mgafk.app.data.model.XP_POTION_ID
+import com.mgafk.app.data.model.XP_POTION_XP
+import java.util.Locale
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.websocket.Constants
@@ -187,8 +190,13 @@ fun ActivePetsCard(
     potionsInInventory: Int = 0,
     /** Hunger Potions sitting in the Tool Shack, retrieved on demand before use. */
     potionsInShack: Int = 0,
+    /** XP Potions sitting in the inventory, usable straight away. */
+    xpPotionsInInventory: Int = 0,
+    /** XP Potions sitting in the Tool Shack, retrieved on demand before use. */
+    xpPotionsInShack: Int = 0,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit = { _, _ -> },
     onUsePotionOnPet: (petItemId: String) -> Unit = {},
+    onUseXpPotionOnPet: (petItemId: String) -> Unit = {},
     onSwapPet: (activePetId: String, targetPetId: String, targetIsInHutch: Boolean) -> Unit = { _, _, _ -> },
     onEquipPet: (targetPetId: String, targetIsInHutch: Boolean) -> Unit = { _, _ -> },
     onUnequipPet: (petId: String) -> Unit = {},
@@ -249,8 +257,11 @@ fun ActivePetsCard(
                     onSelect = { selectedPetId = if (selectedPetId == pet.id) null else pet.id },
                     potionsInInventory = potionsInInventory,
                     potionsInShack = potionsInShack,
+                    xpPotionsInInventory = xpPotionsInInventory,
+                    xpPotionsInShack = xpPotionsInShack,
                     onFeedPet = onFeedPet,
                     onUsePotionOnPet = onUsePotionOnPet,
+                    onUseXpPotionOnPet = onUseXpPotionOnPet,
                     onSwapPet = onSwapPet,
                     onUnequipPet = onUnequipPet,
                 )
@@ -277,8 +288,11 @@ private fun ActivePetRow(
     onSelect: () -> Unit,
     potionsInInventory: Int,
     potionsInShack: Int,
+    xpPotionsInInventory: Int,
+    xpPotionsInShack: Int,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit,
     onUsePotionOnPet: (petItemId: String) -> Unit,
+    onUseXpPotionOnPet: (petItemId: String) -> Unit,
     onSwapPet: (activePetId: String, targetPetId: String, targetIsInHutch: Boolean) -> Unit,
     onUnequipPet: (petId: String) -> Unit,
 ) {
@@ -296,8 +310,11 @@ private fun ActivePetRow(
     val maxStrength = remember(pet.species, pet.targetScale, apiReady) {
         calculatePetMaxStrength(pet.species, pet.targetScale)
     }
+    // "Fully grown" in the game's words: the point where it refuses an XP Potion outright.
+    val isMaxStrength = maxStrength > 0 && strength >= maxStrength
     var showFeedPicker by remember { mutableStateOf(false) }
     var showSwapPicker by remember { mutableStateOf(false) }
+    var showXpPotionDialog by remember { mutableStateOf(false) }
 
     val chipShape = RoundedCornerShape(6.dp)
 
@@ -335,9 +352,8 @@ private fun ActivePetRow(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 if (apiReady && maxStrength > 0) {
-                    val isMaxStr = strength >= maxStrength
-                    val strText = if (isMaxStr) "STR $strength" else "STR $strength/$maxStrength"
-                    val strColor = if (isMaxStr) Color(0xFFFBBF24) else Accent
+                    val strText = if (isMaxStrength) "STR $strength" else "STR $strength/$maxStrength"
+                    val strColor = if (isMaxStrength) Color(0xFFFBBF24) else Accent
                     Text(
                         strText,
                         fontSize = 11.sp,
@@ -446,6 +462,20 @@ private fun ActivePetRow(
                     textAlign = TextAlign.Center,
                     modifier = btnMod.then(Modifier.clickable { showSwapPicker = true }),
                 )
+                // Offered only when there is a potion to spend. A fully grown pet keeps the
+                // button visible but inert, so it reads as "nothing left to gain" rather than
+                // as a missing feature.
+                if (xpPotionsInInventory + xpPotionsInShack > 0) {
+                    Text(
+                        text = "XP",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isMaxStrength) TextMuted.copy(alpha = 0.5f) else btnColor,
+                        textAlign = TextAlign.Center,
+                        modifier = if (isMaxStrength) btnMod
+                        else btnMod.then(Modifier.clickable { showXpPotionDialog = true }),
+                    )
+                }
                 Text(
                     text = "Remove",
                     fontSize = 9.sp,
@@ -479,6 +509,22 @@ private fun ActivePetRow(
                 onUsePotionOnPet(pet.id)
             },
             onDismiss = { showFeedPicker = false },
+        )
+    }
+
+    if (showXpPotionDialog) {
+        XpPotionDialog(
+            pet = pet,
+            strength = strength,
+            maxStrength = maxStrength,
+            apiReady = apiReady,
+            inInventory = xpPotionsInInventory,
+            inShack = xpPotionsInShack,
+            onConfirm = {
+                showXpPotionDialog = false
+                onUseXpPotionOnPet(pet.id)
+            },
+            onDismiss = { showXpPotionDialog = false },
         )
     }
 
@@ -789,6 +835,114 @@ private fun FeedPetPickerDialog(
         }
     }
 }
+
+/**
+ * Confirmation before spending an XP Potion. Unlike the Hunger Potion this is not a one-tap
+ * action: an XP Potion is a Legendary item and the gain is invisible until it lands, so the
+ * dialog shows what the pet's strength becomes before anything is consumed.
+ */
+@Composable
+private fun XpPotionDialog(
+    pet: PetSnapshot,
+    strength: Int,
+    maxStrength: Int,
+    apiReady: Boolean,
+    inInventory: Int,
+    inShack: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val entry = remember(apiReady) { MgApi.findItem(XP_POTION_ID) }
+    val name = entry?.name ?: "XP Potion"
+    val projectedStrength = remember(pet.species, pet.xp, pet.targetScale, apiReady) {
+        calculatePetStrength(pet.species, pet.xp + XP_POTION_XP, pet.targetScale)
+    }
+    val stockText = when {
+        inInventory > 0 && inShack > 0 -> "x$inInventory in inventory, x$inShack in Tool Shack"
+        inInventory > 0 -> "x$inInventory in inventory"
+        else -> "x$inShack in Tool Shack, retrieved on use"
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceCard)
+                .padding(16.dp),
+        ) {
+            Text(
+                "Strengthen ${pet.name.ifBlank { pet.species }}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+            )
+            Text(
+                "One $name grants ${formatXp(XP_POTION_XP)} XP.",
+                fontSize = 11.sp,
+                color = TextMuted,
+                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.5.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .background(Accent.copy(alpha = 0.08f))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
+                }
+                if (maxStrength > 0) {
+                    Text(
+                        "STR $strength -> $projectedStrength",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (projectedStrength > strength) StatusConnected else TextMuted,
+                    )
+                }
+            }
+
+            // Strength moves in whole points, so a potion can be worth real XP and still not
+            // shift the number. Better to say so than to let it look like nothing happened.
+            if (maxStrength > 0 && projectedStrength == strength) {
+                Text(
+                    "This potion adds XP but not enough for the next STR point.",
+                    fontSize = 10.sp,
+                    color = TextMuted,
+                    lineHeight = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                ) {
+                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                }
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                ) {
+                    Text("Use", fontSize = 12.sp, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+/** `20,000`, so a five-figure XP amount stays readable at a glance. */
+private fun formatXp(xp: Int): String = "%,d".format(Locale.US, xp)
 
 /**
  * One-tap Hunger Potion action inside the feed picker. Shown only when the player owns at

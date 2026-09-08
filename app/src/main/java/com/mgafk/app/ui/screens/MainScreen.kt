@@ -75,6 +75,7 @@ import com.mgafk.app.data.model.AlertItem
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.data.model.REPLENISH_POTION_ID
+import com.mgafk.app.data.model.XP_POTION_ID
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.MainViewModel
@@ -642,11 +643,18 @@ private fun SectionContent(
                     .find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0,
                 potionsInShack = session.toolShack
                     .find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0,
+                xpPotionsInInventory = session.inventory.tools
+                    .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
+                xpPotionsInShack = session.toolShack
+                    .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
                 onFeedPet = { petItemId, cropItemIds ->
                     viewModel.feedPet(session.id, petItemId, cropItemIds)
                 },
                 onUsePotionOnPet = { petItemId ->
                     viewModel.useReplenishPotionOnPet(session.id, petItemId)
+                },
+                onUseXpPotionOnPet = { petItemId ->
+                    viewModel.useXpPotionOnPet(session.id, petItemId)
                 },
                 onSwapPet = { activePetId, targetPetId, isInHutch ->
                     viewModel.swapPet(session.id, activePetId, targetPetId, isInHutch)

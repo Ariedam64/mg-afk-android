@@ -130,17 +130,8 @@ object PriceCalculator {
         val maxScale = entry.maxScale ?: 1.0
         val hoursToMature = entry.hoursToMature ?: 1.0
 
-        // Max strength (same logic as InventoryCard)
-        val maxStrength = if (maxScale > 1.0 && targetScale > 1.0) {
-            (80.0 + 20.0 * (targetScale - 1.0) / (maxScale - 1.0)).toInt().coerceIn(80, 100)
-        } else 80
-
-        // Current strength
-        val xpRate = xp / (hoursToMature * 3600.0)
-        val xpComponent = minOf((xpRate * 30.0).toInt(), 30)
-        val baseStrength = (maxStrength - 30).coerceAtLeast(0)
-        val strength = minOf(baseStrength + xpComponent, maxStrength).coerceAtLeast(0)
-
+        val maxStrength = calculateMaxStrength(targetScale, maxScale)
+        val strength = calculatePetStrength(xp, targetScale, maxScale, hoursToMature)
         if (maxStrength <= 0) return null
 
         // Coin multiplier from mutations
@@ -153,6 +144,39 @@ object PriceCalculator {
         val raw = maturitySellPrice * (strength.toDouble() / maxStrength) * targetScale * coinMultiplier
         return if (raw.isFinite()) raw.roundToLong().coerceAtLeast(0) else null
     }
+
+    /** Strength ceiling (80-100) from a pet's current size relative to its max scale. */
+    fun calculateMaxStrength(targetScale: Double, maxScale: Double): Int =
+        if (maxScale > 1.0 && targetScale > 1.0) {
+            (80.0 + 20.0 * (targetScale - 1.0) / (maxScale - 1.0)).toInt().coerceIn(80, 100)
+        } else 80
+
+    /**
+     * Pet "strength" stat (0-100): scales ability effect sizes. Combines size ([targetScale]
+     * relative to [maxScale], worth up to 100) and age ([xp] relative to [hoursToMature],
+     * worth up to 30 within that ceiling).
+     */
+    fun calculatePetStrength(xp: Double, targetScale: Double, maxScale: Double, hoursToMature: Double): Int {
+        val maxStrength = calculateMaxStrength(targetScale, maxScale)
+        if (hoursToMature <= 0.0) return maxStrength
+        val xpRate = xp / (hoursToMature * 3600.0)
+        val xpComponent = minOf((xpRate * 30.0).toInt(), 30)
+        val baseStrength = (maxStrength - 30).coerceAtLeast(0)
+        return minOf(baseStrength + xpComponent, maxStrength).coerceAtLeast(0)
+    }
+
+    /**
+     * Whether a pet has reached its strength ceiling, i.e. what the game calls "fully grown".
+     * Its reducer refuses an XP Potion on such a pet and returns without consuming the item,
+     * so the app checks the same thing before offering the action.
+     */
+    fun isPetMaxStrength(
+        xp: Double,
+        targetScale: Double,
+        maxScale: Double,
+        hoursToMature: Double,
+    ): Boolean = calculatePetStrength(xp, targetScale, maxScale, hoursToMature) >=
+        calculateMaxStrength(targetScale, maxScale)
 
     // ── Dust value (sell price in Magic Dust) ──
     // Port of Gemini's modules/calculators/logic/pet.ts:calculatePetDustValue
@@ -214,15 +238,9 @@ object PriceCalculator {
 
         val mutMult = mutationDustMult(mutations)
 
-        val maxStrength = if (maxScale > 1.0 && targetScale > 1.0) {
-            (80.0 + 20.0 * (targetScale - 1.0) / (maxScale - 1.0)).toInt().coerceIn(80, 100)
-        } else 80
+        val maxStrength = calculateMaxStrength(targetScale, maxScale)
         if (maxStrength <= 0) return 0
-
-        val xpRate = xp / (hoursToMature * 3600.0)
-        val xpComponent = minOf((xpRate * 30.0).toInt(), 30)
-        val baseStrength = (maxStrength - 30).coerceAtLeast(0)
-        val currentStrength = minOf(baseStrength + xpComponent, maxStrength).coerceAtLeast(0)
+        val currentStrength = calculatePetStrength(xp, targetScale, maxScale, hoursToMature)
 
         val scaleMult = (currentStrength * targetScale) / maxStrength
         val raw = 100.0 * rarityMult * chanceMult * mutMult * scaleMult

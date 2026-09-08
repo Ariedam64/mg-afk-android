@@ -8,5 +8,11 @@ package com.mgafk.app.data.model
 /** Potion that fully restores a pet's hunger (displayed as "Hunger Potion"). */
 const val REPLENISH_POTION_ID = "ReplenishPotion"
 
-/** Storage the game keeps potions in, and the only one a Hunger Potion can be pulled back from. */
+/** Potion that grants a pet [XP_POTION_XP] experience (displayed as "XP Potion"). */
+const val XP_POTION_ID = "XPPotion"
+
+/** What one XP Potion is worth, per the game's `XPPotion.xpAmount`. */
+const val XP_POTION_XP = 20_000
+
+/** Storage the game keeps potions in, and the only one a pet potion can be pulled back from. */
 const val POTION_STORAGE_ID = "ToolShack"
