@@ -34,10 +34,8 @@ import com.mgafk.app.data.model.InventoryEggItem
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryPlantItem
 import com.mgafk.app.data.model.CrystalType
-import com.mgafk.app.data.model.GardenTileRef
 import com.mgafk.app.data.model.GardenTileType
 import com.mgafk.app.data.model.PlacedCrystal
-import com.mgafk.app.data.repository.CrystalParser
 import com.mgafk.app.data.repository.Crystals
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.model.InventoryProduceItem
@@ -305,10 +303,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateSession(id: String, transform: (Session) -> Session) {
+        updateSessionInMemory(id, transform)
+        persist()
+    }
+
+    /**
+     * Same, minus the write to disk.
+     *
+     * For state the server hands back on every reconnect and that changes on its own schedule:
+     * persisting it buys nothing and would turn a ticking countdown into a disk write per tick.
+     */
+    private fun updateSessionInMemory(id: String, transform: (Session) -> Session) {
         _state.update { s ->
             s.copy(sessions = s.sessions.map { if (it.id == id) transform(it) else it })
         }
-        persist()
     }
 
     // ---- Connection ----
@@ -997,20 +1005,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Crystals ----
 
-    /** Reads the crystals standing in [sessionId]'s garden, from both tile maps. */
-    private fun readCrystals(sessionId: String): List<PlacedCrystal> {
-        val client = clients[sessionId] ?: return emptyList()
-        val me = client.gameState.getPlayer(client.playerId) ?: return emptyList()
-        return CrystalParser.parse(me.getGardenTiles(), me.getBoardwalkTiles())
-    }
-
-    /** Every tile of [sessionId]'s garden that already holds something. */
-    private fun readOccupiedTiles(sessionId: String): Set<GardenTileRef> {
-        val client = clients[sessionId] ?: return emptySet()
-        val me = client.gameState.getPlayer(client.playerId) ?: return emptySet()
-        return CrystalParser.occupiedTiles(me.getGardenTiles(), me.getBoardwalkTiles())
-    }
-
     /**
      * Plants one [type] shard on an empty tile, dirt or boardwalk.
      *
@@ -1046,11 +1040,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun fuseCrystal(sessionId: String, target: PlacedCrystal) {
         val client = clients[sessionId] ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val shards = Crystals.ownedShards(target.type, session.inventory.tools)
-        val shard = Crystals.chooseForFuse(shards, target.remainingSeconds) ?: return
-        val gain = Crystals.mergeGainSeconds(target.remainingSeconds, shard.seconds)
+        // Measure against what the server last reported, not against what the card has counted
+        // down to. The server refuses a gain larger than the room actually left, so erring on
+        // the high side loses the whole fuse, while erring low only leaves seconds on the table.
+        val current = session.crystals.firstOrNull {
+            it.tileType == target.tileType && it.localTileIndex == target.localTileIndex
+        } ?: target
+        val shards = Crystals.ownedShards(current.type, session.inventory.tools)
+        val shard = Crystals.chooseForFuse(shards, current.remainingSeconds) ?: return
+        val gain = Crystals.mergeGainSeconds(current.remainingSeconds, shard.seconds)
         if (gain <= 0) return
-        client.actions.fuseCrystal(shard.ref, target.tileType, target.localTileIndex, gain)
+        client.actions.fuseCrystal(shard.ref, current.tileType, current.localTileIndex, gain)
     }
 
     /** Takes [crystal] back into the inventory, keeping whatever time it has left. */
@@ -2171,14 +2171,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     pendingCleanseJobs.remove(key)?.cancel()
                 }
                 val freeTiles = clients[sessionId]?.let { computeFreePlantTileCount(it) } ?: 0
-                val crystals = readCrystals(sessionId)
-                val occupied = readOccupiedTiles(sessionId)
-                updateSession(sessionId) {
+                updateSession(sessionId) { it.copy(garden = newGarden, freePlantTiles = freeTiles) }
+            }
+            is ClientEvent.CrystalsChanged -> {
+                // Not persisted: the server reports it again on every reconnect, and it changes
+                // as often as a crystal burns down.
+                updateSessionInMemory(sessionId) {
                     it.copy(
-                        garden = newGarden,
-                        freePlantTiles = freeTiles,
-                        crystals = crystals,
-                        occupiedTiles = occupied,
+                        crystals = event.crystals,
+                        occupiedTiles = event.occupiedTiles,
                         crystalsReadAtMs = System.currentTimeMillis(),
                     )
                 }

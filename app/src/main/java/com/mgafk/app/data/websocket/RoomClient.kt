@@ -3,10 +3,13 @@ package com.mgafk.app.data.websocket
 import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.ChatMessage
+import com.mgafk.app.data.model.GardenTileRef
 import com.mgafk.app.data.model.PetTeam
+import com.mgafk.app.data.model.PlacedCrystal
 import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.SessionStatus
+import com.mgafk.app.data.repository.CrystalParser
 import com.mgafk.app.data.websocket.state.GameState
 import com.mgafk.app.data.websocket.state.GardenTile
 import com.mgafk.app.data.websocket.state.PetInfo
@@ -67,6 +70,18 @@ sealed class ClientEvent {
 
     data class ShopsChanged(val shops: List<ShopModel>, val shopPurchases: JsonObject? = null) : ClientEvent()
     data class GardenChanged(val plants: List<GardenTile>) : ClientEvent()
+
+    /**
+     * Crystals standing in the garden, with every occupied tile of both maps.
+     *
+     * Separate from [GardenChanged] on purpose: a crystal is not a plant, so planting or
+     * picking one up leaves the plant list untouched and would never be reported. Keeping it
+     * apart also means a crystal burning down does not wake the auto-harvest pipeline.
+     */
+    data class CrystalsChanged(
+        val crystals: List<PlacedCrystal>,
+        val occupiedTiles: Set<GardenTileRef>,
+    ) : ClientEvent()
     data class EggsChanged(val eggs: List<GardenTile>) : ClientEvent()
     data class PetTeamsChanged(val teams: List<PetTeam>) : ClientEvent()
     data class InventoryChanged(val items: JsonArray, val storages: JsonArray, val favoritedItemIds: List<String> = emptyList(), val magicDust: Double = 0.0) : ClientEvent()
@@ -148,6 +163,7 @@ class RoomClient {
     private var lastLivePayload: ClientEvent.LiveStatusChanged? = null
     private var lastShopsPayload: ClientEvent.ShopsChanged? = null
     private var lastGardenPayload: ClientEvent.GardenChanged? = null
+    private var lastCrystalsPayload: ClientEvent.CrystalsChanged? = null
     private var lastEggsPayload: ClientEvent.EggsChanged? = null
     private var lastInventoryPayload: ClientEvent.InventoryChanged? = null
     private var lastPetTeamsPayload: ClientEvent.PetTeamsChanged? = null
@@ -242,6 +258,7 @@ class RoomClient {
         this.lastLivePayload = null
         this.lastShopsPayload = null
         this.lastGardenPayload = null
+        this.lastCrystalsPayload = null
         this.lastEggsPayload = null
         this.lastInventoryPayload = null
         this.lastPetTeamsPayload = null
@@ -424,6 +441,7 @@ class RoomClient {
         emitLiveStatus()
         emitShops()
         emitGarden()
+        emitCrystals()
         emitEggs()
         emitInventory()
         emitPetTeams()
@@ -486,6 +504,7 @@ class RoomClient {
         emitLiveStatus()
         emitShops()
         emitGarden()
+        emitCrystals()
         emitEggs()
         emitInventory()
         emitPetTeams()
@@ -826,6 +845,19 @@ class RoomClient {
         val payload = ClientEvent.GardenChanged(plants)
         if (payload == lastGardenPayload) return
         lastGardenPayload = payload
+        emit(payload)
+    }
+
+    private fun emitCrystals() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val dirt = me.getGardenTiles()
+        val boardwalk = me.getBoardwalkTiles()
+        val payload = ClientEvent.CrystalsChanged(
+            crystals = CrystalParser.parse(dirt, boardwalk),
+            occupiedTiles = CrystalParser.occupiedTiles(dirt, boardwalk),
+        )
+        if (payload == lastCrystalsPayload) return
+        lastCrystalsPayload = payload
         emit(payload)
     }
 

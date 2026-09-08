@@ -57,6 +57,27 @@ class CrystalsTest {
         assertEquals(14_400, Crystals.wastedSeconds(Crystals.MAX_ACTIVE_SECONDS, 14_400))
     }
 
+    /**
+     * The server refuses a gain bigger than the crystal's real headroom and accepts a smaller
+     * one, so an app whose reading is out of date must err towards the older, larger value.
+     * This is why a fuse measures against the last figure the server reported rather than the
+     * one ticking down on screen: reading high can only ask for less.
+     */
+    @Test fun `an older higher reading never asks for more`() {
+        val source = Crystals.FRESH_SHARD_SECONDS
+        val realValues = listOf(0, 5_000, 28_800, 35_000, Crystals.MAX_ACTIVE_SECONDS)
+        val drifts = listOf(0, 60, 600, 3_600)
+        for (real in realValues) {
+            for (drift in drifts) {
+                val older = (real + drift).coerceAtMost(Crystals.MAX_ACTIVE_SECONDS)
+                assertTrue(
+                    "older=$older real=$real",
+                    Crystals.mergeGainSeconds(older, source) <= Crystals.mergeGainSeconds(real, source),
+                )
+            }
+        }
+    }
+
     @Test fun `only a crystal at the cap counts as full`() {
         assertTrue(Crystals.isAtMaxLifespan(Crystals.MAX_ACTIVE_SECONDS))
         assertTrue(Crystals.isAtMaxLifespan(Crystals.MAX_ACTIVE_SECONDS + 1))
