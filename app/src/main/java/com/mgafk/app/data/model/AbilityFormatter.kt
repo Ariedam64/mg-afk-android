@@ -15,7 +15,8 @@ object AbilityFormatter {
         return when (log.action) {
 
             // ── Coin Finder ────────────────────────────────────────────────
-            "CoinFinderI", "CoinFinderII", "CoinFinderIII", "SnowyCoinFinder" -> {
+            "CoinFinderI", "CoinFinderII", "CoinFinderIII", "CoinFinderIV",
+            "SnowyCoinFinder", "DawnCoinFinder", "ThunderCoinFinder" -> {
                 val coins = p["coinsFound"] ?: return null
                 "Found $coins coins"
             }
@@ -27,7 +28,8 @@ object AbilityFormatter {
             }
 
             // ── Hunger Restore ─────────────────────────────────────────────
-            "HungerRestore", "HungerRestoreII", "HungerRestoreIII", "SnowyHungerRestore" -> {
+            "HungerRestore", "HungerRestoreII", "HungerRestoreIII", "SnowyHungerRestore",
+            "Rebirth" -> {
                 val amount = p["hungerRestoreAmount"] ?: return null
                 val isSelf = p["targetPetId"] != null && p["targetPetId"] == p["petId"]
                 val target = if (isSelf) "itself" else targetName(p)
@@ -39,7 +41,7 @@ object AbilityFormatter {
                 val crop = p["harvestedCropSpecies"] ?: "Unknown"
                 "Double harvested $crop"
             }
-            "DoubleHatch" -> {
+            "DoubleHatch", "DoubleHatchII" -> {
                 val species = p["extraPetSpecies"] ?: "Unknown"
                 "Double hatched $species"
             }
@@ -79,6 +81,12 @@ object AbilityFormatter {
                 "Refunded $count $label"
             }
 
+            // ── Dust Boost ─────────────────────────────────────────────────
+            "DustBoost" -> {
+                val dust = p["bonusDust"] ?: return null
+                "Found $dust bonus Magic Dust"
+            }
+
             // ── Sell Boost ─────────────────────────────────────────────────
             "SellBoostI", "SellBoostII", "SellBoostIII", "SellBoostIV" -> {
                 val bonus = p["bonusCoins"] ?: "0"
@@ -88,14 +96,15 @@ object AbilityFormatter {
             // ── Mutation granters ──────────────────────────────────────────
             "GoldGranter", "RainbowGranter", "RainDance",
             "SnowGranter", "FrostGranter",
-            "DawnlitGranter", "AmberlitGranter" -> {
+            "DawnlitGranter", "AmberlitGranter", "ThunderstruckGranter" -> {
                 val mutation = p["mutation"] ?: "Unknown"
                 val crop = p["growSlotSpecies"] ?: "Unknown"
                 "Made $crop turn $mutation"
             }
 
             // ── Pet XP Boost ───────────────────────────────────────────────
-            "PetXpBoost", "PetXpBoostII", "PetXpBoostIII", "SnowyPetXpBoost" -> {
+            "PetXpBoost", "PetXpBoostII", "PetXpBoostIII",
+            "SnowyPetXpBoost", "DawnXpBoost", "ThunderXpBoost", "AmberXpBoost" -> {
                 val xp = p["bonusXp"] ?: "0"
                 val count = p["petsAffectedCount"] ?: "0"
                 val label = if (count == "1") "pet" else "pets"
@@ -103,7 +112,8 @@ object AbilityFormatter {
             }
 
             // ── Egg Growth Boost ───────────────────────────────────────────
-            "EggGrowthBoost", "EggGrowthBoostII", "EggGrowthBoostII_NEW", "SnowyEggGrowthBoost" -> {
+            "EggGrowthBoost", "EggGrowthBoostII", "EggGrowthBoostII_NEW",
+            "SnowyEggGrowthBoost", "ThunderEggGrowthBoost", "AmberEggGrowthBoost" -> {
                 val seconds = p["secondsReduced"]?.toDoubleOrNull()?.toInt() ?: 0
                 val count = p["eggsAffectedCount"] ?: "0"
                 val label = if (count == "1") "egg" else "eggs"
@@ -112,14 +122,18 @@ object AbilityFormatter {
 
             // ── Plant Growth Boost ─────────────────────────────────────────
             "PlantGrowthBoost", "PlantGrowthBoostII", "PlantGrowthBoostIII",
-            "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost" -> {
+            "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost",
+            "ThunderPlantGrowthBoost" -> {
                 val seconds = p["secondsReduced"]?.toDoubleOrNull()?.toInt() ?: 0
                 val count = p["numPlantsAffected"] ?: "0"
                 val label = if (count == "1") "plant" else "plants"
                 "Reduced $count $label growth by ${formatTime(seconds)}"
             }
 
-            // ── Produce Scale Boost ────────────────────────────────────────
+            // ── Crop Size Boost ────────────────────────────────────────────
+            // Since the V30 size rework these add a flat number of Size points (I +4, II +7,
+            // III +9, Snow +8), not a percentage, and pet Strength changes how often they fire
+            // rather than how much they add. The parameter was renamed to match.
             "ProduceScaleBoost", "ProduceScaleBoostII", "ProduceScaleBoostIII", "SnowyCropSizeBoost" -> {
                 val raw = p["sizeIncrease"]
                 val amount = raw?.toDoubleOrNull()?.toInt()?.toString() ?: (raw ?: "?")
