@@ -90,6 +90,7 @@ import com.mgafk.app.ui.screens.room.ChatCard
 import com.mgafk.app.ui.screens.room.PlayersCard
 import com.mgafk.app.ui.screens.room.PopulateCard
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
+import com.mgafk.app.data.repository.Crystals
 import com.mgafk.app.ui.screens.garden.CrystalsCard
 import com.mgafk.app.ui.screens.garden.EggsCard
 import com.mgafk.app.ui.screens.garden.GardenCard
@@ -661,6 +662,7 @@ private fun SectionContent(
                     .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
                 xpPotionsInShack = session.toolShack
                     .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
+                strengthBonus = Crystals.effects(session.crystals).strengthBonus,
                 onFeedPet = { petItemId, cropItemIds ->
                     viewModel.feedPet(session.id, petItemId, cropItemIds)
                 },
@@ -689,6 +691,7 @@ private fun SectionContent(
                     viewModel.detectActiveTeamId(session.id)
                 },
                 apiReady = state.apiReady,
+                strengthBonus = Crystals.effects(session.crystals).strengthBonus,
                 onCreate = { name, petIds -> viewModel.createPetTeam(session.id, name, petIds) },
                 onUpdate = { teamId, name, petIds ->
                     viewModel.updatePetTeam(session.id, teamId, name, petIds)

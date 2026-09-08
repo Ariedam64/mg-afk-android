@@ -176,6 +176,8 @@ fun PetTeamCard(
     hutchPets: List<InventoryPetItem>,
     activeTeamId: String?,
     apiReady: Boolean,
+    /** Flat strength a Strength crystal is granting, which reaches equipped pets only. */
+    strengthBonus: Int = 0,
     onCreate: (name: String, petIds: List<String>) -> Unit,
     onUpdate: (teamId: String, name: String, petIds: List<String>) -> Unit,
     onDelete: (teamId: String) -> Unit,
@@ -192,6 +194,11 @@ fun PetTeamCard(
     // sprites with each pet's actual mutations (the team itself only stores species).
     val mutationsByPetId = remember(allCandidates) {
         allCandidates.associate { it.id to it.mutations }
+    }
+    // A Strength crystal only reaches the pets that are actually equipped, so a team sitting in
+    // the hutch shows its pets' own strength.
+    val strengthBonusByPetId = remember(activePets, strengthBonus) {
+        if (strengthBonus <= 0) emptyMap() else activePets.associate { it.id to strengthBonus }
     }
 
     var editorTeam by remember { mutableStateOf<PetTeam?>(null) }
@@ -337,6 +344,7 @@ fun PetTeamCard(
             isNew = editorIsNew,
             candidates = allCandidates,
             apiReady = apiReady,
+            strengthBonusByPetId = strengthBonusByPetId,
             onConfirm = { name, petIds ->
                 val existing = editorTeam
                 if (editorIsNew || existing == null) onCreate(name, petIds)
@@ -542,6 +550,7 @@ private fun TeamEditorDialog(
     isNew: Boolean,
     candidates: List<TeamPetCandidate>,
     apiReady: Boolean,
+    strengthBonusByPetId: Map<String, Int>,
     onConfirm: (name: String, petIds: List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -605,6 +614,7 @@ private fun TeamEditorDialog(
                             FilledSlotTile(
                                 pet = pet,
                                 apiReady = apiReady,
+                                strengthBonus = strengthBonusByPetId[pet.id] ?: 0,
                                 onRemove = { slots = slots.toMutableList().also { it[i] = null } },
                             )
                         } else {
@@ -688,6 +698,7 @@ private fun EmptySlotTile(onClick: () -> Unit) {
 private fun FilledSlotTile(
     pet: TeamPetCandidate,
     apiReady: Boolean,
+    strengthBonus: Int,
     onRemove: () -> Unit,
 ) {
     val entry = remember(pet.species, apiReady) { MgApi.findPet(pet.species) }
@@ -740,8 +751,12 @@ private fun FilledSlotTile(
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
             )
             if (ms > 0) {
-                val strText = if (isMax) "STR $cs" else "STR $cs/$ms"
-                val strColor = if (isMax) Color(0xFFFBBF24) else Accent
+                val strText = when {
+                    strengthBonus > 0 -> "STR ${cs + strengthBonus} (+$strengthBonus)"
+                    isMax -> "STR $cs"
+                    else -> "STR $cs/$ms"
+                }
+                val strColor = if (isMax || strengthBonus > 0) Color(0xFFFBBF24) else Accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {

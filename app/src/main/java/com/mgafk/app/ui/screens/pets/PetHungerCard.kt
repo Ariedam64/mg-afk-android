@@ -194,6 +194,8 @@ fun ActivePetsCard(
     xpPotionsInInventory: Int = 0,
     /** XP Potions sitting in the Tool Shack, retrieved on demand before use. */
     xpPotionsInShack: Int = 0,
+    /** Flat strength a Strength crystal is granting these pets right now, 0 when none is up. */
+    strengthBonus: Int = 0,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit = { _, _ -> },
     onUsePotionOnPet: (petItemId: String) -> Unit = {},
     onUseXpPotionOnPet: (petItemId: String) -> Unit = {},
@@ -259,6 +261,7 @@ fun ActivePetsCard(
                     potionsInShack = potionsInShack,
                     xpPotionsInInventory = xpPotionsInInventory,
                     xpPotionsInShack = xpPotionsInShack,
+                    strengthBonus = strengthBonus,
                     onFeedPet = onFeedPet,
                     onUsePotionOnPet = onUsePotionOnPet,
                     onUseXpPotionOnPet = onUseXpPotionOnPet,
@@ -290,6 +293,7 @@ private fun ActivePetRow(
     potionsInShack: Int,
     xpPotionsInInventory: Int,
     xpPotionsInShack: Int,
+    strengthBonus: Int,
     onFeedPet: (petItemId: String, cropItemIds: List<String>) -> Unit,
     onUsePotionOnPet: (petItemId: String) -> Unit,
     onUseXpPotionOnPet: (petItemId: String) -> Unit,
@@ -352,8 +356,15 @@ private fun ActivePetRow(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 if (apiReady && maxStrength > 0) {
-                    val strText = if (isMaxStrength) "STR $strength" else "STR $strength/$maxStrength"
-                    val strColor = if (isMaxStrength) Color(0xFFFBBF24) else Accent
+                    // A crystal's bonus is shown apart from the pet's own strength: it is not
+                    // progress, it lasts as long as the crystal does, and it reads above the
+                    // ceiling on purpose.
+                    val strText = when {
+                        strengthBonus > 0 -> "STR ${strength + strengthBonus} (+$strengthBonus)"
+                        isMaxStrength -> "STR $strength"
+                        else -> "STR $strength/$maxStrength"
+                    }
+                    val strColor = if (isMaxStrength || strengthBonus > 0) Color(0xFFFBBF24) else Accent
                     Text(
                         strText,
                         fontSize = 11.sp,

@@ -24,6 +24,12 @@ class PetStrengthTest {
     private fun isMax(xp: Double, targetScale: Double = 1.0) =
         PriceCalculator.isPetMaxStrength(xp, targetScale, maxScale, hoursToMature)
 
+    private fun strength(xp: Double, targetScale: Double) =
+        PriceCalculator.calculatePetStrength(xp, targetScale, maxScale, hoursToMature)
+
+    private fun effective(xp: Double, targetScale: Double, bonus: Int) =
+        PriceCalculator.effectivePetStrength(xp, targetScale, maxScale, hoursToMature, bonus)
+
     @Test fun `a newly hatched pet is not fully grown`() {
         assertFalse(isMax(0.0))
     }
@@ -49,6 +55,46 @@ class PetStrengthTest {
     /** Mirrors calculatePetStrength, which reports the ceiling when there is no maturation time. */
     @Test fun `a species without a maturation time counts as fully grown`() {
         assertTrue(PriceCalculator.isPetMaxStrength(0.0, 1.0, maxScale, hoursToMature = 0.0))
+    }
+
+    // ── The Strength crystal's bonus ──
+
+    /**
+     * A Strength crystal adds a flat bonus to an equipped pet's strength, which scales its
+     * abilities and shortens their cooldowns. The game applies it on top of the level and
+     * clamps nothing, which is what lets a pet read above its own ceiling.
+     */
+    @Test fun `the crystal bonus adds on top of the strength`() {
+        val base = strength(xp = 0.0, targetScale = 1.0)
+
+        assertEquals(base + 10, effective(xp = 0.0, targetScale = 1.0, bonus = 10))
+    }
+
+    @Test fun `no crystal leaves the strength alone`() {
+        assertEquals(strength(xp = 1_000.0, targetScale = 1.5), effective(xp = 1_000.0, targetScale = 1.5, bonus = 0))
+    }
+
+    /** "Pets can go beyond max str", in the game's own words. */
+    @Test fun `the bonus is not capped by the ceiling`() {
+        val ceiling = PriceCalculator.calculateMaxStrength(1.0, maxScale)
+
+        val boosted = effective(xp = fullyGrownXp, targetScale = 1.0, bonus = 10)
+
+        assertEquals(ceiling + 10, boosted)
+        assertTrue("the bonus should push past the ceiling", boosted > ceiling)
+    }
+
+    /**
+     * The XP Potion guard must stay blind to the bonus: the game refuses the potion on a pet
+     * whose own level is maxed, and a pet that only looks maxed because a crystal is running
+     * can still take one.
+     */
+    @Test fun `a crystal does not make a pet count as fully grown`() {
+        assertFalse(isMax(fullyGrownXp - 1.0))
+        assertFalse(
+            "the bonus must not leak into the fully grown check",
+            PriceCalculator.isPetMaxStrength(fullyGrownXp - 1.0, 1.0, maxScale, hoursToMature),
+        )
     }
 
     /**

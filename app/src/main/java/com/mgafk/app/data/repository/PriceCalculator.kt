@@ -166,6 +166,22 @@ object PriceCalculator {
     }
 
     /**
+     * A pet's strength as its abilities actually feel it, i.e. with a Strength crystal's
+     * [strengthBonus] added.
+     *
+     * Deliberately uncapped: the game adds the bonus after the ceiling and lets a boosted pet
+     * read above its own maximum. The bonus applies to equipped pets only, and it must never
+     * reach [isPetMaxStrength], which answers a question about the pet itself.
+     */
+    fun effectivePetStrength(
+        xp: Double,
+        targetScale: Double,
+        maxScale: Double,
+        hoursToMature: Double,
+        strengthBonus: Int = 0,
+    ): Int = calculatePetStrength(xp, targetScale, maxScale, hoursToMature) + strengthBonus
+
+    /**
      * Whether a pet has reached its strength ceiling, i.e. what the game calls "fully grown".
      * Its reducer refuses an XP Potion on such a pet and returns without consuming the item,
      * so the app checks the same thing before offering the action.
