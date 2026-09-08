@@ -62,6 +62,7 @@ import androidx.compose.ui.zIndex
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.PetTeam
+import com.mgafk.app.data.model.PetTeamEmblem
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
@@ -175,8 +176,8 @@ fun PetTeamCard(
     hutchPets: List<InventoryPetItem>,
     activeTeamId: String?,
     apiReady: Boolean,
-    onCreate: (PetTeam) -> Unit,
-    onUpdate: (PetTeam) -> Unit,
+    onCreate: (name: String, petIds: List<String>) -> Unit,
+    onUpdate: (teamId: String, name: String, petIds: List<String>) -> Unit,
     onDelete: (teamId: String) -> Unit,
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onActivate: (PetTeam) -> Unit,
@@ -195,6 +196,7 @@ fun PetTeamCard(
 
     var editorTeam by remember { mutableStateOf<PetTeam?>(null) }
     var editorIsNew by remember { mutableStateOf(false) }
+    var editorOpen by remember { mutableStateOf(false) }
 
     // Drag state
     var dragIndex by remember { mutableIntStateOf(-1) }
@@ -243,8 +245,9 @@ fun PetTeamCard(
 
         if (teams.isEmpty()) {
             AddTeamTile {
-                editorTeam = PetTeam()
+                editorTeam = null
                 editorIsNew = true
+                editorOpen = true
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -274,6 +277,7 @@ fun PetTeamCard(
                             onEdit = {
                                 editorTeam = team
                                 editorIsNew = false
+                                editorOpen = true
                             },
                             onDelete = { onDelete(team.id) },
                             dragModifier = Modifier.pointerInput(teams.size) {
@@ -311,25 +315,36 @@ fun PetTeamCard(
                 }
                 if (teams.size < PetTeam.MAX_TEAMS) {
                     AddTeamTile {
-                        editorTeam = PetTeam()
+                        editorTeam = null
                         editorIsNew = true
+                        editorOpen = true
                     }
+                } else {
+                    // The server refuses a 26th team, so say why instead of offering the tile.
+                    Text(
+                        "Team limit reached (${PetTeam.MAX_TEAMS} of ${PetTeam.MAX_TEAMS})",
+                        fontSize = 10.sp,
+                        color = TextMuted,
+                    )
                 }
             }
         }
     }
 
-    editorTeam?.let { team ->
+    if (editorOpen) {
         TeamEditorDialog(
-            initialTeam = team,
+            initialTeam = editorTeam,
             isNew = editorIsNew,
             candidates = allCandidates,
             apiReady = apiReady,
-            onConfirm = { finalTeam ->
-                if (editorIsNew) onCreate(finalTeam) else onUpdate(finalTeam)
+            onConfirm = { name, petIds ->
+                val existing = editorTeam
+                if (editorIsNew || existing == null) onCreate(name, petIds)
+                else onUpdate(existing.id, name, petIds)
+                editorOpen = false
                 editorTeam = null
             },
-            onDismiss = { editorTeam = null },
+            onDismiss = { editorOpen = false; editorTeam = null },
         )
     }
 }
@@ -374,8 +389,8 @@ private fun TeamRow(
     val borderColor = if (isActive) StatusConnected.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.10f)
     // Pair each filled species with the pet id at the same slot index so we can look
     // up the pet's current mutations for composed sprite rendering.
-    val filledSlots = remember(team.petSpecies, team.petIds) {
-        team.petSpecies.zip(team.petIds).filter { (species, _) -> species.isNotBlank() }
+    val filledSlots = remember(team.members) {
+        team.members.filter { it.petSpecies.isNotBlank() }.map { it.petSpecies to it.petId }
     }
 
     Row(
@@ -396,6 +411,8 @@ private fun TeamRow(
             tint = TextMuted,
             modifier = dragModifier.size(20.dp),
         )
+
+        TeamEmblemBadge(team.emblem)
 
         // Pet sprites (only filled slots, with spacing) - composed with each pet's
         // current mutations when available.
@@ -468,24 +485,71 @@ private fun TeamRow(
     }
 }
 
+/**
+ * The team's badge, as the game assigns it. Read-only here: the server picks one on create and
+ * the game is where a player changes it.
+ *
+ * A letter renders as text, the sprite-backed kinds through [SpriteImage], and an emblem this
+ * build does not know renders as nothing rather than as a wrong guess.
+ */
+@Composable
+private fun TeamEmblemBadge(emblem: PetTeamEmblem) {
+    val size = 22.dp
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(5.dp))
+            .background(SurfaceBorder.copy(alpha = 0.25f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (emblem) {
+            is PetTeamEmblem.Letter -> Text(
+                emblem.label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextSecondary,
+            )
+            is PetTeamEmblem.Pet -> SpriteImage(
+                category = "pets",
+                name = emblem.petSpecies,
+                size = size - 4.dp,
+                contentDescription = emblem.petSpecies,
+            )
+            is PetTeamEmblem.Cosmetic -> SpriteImage(
+                url = MgApi.findItem(emblem.cosmetic)?.sprite,
+                size = size - 4.dp,
+                contentDescription = emblem.cosmetic,
+            )
+            // The game draws these from its own icon atlas, which the app has no mapping for.
+            is PetTeamEmblem.Icon -> Text(
+                emblem.icon.take(1).uppercase(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextMuted,
+            )
+            PetTeamEmblem.Unknown -> Unit
+        }
+    }
+}
+
 // ══════════════════════════════════════════
 // Team Editor Dialog
 // ══════════════════════════════════════════
 
 @Composable
 private fun TeamEditorDialog(
-    initialTeam: PetTeam,
+    initialTeam: PetTeam?,
     isNew: Boolean,
     candidates: List<TeamPetCandidate>,
     apiReady: Boolean,
-    onConfirm: (PetTeam) -> Unit,
+    onConfirm: (name: String, petIds: List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var teamName by remember { mutableStateOf(initialTeam.name) }
+    var teamName by remember { mutableStateOf(initialTeam?.name.orEmpty()) }
     var slots by remember {
         mutableStateOf(
             List(PetTeam.MAX_PETS) { i ->
-                val id = initialTeam.petIds.getOrElse(i) { "" }
+                val id = initialTeam?.petIds?.getOrElse(i) { "" }.orEmpty()
                 if (id.isNotBlank()) candidates.find { it.id == id } else null
             }
         )
@@ -564,15 +628,12 @@ private fun TeamEditorDialog(
                 }
                 Button(
                     onClick = {
-                        val team = initialTeam.copy(
-                            name = teamName.trim().ifBlank {
-                                slots.filterNotNull().joinToString(" / ") { it.name.ifBlank { it.species } }.ifBlank { "Team" }
-                            },
-                            petIds = List(PetTeam.MAX_PETS) { i -> slots[i]?.id ?: "" },
-                            petSpecies = List(PetTeam.MAX_PETS) { i -> slots[i]?.species ?: "" },
-                            petNames = List(PetTeam.MAX_PETS) { i -> slots[i]?.name ?: "" },
-                        )
-                        onConfirm(team)
+                        val chosen = slots.filterNotNull()
+                        val name = teamName.trim().ifBlank {
+                            chosen.joinToString(" / ") { it.name.ifBlank { it.species } }.ifBlank { "Team" }
+                        }
+                        // The server truncates past this, so do it here and show the real result.
+                        onConfirm(name.take(PetTeam.MAX_NAME_CLUSTERS), chosen.map { it.id })
                     },
                     enabled = slots.any { it != null },
                     colors = ButtonDefaults.buttonColors(containerColor = Accent),

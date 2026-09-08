@@ -31,7 +31,6 @@ class SessionRepository(private val context: Context) {
         private val KEY_PET_TIP = booleanPreferencesKey("mgafk.petTipDismissed")
         private val KEY_COLLAPSED_CARDS = stringPreferencesKey("mgafk.collapsedCards")
         private val KEY_SETTINGS = stringPreferencesKey("mgafk.settings")
-        private val KEY_PET_TEAMS = stringPreferencesKey("mgafk.petTeams")
         private val KEY_TEAM_TIP = booleanPreferencesKey("mgafk.teamTipDismissed")
         private val KEY_GARDEN_TIP = booleanPreferencesKey("mgafk.gardenTipDismissed")
         private val KEY_SEED_TIP = booleanPreferencesKey("mgafk.seedTipDismissed")
@@ -211,16 +210,6 @@ class SessionRepository(private val context: Context) {
     suspend fun dismissStorageTip() {
         context.dataStore.edit { prefs ->
             prefs[KEY_STORAGE_TIP] = true
-        }
-    }
-
-    suspend fun loadPetTeams(): List<PetTeam> {
-        val raw = context.dataStore.data.map { it[KEY_PET_TEAMS] }.first()
-        if (raw.isNullOrBlank()) return emptyList()
-        return try {
-            json.decodeFromString<List<PetTeam>>(raw)
-        } catch (_: Exception) {
-            emptyList()
         }
     }
 

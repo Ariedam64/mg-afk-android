@@ -3,6 +3,7 @@ package com.mgafk.app.data.websocket
 import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.model.ChatMessage
+import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.SessionStatus
@@ -67,6 +68,7 @@ sealed class ClientEvent {
     data class ShopsChanged(val shops: List<ShopModel>, val shopPurchases: JsonObject? = null) : ClientEvent()
     data class GardenChanged(val plants: List<GardenTile>) : ClientEvent()
     data class EggsChanged(val eggs: List<GardenTile>) : ClientEvent()
+    data class PetTeamsChanged(val teams: List<PetTeam>) : ClientEvent()
     data class InventoryChanged(val items: JsonArray, val storages: JsonArray, val favoritedItemIds: List<String> = emptyList(), val magicDust: Double = 0.0) : ClientEvent()
     data class ChatChanged(val messages: List<ChatMessage>) : ClientEvent()
     data class PlayersListChanged(val players: List<PlayerSnapshot>) : ClientEvent()
@@ -148,6 +150,7 @@ class RoomClient {
     private var lastGardenPayload: ClientEvent.GardenChanged? = null
     private var lastEggsPayload: ClientEvent.EggsChanged? = null
     private var lastInventoryPayload: ClientEvent.InventoryChanged? = null
+    private var lastPetTeamsPayload: ClientEvent.PetTeamsChanged? = null
     private var lastAbilityTimestamp = 0L
     private var lastChatSize = -1
     private var lastPlayersPayload: ClientEvent.PlayersListChanged? = null
@@ -241,6 +244,7 @@ class RoomClient {
         this.lastGardenPayload = null
         this.lastEggsPayload = null
         this.lastInventoryPayload = null
+        this.lastPetTeamsPayload = null
         gameState.reset()
         commandSequencer.reset()
 
@@ -422,6 +426,7 @@ class RoomClient {
         emitGarden()
         emitEggs()
         emitInventory()
+        emitPetTeams()
         emitChat()
         emitPlayersList()
 
@@ -483,6 +488,7 @@ class RoomClient {
         emitGarden()
         emitEggs()
         emitInventory()
+        emitPetTeams()
         emitChat()
         emitPlayersList()
     }
@@ -820,6 +826,14 @@ class RoomClient {
         val payload = ClientEvent.GardenChanged(plants)
         if (payload == lastGardenPayload) return
         lastGardenPayload = payload
+        emit(payload)
+    }
+
+    private fun emitPetTeams() {
+        val me = gameState.getPlayer(playerId) ?: return
+        val payload = ClientEvent.PetTeamsChanged(PetTeam.listFromJson(me.petTeams))
+        if (payload == lastPetTeamsPayload) return
+        lastPetTeamsPayload = payload
         emit(payload)
     }
 

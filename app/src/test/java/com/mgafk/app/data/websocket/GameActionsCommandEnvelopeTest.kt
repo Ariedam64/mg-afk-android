@@ -1,6 +1,7 @@
 package com.mgafk.app.data.websocket
 
 import com.mgafk.app.data.AppJson
+import com.mgafk.app.data.model.PetTeamEmblem
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -98,6 +99,38 @@ class GameActionsCommandEnvelopeTest {
         // Otherwise every pot gets its own.
         actions.potPlant(slot = 6)
         assertNotEquals(mintedId, lastCommand()["plantItemId"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    /**
+     * The game's emblem is an object discriminated on `type`, not a string. Sending a string
+     * gets the command dropped by the reducer.
+     */
+    @Test fun `setPetTeamEmblem sends the emblem as the object the game expects`() {
+        actions.setPetTeamEmblem("t1", PetTeamEmblem.Letter(16))
+        assertWrapped("SetPetTeamEmblem")
+        lastCommand()["emblem"]!!.jsonObject.let { emblem ->
+            assertEquals("number", emblem["type"]?.jsonPrimitive?.contentOrNull)
+            assertEquals(16, emblem["number"]?.jsonPrimitive?.intOrNull)
+        }
+
+        actions.setPetTeamEmblem("t1", PetTeamEmblem.Pet("Peacock"))
+        lastCommand()["emblem"]!!.jsonObject.let { emblem ->
+            assertEquals("pet", emblem["type"]?.jsonPrimitive?.contentOrNull)
+            assertEquals("Peacock", emblem["petSpecies"]?.jsonPrimitive?.contentOrNull)
+        }
+
+        actions.setPetTeamEmblem("t1", PetTeamEmblem.Icon("rainbow"))
+        assertEquals("rainbow", lastCommand()["emblem"]!!.jsonObject["icon"]?.jsonPrimitive?.contentOrNull)
+
+        actions.setPetTeamEmblem("t1", PetTeamEmblem.Cosmetic("TopHat"))
+        assertEquals("TopHat", lastCommand()["emblem"]!!.jsonObject["cosmetic"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    /** An emblem this build cannot describe must not be guessed at over the wire. */
+    @Test fun `setPetTeamEmblem sends nothing for an unknown emblem`() {
+        val before = sent.size
+        actions.setPetTeamEmblem("t1", PetTeamEmblem.Unknown)
+        assertEquals(before, sent.size)
     }
 
     @Test fun `savePetTeam says whether the team is new`() {

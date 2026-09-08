@@ -1,5 +1,6 @@
 package com.mgafk.app.data.websocket
 
+import com.mgafk.app.data.model.PetTeamEmblem
 import com.mgafk.app.data.repository.MgApi
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -404,8 +405,15 @@ class GameActions(
             "toPetTeamIndex" to JsonPrimitive(toPetTeamIndex),
         ))
 
-    fun setPetTeamEmblem(teamId: String, emblem: String) =
-        game("SetPetTeamEmblem", obj("teamId" to JsonPrimitive(teamId), "emblem" to JsonPrimitive(emblem)))
+    /**
+     * Sets a team's badge. The emblem travels as an object discriminated on `type`, never as a
+     * string - a string is dropped by the reducer. An emblem shape this build does not know
+     * ([PetTeamEmblem.Unknown]) is not sent at all rather than guessed at.
+     */
+    fun setPetTeamEmblem(teamId: String, emblem: PetTeamEmblem) {
+        val payload = emblem.toJson() ?: return
+        game("SetPetTeamEmblem", obj("teamId" to JsonPrimitive(teamId), "emblem" to payload))
+    }
 
     // =====================
     // Inventory / Storage

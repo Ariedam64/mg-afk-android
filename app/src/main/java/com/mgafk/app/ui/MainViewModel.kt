@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.repository.PetTeams
 import com.mgafk.app.data.repository.GardenTiles
 import com.mgafk.app.data.model.BotSnapshot
 import com.mgafk.app.data.model.BotStatus
@@ -177,9 +178,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Legacy migration: pet teams used to be a single global list. Seed each
             // session that has none yet from the old global one, so the previous behaviour
             // (same teams on every session) is preserved.
-            val legacyPetTeams = repo.loadPetTeams()
-            val migratedSessions = if (legacyPetTeams.isEmpty()) sessions
-                else sessions.map { if (it.petTeams.isEmpty()) it.copy(petTeams = legacyPetTeams) else it }
+            // Pet teams are server state now (see PetTeams); nothing is seeded from disk.
+            val migratedSessions = sessions
             val teamTipDismissed = repo.isTeamTipDismissed()
             val gardenTipDismissed = repo.isGardenTipDismissed()
             val seedTipDismissed = repo.isSeedTipDismissed()
@@ -1691,130 +1691,94 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Pet Teams ----
 
-    private fun updatePetTeams(sessionId: String, transform: (List<PetTeam>) -> List<PetTeam>) {
-        updateSession(sessionId) { it.copy(petTeams = transform(it.petTeams)) }
-    }
+    // Teams are server state now: every change goes out as the game's own command and comes
+    // back through PetTeamsChanged. Nothing is stored locally, so nothing can drift.
 
-    /** Create a new pet team from the editor overlay selections. */
-    fun createPetTeam(sessionId: String, team: PetTeam) {
-        updatePetTeams(sessionId) { teams ->
-            if (teams.size >= PetTeam.MAX_TEAMS) teams else teams + team
+    /**
+     * Create a team from the editor overlay selections.
+     *
+     * The id is minted here, the way the game's client does. Refused past [PetTeam.MAX_TEAMS],
+     * which the server would reject silently.
+     */
+    fun createPetTeam(sessionId: String, name: String, petIds: List<String>) {
+        val client = clients[sessionId] ?: return
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        if (session.petTeams.size >= PetTeam.MAX_TEAMS) {
+            AppLog.w(TAG, "[PetTeam] Team limit reached (${PetTeam.MAX_TEAMS}), not creating")
+            return
         }
+        val members = petIds.filter { it.isNotBlank() }.take(PetTeam.MAX_PETS)
+        if (members.size < PetTeam.MIN_PETS || name.isBlank()) return
+        client.actions.savePetTeam(
+            teamId = UUID.randomUUID().toString(),
+            name = name,
+            petIds = members,
+            isCreate = true,
+        )
     }
 
-    /** Update an existing pet team (from the editor overlay). */
-    fun updatePetTeam(sessionId: String, team: PetTeam) {
-        updatePetTeams(sessionId) { teams ->
-            teams.map { t -> if (t.id == team.id) team.copy(updatedAt = System.currentTimeMillis()) else t }
-        }
+    /** Rename a team and/or change its members. Both travel in the same SavePetTeam. */
+    fun updatePetTeam(sessionId: String, teamId: String, name: String, petIds: List<String>) {
+        val client = clients[sessionId] ?: return
+        val members = petIds.filter { it.isNotBlank() }.take(PetTeam.MAX_PETS)
+        if (members.size < PetTeam.MIN_PETS || name.isBlank()) return
+        client.actions.savePetTeam(teamId = teamId, name = name, petIds = members, isCreate = false)
     }
 
-    /** Delete a team by id. */
     fun deletePetTeam(sessionId: String, teamId: String) {
-        updatePetTeams(sessionId) { teams -> teams.filter { t -> t.id != teamId } }
+        clients[sessionId]?.actions?.deletePetTeam(teamId)
     }
 
-    /** Rename a team. */
     fun renamePetTeam(sessionId: String, teamId: String, newName: String) {
-        updatePetTeams(sessionId) { teams ->
-            teams.map { t -> if (t.id == teamId) t.copy(name = newName, updatedAt = System.currentTimeMillis()) else t }
-        }
+        val session = _state.value.sessions.find { it.id == sessionId } ?: return
+        val team = session.petTeams.find { it.id == teamId } ?: return
+        updatePetTeam(sessionId, teamId, newName, team.petIds)
     }
 
     /** Reorder teams by moving [fromIndex] to [toIndex]. */
     fun reorderPetTeams(sessionId: String, fromIndex: Int, toIndex: Int) {
-        updatePetTeams(sessionId) { teams ->
-            val list = teams.toMutableList()
-            if (fromIndex in list.indices && toIndex in list.indices) {
-                val item = list.removeAt(fromIndex)
-                list.add(toIndex, item)
-            }
-            list
-        }
+        val client = clients[sessionId] ?: return
+        val teams = _state.value.sessions.find { it.id == sessionId }?.petTeams ?: return
+        if (fromIndex !in teams.indices || toIndex !in teams.indices || fromIndex == toIndex) return
+        client.actions.movePetTeam(movePetTeamId = teams[fromIndex].id, toPetTeamIndex = toIndex)
     }
 
     /**
-     * Activate a pet team: swap active pets to match the team composition.
+     * Activate a pet team.
      *
-     * Strategy (sequential, same as Gemini userscript):
-     * 1. Remove active pets that are NOT in the target team.
-     * 2. Equip target pets that are NOT currently active.
-     *
-     * Pets already in the right slot are left untouched.
+     * One command: the server pulls the members out of the inventory and the storages itself,
+     * skipping any the player no longer owns. The app used to re-enact this pet by pet with
+     * pickup/store/place, which could half-apply and could not reach a pet in a storage.
      */
     fun activateTeam(sessionId: String, team: PetTeam) {
         val client = clients[sessionId] ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val actions = client.actions
 
-        val activePetIds = session.pets.map { it.id }.toSet()
-        val targetPetIds = team.petIds.filter { it.isNotBlank() }.toSet()
-
-        // Already the same team? Skip.
-        if (activePetIds == targetPetIds) {
+        if (PetTeams.isActive(team, session.pets.map { it.id })) {
             AppLog.d(TAG, "[ActivateTeam] Team already active, skipping")
             return
         }
-
-        AppLog.d(TAG, "[ActivateTeam] active=$activePetIds, target=$targetPetIds")
-
-        // Step 1: Remove pets that are active but NOT in target
-        val toRemove = activePetIds - targetPetIds
-        for (petId in toRemove) {
-            AppLog.d(TAG, "[ActivateTeam] Removing $petId")
-            actions.pickupPet(petId = petId)
-            actions.putItemInStorage(itemId = petId, storageId = "PetHutch")
+        // The game refuses the same way rather than emptying the slots.
+        val ownedPetIds = (session.pets.map { it.id } +
+            session.petHutch.map { it.id } +
+            session.inventory.pets.map { it.id }).toSet()
+        if (team.petIds.none { it in ownedPetIds }) {
+            AppLog.w(TAG, "[ActivateTeam] None of '${team.name}' pets are owned any more, skipping")
+            return
         }
 
-        // Step 2: Equip pets that are in target but NOT active
-        val toEquip = targetPetIds - activePetIds
-        val hutchPetIds = session.petHutch.map { it.id }.toSet()
-        val inventoryPetIds = session.inventory.pets.map { it.id }.toSet()
-
-        // Determine placement position
-        val me = client.gameState.getPlayer(client.playerId)
-        val slotIndex = (me?.slotIndex ?: 0).coerceIn(0, 5)
-        val base = SLOT_BASE_TILE[slotIndex]
-        var nextLocal = 0
-
-        for (petId in toEquip) {
-            val isInHutch = petId in hutchPetIds
-            val isInInventory = petId in inventoryPetIds
-
-            if (!isInHutch && !isInInventory) {
-                AppLog.w(TAG, "[ActivateTeam] Pet $petId not found in hutch or inventory, skipping")
-                continue
-            }
-
-            if (isInHutch) {
-                AppLog.d(TAG, "[ActivateTeam] Retrieving $petId from hutch")
-                actions.retrieveItemFromStorage(itemId = petId, storageId = "PetHutch")
-            }
-
-            val x = base.first + nextLocal
-            val y = base.second
-            AppLog.d(TAG, "[ActivateTeam] Placing $petId at ($x, $y) local=$nextLocal")
-            actions.placePet(
-                itemId = petId,
-                x = x.toDouble(), y = y.toDouble(),
-                tileType = "Dirt",
-                localTileIndex = nextLocal,
-            )
-            nextLocal++
-        }
+        AppLog.d(TAG, "[ActivateTeam] Applying '${team.name}' (${team.id})")
+        client.actions.applyPetTeam(team.id)
     }
 
     /**
-     * Detect which saved team matches the currently active pets (order-independent).
-     * Returns the team id or null if no match.
+     * The team whose members are exactly the active pets, or null when none matches.
+     * Mirrors the game's own rule, see [PetTeams.isActive].
      */
     fun detectActiveTeamId(sessionId: String): String? {
         val session = _state.value.sessions.find { it.id == sessionId } ?: return null
-        val activePetIds = session.pets.map { it.id }.toSet()
-        if (activePetIds.isEmpty()) return null
-        return session.petTeams.firstOrNull { team ->
-            team.petIds.filter { it.isNotBlank() }.toSet() == activePetIds
-        }?.id
+        val activePetIds = session.pets.map { it.id }
+        return session.petTeams.firstOrNull { PetTeams.isActive(it, activePetIds) }?.id
     }
 
     // ---- Card collapse persistence ----
@@ -2004,6 +1968,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val alerts = _state.value.alerts
                 alertNotifier.checkWeather(event.weather, previousWeather, alerts)
                 alertNotifier.checkPetHunger(sessionId, newPets, alerts)
+            }
+            is ClientEvent.PetTeamsChanged -> {
+                updateSession(sessionId) { it.copy(petTeams = event.teams) }
             }
             is ClientEvent.GardenChanged -> {
                 val newGarden = mutableListOf<GardenPlantSnapshot>()

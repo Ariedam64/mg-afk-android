@@ -665,8 +665,10 @@ private fun SectionContent(
                     viewModel.detectActiveTeamId(session.id)
                 },
                 apiReady = state.apiReady,
-                onCreate = { team -> viewModel.createPetTeam(session.id, team) },
-                onUpdate = { team -> viewModel.updatePetTeam(session.id, team) },
+                onCreate = { name, petIds -> viewModel.createPetTeam(session.id, name, petIds) },
+                onUpdate = { teamId, name, petIds ->
+                    viewModel.updatePetTeam(session.id, teamId, name, petIds)
+                },
                 onDelete = { teamId -> viewModel.deletePetTeam(session.id, teamId) },
                 onReorder = { from, to -> viewModel.reorderPetTeams(session.id, from, to) },
                 onActivate = { team -> viewModel.activateTeam(session.id, team) },

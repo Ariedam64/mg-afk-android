@@ -1,0 +1,52 @@
+[
+  {
+    "id": "eb99363f-c212-4f69-8a24-c0551a91e6fd",
+    "name": "PetRfnd",
+    "members": [
+      {
+        "petId": "26568a1d-d0a5-47c0-bfe2-751078caa8a0",
+        "petSpecies": "Peacock",
+        "name": null
+      },
+      {
+        "petId": "952d6ad4-fc22-4038-a6dc-cfe0d10459f9",
+        "petSpecies": "Peacock",
+        "name": null
+      },
+      {
+        "petId": "e17fa70c-d407-4c17-b8b4-d47d4edf6ffb",
+        "petSpecies": "Chicken",
+        "name": null
+      }
+    ],
+    "emblem": {
+      "type": "number",
+      "number": 16
+    }
+  },
+  {
+    "id": "b31ab0f3-8c3d-4d81-9bcb-896449f3f0f6",
+    "name": "🌅🌅🌅",
+    "members": [
+      {
+        "petId": "669159c1-fd68-41c1-a012-702727020c84",
+        "petSpecies": "Horse",
+        "name": null
+      },
+      {
+        "petId": "3bb20f8c-64bb-4d86-b988-2db529710428",
+        "petSpecies": "Horse",
+        "name": null
+      },
+      {
+        "petId": "855610cc-9b49-4f73-827e-96a89015034e",
+        "petSpecies": "Horse",
+        "name": null
+      }
+    ],
+    "emblem": {
+      "type": "number",
+      "number": 7
+    }
+  }
+]
