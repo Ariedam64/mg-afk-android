@@ -101,6 +101,7 @@ import com.mgafk.app.ui.screens.pets.ActivePetsCard
 import com.mgafk.app.ui.screens.pets.PetTeamCard
 import com.mgafk.app.ui.screens.shops.ShopsCards
 import com.mgafk.app.ui.screens.status.LiveStatusCard
+import com.mgafk.app.ui.screens.status.WeatherStationCard
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.BgDark
 import com.mgafk.app.ui.theme.StatusConnected
@@ -564,6 +565,7 @@ private fun SectionContent(
             )
 
             LiveStatusCard(session = session)
+            WeatherStationCard(forecast = state.weatherForecast)
 
             // ── Remove session ──
             RemoveSessionButton(

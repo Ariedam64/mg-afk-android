@@ -46,6 +46,7 @@ import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.model.ReconnectConfig
 import com.mgafk.app.data.model.Session
+import com.mgafk.app.data.model.WeatherForecast
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.AriesApi
@@ -88,6 +89,9 @@ private fun WakeLockMode.toServiceMode(): Int = when (this) {
     WakeLockMode.ALWAYS -> AfkService.MODE_ALWAYS
 }
 
+/** How often the Weather Station forecast is refetched. The card ticks its own countdowns. */
+private const val WEATHER_STATION_REFRESH_MS = 60_000L
+
 data class UiState(
     val sessions: List<Session> = listOf(Session()),
     val activeSessionId: String = "",
@@ -95,6 +99,7 @@ data class UiState(
     val collapsedCards: Map<String, Boolean> = emptyMap(),
     val connecting: Boolean = false,
     val apiReady: Boolean = false,
+    val weatherForecast: WeatherForecast? = null,
     val loadingStep: String = "",
     val updateAvailable: AppRelease? = null,
     val purchaseError: String = "",
@@ -214,6 +219,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             launch {
                 _state.update { it.copy(loadingStep = "Loading game data…") }
                 MgApi.preloadAll()
+                startWeatherStationRefresh()
                 _state.update { it.copy(loadingStep = "Preloading sprites…") }
                 preloadSprites()
                 _state.update { it.copy(apiReady = true, loadingStep = "") }
@@ -1780,6 +1786,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val session = _state.value.sessions.find { it.id == sessionId } ?: return null
         val activePetIds = session.pets.map { it.id }
         return session.petTeams.firstOrNull { PetTeams.isActive(it, activePetIds) }?.id
+    }
+
+
+    // ---- Weather Station ----
+
+    private var weatherStationJob: Job? = null
+
+    /**
+     * Keeps [UiState.weatherForecast] fresh. The card ticks its own countdowns from the events'
+     * timestamps, so this only has to run often enough to pick up the next events, not to drive
+     * the display.
+     */
+    private fun startWeatherStationRefresh() {
+        if (weatherStationJob?.isActive == true) return
+        weatherStationJob = viewModelScope.launch {
+            while (true) {
+                MgApi.fetchWeatherStation()?.let { forecast ->
+                    _state.update { it.copy(weatherForecast = forecast) }
+                }
+                delay(WEATHER_STATION_REFRESH_MS)
+            }
+        }
     }
 
     // ---- Card collapse persistence ----

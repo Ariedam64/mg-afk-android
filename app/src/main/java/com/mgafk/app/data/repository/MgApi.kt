@@ -1,6 +1,7 @@
 package com.mgafk.app.data.repository
 
 import com.mgafk.app.data.AppLog
+import com.mgafk.app.data.model.WeatherForecast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -13,6 +14,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -122,6 +124,33 @@ object MgApi {
      * Preload all categories in parallel. Call once at app startup.
      * After this completes, all get*() calls return instantly from cache.
      */
+    /**
+     * The Weather Station forecast: what is running now and what comes next.
+     *
+     * Not cached and not part of [preloadAll]: it is live data with second-level countdowns, so
+     * the caller refreshes it on its own schedule. Returns null on any failure, since a missing
+     * forecast just hides the card rather than breaking anything.
+     */
+    suspend fun fetchWeatherStation(): WeatherForecast? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/weather-station")
+                .header("Accept", "application/json")
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    AppLog.w(TAG, "HTTP ${response.code} for /weather-station")
+                    return@withContext null
+                }
+                val body = response.body?.string() ?: return@withContext null
+                WeatherStationParser.parse(json.parseToJsonElement(body).jsonObject)
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Weather station fetch failed: ${e.message}")
+            null
+        }
+    }
+
     suspend fun preloadAll() {
         val categories = listOf("pets", "items", "plants", "decors", "eggs", "weathers", "abilities")
         coroutineScope {
