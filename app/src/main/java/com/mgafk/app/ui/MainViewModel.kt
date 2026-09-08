@@ -2003,7 +2003,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 // Fire alert checks (alarm items auto-batch within 300ms)
                 val alerts = _state.value.alerts
                 alertNotifier.checkWeather(event.weather, previousWeather, alerts)
-                alertNotifier.checkPetHunger(newPets, alerts)
+                alertNotifier.checkPetHunger(sessionId, newPets, alerts)
             }
             is ClientEvent.GardenChanged -> {
                 val newGarden = mutableListOf<GardenPlantSnapshot>()

@@ -59,41 +59,52 @@ class AlertNotifier(private val context: Context) {
 
     // Dedup tracking - cleared when the condition goes away
     private val shopAlerts = ShopAlertTracker()
-    private val firedHungerPets = mutableSetOf<String>()
+    private val petHungerAlerts = PetHungerAlertTracker()
     private var firedWeather: String = ""
     private var firedTroughLow: Boolean = false
 
     // ── Public check methods ──
 
-    fun checkPetHunger(pets: List<PetSnapshot>, alerts: AlertConfig) {
+    /**
+     * Alerts on the pets of [sessionId] that just got hungry or just ran out.
+     *
+     * Hunger updates arrive every few seconds, so the edges are what gets announced, never the
+     * standing level - see [PetHungerAlertTracker]. The session is part of the call because one
+     * notifier serves them all and each update carries a single session's pets.
+     */
+    fun checkPetHunger(sessionId: String, pets: List<PetSnapshot>, alerts: AlertConfig) {
         val hungerKey = "hunger<5"
         val hungerAlert = alerts.items[hungerKey] ?: return
         if (!hungerAlert.enabled) return
 
-        val threshold = alerts.petHungerThreshold
-        val currentLowPets = mutableSetOf<String>()
-        val items = mutableListOf<DisplayItem>()
+        // Pets whose species has no known max hunger have no percentage, so they are not judged.
+        val measured = pets.mapNotNull { pet ->
+            val maxHunger = Constants.maxHungerFor(pet.species) ?: return@mapNotNull null
+            pet to (pet.hunger.toFloat() / maxHunger) * 100
+        }
+        val newAlerts = petHungerAlerts.newlyHungry(
+            sessionId = sessionId,
+            readings = measured.map { (pet, percent) ->
+                PetHungerAlertTracker.PetHungerReading(pet.id, percent)
+            },
+            threshold = alerts.petHungerThreshold.toFloat(),
+        )
+        if (newAlerts.isEmpty()) return
 
-        for (pet in pets) {
-            val maxHunger = Constants.maxHungerFor(pet.species) ?: continue
-            val percent = (pet.hunger.toFloat() / maxHunger) * 100
-            if (percent < threshold) {
-                currentLowPets.add(pet.id)
-                if (pet.id !in firedHungerPets) {
-                    firedHungerPets.add(pet.id)
-                    val petEntry = MgApi.findPet(pet.species.lowercase())
-                    items.add(DisplayItem(
-                        label = "${pet.name} (${pet.species}): ${"%.1f".format(percent)}%",
-                        spriteUrl = petEntry?.sprite,
-                    ))
-                }
+        val measuredById = measured.associateBy { (pet, _) -> pet.id }
+        val items = newAlerts.mapNotNull { alert ->
+            val (pet, percent) = measuredById[alert.petId] ?: return@mapNotNull null
+            val state = if (alert.stage == PetHungerAlertTracker.Stage.EMPTY) {
+                "out of food"
+            } else {
+                "${"%.1f".format(percent)}%"
             }
+            DisplayItem(
+                label = "${pet.name} (${pet.species}): $state",
+                spriteUrl = MgApi.findPet(pet.species.lowercase())?.sprite,
+            )
         }
-        firedHungerPets.retainAll(currentLowPets)
-
-        if (items.isNotEmpty()) {
-            dispatchAlert("Pet Hunger", items, alerts.resolveMode(AlertSection.PET, hungerKey))
-        }
+        dispatchAlert("Pet Hunger", items, alerts.resolveMode(AlertSection.PET, hungerKey))
     }
 
     fun checkWeather(weather: String, previousWeather: String, alerts: AlertConfig) {
