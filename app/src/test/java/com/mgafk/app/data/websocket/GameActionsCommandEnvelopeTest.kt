@@ -60,6 +60,21 @@ class GameActionsCommandEnvelopeTest {
         assertEquals(3, command?.get("slotsIndex")?.jsonPrimitive?.intOrNull)
     }
 
+    /**
+     * Bundle 1116 added `cropItemId` to HarvestCrop: the client mints the id the produce
+     * item will carry, and the reducer needs it to build that item. A harvest without one
+     * is rejected while every other action keeps working.
+     */
+    @Test fun `harvest mints the id the produce item will carry`() {
+        actions.harvestCrop(slot = 12, slotsIndex = 3)
+        val mintedId = lastCommand()["cropItemId"]?.jsonPrimitive?.contentOrNull
+        assertTrue(mintedId.orEmpty().isNotBlank())
+
+        // Never reused: each harvest produces its own item, so each needs its own id.
+        actions.harvestCrop(slot = 13, slotsIndex = 4)
+        assertNotEquals(mintedId, lastCommand()["cropItemId"]?.jsonPrimitive?.contentOrNull)
+    }
+
     @Test fun `potting is wrapped too`() {
         sequencer.seed(0)
 

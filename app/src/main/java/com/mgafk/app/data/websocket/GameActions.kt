@@ -191,10 +191,24 @@ class GameActions(
     fun waterPlant(slot: Int) =
         game("WaterPlant", obj("slot" to JsonPrimitive(slot)))
 
-    fun harvestCrop(slot: Int, slotsIndex: Int? = null) {
+    /**
+     * Harvests the crop on grow slot [slotsIndex] of dirt tile [slot].
+     *
+     * [cropItemId] is the id the harvested Produce item will carry in the inventory: like
+     * [potPlant], the client mints it and the server honours it. Bundle 1116 made it
+     * mandatory - the reducer needs an id to build the produce item, so a harvest without
+     * one is rejected while every other action keeps working. Any fresh UUID does; the
+     * caller can drop it, since we read the inventory back from server state anyway.
+     */
+    fun harvestCrop(
+        slot: Int,
+        slotsIndex: Int? = null,
+        cropItemId: String = UUID.randomUUID().toString(),
+    ) {
         val params = buildJsonObject {
             put("slot", JsonPrimitive(slot))
             if (slotsIndex != null) put("slotsIndex", JsonPrimitive(slotsIndex))
+            put("cropItemId", JsonPrimitive(cropItemId))
         }
         game("HarvestCrop", params)
     }
