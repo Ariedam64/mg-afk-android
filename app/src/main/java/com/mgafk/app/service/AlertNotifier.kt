@@ -60,7 +60,7 @@ class AlertNotifier(private val context: Context) {
     // Dedup tracking - cleared when the condition goes away
     private val shopAlerts = ShopAlertTracker()
     private val petHungerAlerts = PetHungerAlertTracker()
-    private var firedWeather: String = ""
+    private val weatherTracker = WeatherAlertTracker()
     private var firedTroughLow: Boolean = false
 
     // ── Public check methods ──
@@ -108,12 +108,12 @@ class AlertNotifier(private val context: Context) {
     }
 
     fun checkWeather(weather: String, previousWeather: String, alerts: AlertConfig) {
-        if (weather == previousWeather || weather.isBlank()) return
-        if (weather == firedWeather) return
+        // Asked before the alert is looked up, so the weather is recorded either way: see
+        // WeatherAlertTracker for why doing it the other way round silenced Amber Moon.
+        if (!weatherTracker.isNewWeather(weather, previousWeather)) return
         val key = "weather:$weather"
         val alert = alerts.items[key] ?: return
         if (!alert.enabled) return
-        firedWeather = weather
 
         val weatherEntry = MgApi.weatherInfo(weather)
         dispatchAlert(
