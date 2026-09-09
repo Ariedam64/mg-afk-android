@@ -20,21 +20,33 @@ data class WeatherEvent(
 ) {
     val isLunar: Boolean get() = group == GROUP_LUNAR
 
+    /** Rain, Snow and Thunderstorm. The Clear Skies gaps carry no group and are neither. */
+    val isHydro: Boolean get() = group == GROUP_HYDRO
+
     fun startsInMs(atMs: Long): Long = (startsAtMs - atMs).coerceAtLeast(0L)
 
     fun endsInMs(atMs: Long): Long = (endsAtMs - atMs).coerceAtLeast(0L)
 
     companion object {
         const val GROUP_LUNAR = "Lunar"
+        const val GROUP_HYDRO = "Hydro"
+
+        /** The two lunar weathers, which is what the station has to ask the API for by name. */
+        val LUNAR_IDS = listOf("Dawn", "AmberMoon")
+
+        /** The three hydro weathers, same reason. */
+        val HYDRO_IDS = listOf("Rain", "Frost", "Thunderstorm")
     }
 }
 
 /**
- * What the Weather Station shows: the current weather and what is coming.
+ * What the Weather Station shows, as three cards with fixed roles: [now], [nextHydro] and
+ * [nextLunar].
  *
- * The three cards are [now], [next] and [nextLunar]. The last one deliberately skips [next]
- * when that is already a lunar event, so the two cards never announce the same thing; that is
- * the game's own rule.
+ * Each card only ever shows its own kind. A lunar event landing before the next hydro one does
+ * not take the hydro card, and the lunar card shows its own next event even when that is also
+ * the next event overall. Neither card should be left empty: the repository tops the forecast
+ * up when the dashboard's short list happens to hold only one of the two kinds.
  */
 data class WeatherForecast(
     val now: WeatherEvent?,
@@ -48,12 +60,11 @@ data class WeatherForecast(
      */
     private fun stillToCome(atMs: Long): List<WeatherEvent> = upcoming.filter { it.startsAtMs > atMs }
 
-    fun next(atMs: Long): WeatherEvent? = stillToCome(atMs).firstOrNull()
+    fun nextHydro(atMs: Long): WeatherEvent? = stillToCome(atMs).firstOrNull { it.isHydro }
 
-    fun nextLunar(atMs: Long): WeatherEvent? {
-        val toCome = stillToCome(atMs)
-        // Skip the Next card's own event when it is lunar, so the two never say the same thing.
-        val candidates = if (toCome.firstOrNull()?.isLunar == true) toCome.drop(1) else toCome
-        return candidates.firstOrNull { it.isLunar }
-    }
+    fun nextLunar(atMs: Long): WeatherEvent? = stillToCome(atMs).firstOrNull { it.isLunar }
+
+    fun hasHydro(atMs: Long): Boolean = nextHydro(atMs) != null
+
+    fun hasLunar(atMs: Long): Boolean = nextLunar(atMs) != null
 }

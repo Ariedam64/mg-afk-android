@@ -25,6 +25,19 @@ object WeatherStationParser {
             .orEmpty(),
     )
 
+    /**
+     * The events of a `/weather-station/next` answer, which carries them under `events` in the
+     * same shape the dashboard uses.
+     *
+     * That endpoint is how the station fills a card the dashboard's five-entry list left empty:
+     * asked for the lunar ids, it scans forward until it finds one.
+     */
+    fun parseEvents(payload: JsonObject): List<WeatherEvent> =
+        (payload["events"] as? JsonArray)
+            ?.mapNotNull { element -> (element as? JsonObject)?.let(::event) }
+            ?.sortedBy { it.startsAtMs }
+            .orEmpty()
+
     /** Null for an entry missing the timestamps the cards count down to. */
     private fun event(obj: JsonObject): WeatherEvent? {
         val id = obj.string("id") ?: return null

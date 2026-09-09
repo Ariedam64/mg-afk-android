@@ -42,11 +42,12 @@ import com.mgafk.app.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 
 /**
- * The game's Weather Station, as three cards: what is running now, what comes next, and when
- * the next lunar event lands.
+ * The game's Weather Station, as three cards with fixed roles: what is running now, when the
+ * next Hydro weather lands, and when the next Lunar one does.
  *
- * A lunar event is announced by its timing only, never by its name: the game keeps Dawn and
- * Amber Moon a surprise until they start, and so does this.
+ * Each card only ever shows its own kind, so a lunar event coming up first cannot take the
+ * Hydro card's place. A lunar event is still announced by its timing only, never by its name:
+ * the game keeps Dawn and Amber Moon a surprise until they start, and so does this.
  *
  * The countdowns tick locally against the events' absolute timestamps, so a forecast fetched a
  * minute ago still shows the right numbers without re-polling every second.
@@ -88,14 +89,12 @@ fun WeatherStationCard(
                 highlighted = true,
                 modifier = Modifier.weight(1f),
             )
-            val next = forecast.next(nowMs)
+            val hydro = forecast.nextHydro(nowMs)
             ForecastCard(
-                label = "Next",
-                event = next,
+                label = "Hydro",
+                event = hydro,
                 countdownLabel = "in",
-                countdownMs = next?.startsInMs(nowMs),
-                // A lunar event keeps its secret here too, exactly like the Lunar card.
-                hideIdentity = next?.isLunar == true,
+                countdownMs = hydro?.startsInMs(nowMs),
                 modifier = Modifier.weight(1f),
             )
             val lunar = forecast.nextLunar(nowMs)

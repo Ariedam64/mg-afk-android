@@ -1,6 +1,7 @@
 package com.mgafk.app.data.repository
 
 import com.mgafk.app.data.AppLog
+import com.mgafk.app.data.model.WeatherEvent
 import com.mgafk.app.data.model.WeatherForecast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -66,6 +67,10 @@ object MgApi {
         // Plant-only visual data (from `/data/plants`)
         val plantSprite: String? = null,
         val plantSlotOffsets: List<SlotOffset> = emptyList(),
+        // Patch-style plants (e.g. Clover): explicit max grow-slot count, separate from
+        // plantSlotOffsets - these have no slotOffsets at all (a single PlantSeed fills a
+        // random subset of the capacity, between slotCountMin/slotCountMax).
+        val plantSlotCapacity: Int? = null,
         val plantBaseTileScale: Double? = null,
         val plantTileTransformOrigin: String? = null,
         val cropBaseTileScale: Double? = null,
@@ -87,6 +92,12 @@ object MgApi {
         val eligibleShops: List<String> = emptyList(),
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
+
+        /** Max simultaneous grow slots for this plant: explicit [plantSlotCapacity] (patch-style
+         * plants like Clover) if present, else the length of [plantSlotOffsets] (tree-style
+         * multi-crop plants like FavaBean), else 1 for an ordinary single-harvest plant. */
+        val plantMaxGrowSlots: Int
+            get() = plantSlotCapacity ?: plantSlotOffsets.size.takeIf { it > 0 } ?: 1
     }
 
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
@@ -132,23 +143,55 @@ object MgApi {
      * forecast just hides the card rather than breaking anything.
      */
     suspend fun fetchWeatherStation(): WeatherForecast? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url("$BASE_URL/weather-station")
-                .header("Accept", "application/json")
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    AppLog.w(TAG, "HTTP ${response.code} for /weather-station")
-                    return@withContext null
-                }
-                val body = response.body?.string() ?: return@withContext null
-                WeatherStationParser.parse(json.parseToJsonElement(body).jsonObject)
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Weather station fetch failed: ${e.message}")
-            null
+        val dashboard = getJson("/weather-station")?.let(WeatherStationParser::parse)
+            ?: return@withContext null
+
+        // The dashboard only lists the next five events, and both a Hydro and a Lunar card have
+        // to be filled. Whichever kind that list happens to miss is asked for by name, which
+        // scans forward as far as it needs.
+        val now = System.currentTimeMillis()
+        val missing = buildList {
+            if (!dashboard.hasHydro(now)) add(WeatherEvent.HYDRO_IDS)
+            if (!dashboard.hasLunar(now)) add(WeatherEvent.LUNAR_IDS)
         }
+        if (missing.isEmpty()) return@withContext dashboard
+
+        val extra = missing.flatMap { ids -> fetchNextWeather(ids) }
+        dashboard.copy(upcoming = (dashboard.upcoming + extra).distinctBy { it.startsAtMs to it.id }
+            .sortedBy { it.startsAtMs })
+    }
+
+    /**
+     * The next events among [ids], however far ahead they are. Empty on any failure.
+     *
+     * Two are asked for rather than one: the endpoint counts from now and so can answer with the
+     * event that is running at this very moment, which is the Now card's business and gets
+     * filtered out of the upcoming list. The second entry is what guarantees a future one.
+     */
+    private fun fetchNextWeather(ids: List<String>): List<WeatherEvent> {
+        val query = ids.joinToString(",")
+        return getJson("/weather-station/next?ids=$query&count=2")
+            ?.let(WeatherStationParser::parseEvents)
+            .orEmpty()
+    }
+
+    /** One GET returning a parsed object, or null on any failure. */
+    private fun getJson(path: String): JsonObject? = try {
+        val request = Request.Builder()
+            .url("$BASE_URL$path")
+            .header("Accept", "application/json")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                AppLog.w(TAG, "HTTP ${response.code} for $path")
+                null
+            } else {
+                response.body?.string()?.let { json.parseToJsonElement(it).jsonObject }
+            }
+        }
+    } catch (e: Exception) {
+        AppLog.w(TAG, "Request failed for $path: ${e.message}")
+        null
     }
 
     suspend fun preloadAll() {
@@ -486,6 +529,7 @@ object MgApi {
                     baseSellPrice = cropObj?.get("baseSellPrice")?.jsonPrimitive?.doubleOrNull,
                     plantSprite = plantObj?.get("sprite")?.jsonPrimitive?.contentOrNull,
                     plantSlotOffsets = slotOffsets,
+                    plantSlotCapacity = plantObj?.get("slotCapacity")?.jsonPrimitive?.intOrNull,
                     plantBaseTileScale = plantObj?.get("baseTileScale")?.jsonPrimitive?.doubleOrNull,
                     plantTileTransformOrigin = plantObj?.get("tileTransformOrigin")?.jsonPrimitive?.contentOrNull,
                     cropBaseTileScale = cropObj?.get("baseTileScale")?.jsonPrimitive?.doubleOrNull,

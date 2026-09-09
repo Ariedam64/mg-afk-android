@@ -53,6 +53,38 @@ class WeatherStationParserTest {
         assertEquals(10L * 60_000, lunar.endsAtMs - lunar.startsAtMs)
     }
 
+    // ── Topping the forecast up ──
+
+    /**
+     * `/weather-station/next?ids=...` answers with the same event shape under `events`, which
+     * is what lets the station guarantee a lunar even when the dashboard's short list has none.
+     */
+    @Test fun `it reads the targeted next endpoint`() {
+        val payload = AppJson.default.parseToJsonElement(
+            """
+            {"from": 1788952208465, "count": 1, "complete": true, "events": [
+              {"id": "AmberMoon", "weather": "Amber Moon", "group": "Lunar",
+               "started_at": 1788955200000, "ended_at": 1788955800000,
+               "mutation": "Ambershine", "sprite": "https://example/AmberMoonIcon.png"}
+            ]}
+            """.trimIndent()
+        ).jsonObject
+
+        val events = WeatherStationParser.parseEvents(payload)
+
+        assertEquals(1, events.size)
+        assertEquals("AmberMoon", events.single().id)
+        assertEquals("Amber Moon", events.single().label)
+        assertTrue(events.single().isLunar)
+        assertEquals(1788955200000L, events.single().startsAtMs)
+    }
+
+    @Test fun `a response without events reads as none`() {
+        val empty = AppJson.default.parseToJsonElement("""{"count": 0}""").jsonObject
+
+        assertTrue(WeatherStationParser.parseEvents(empty).isEmpty())
+    }
+
     @Test fun `a payload without a forecast parses to an empty one`() {
         val empty = WeatherStationParser.parse(AppJson.default.parseToJsonElement("{}").jsonObject)
 
