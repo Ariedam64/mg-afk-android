@@ -1719,11 +1719,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val pendingUnpotJobs = mutableMapOf<String, Job>()
 
-    /** Plant a potted plant back into the garden. */
-    fun plantGardenPlant(sessionId: String, itemId: String) {
+    /**
+     * Unpots [itemId] onto [tileId], or onto the first free tile when it is null (see
+     * [com.mgafk.app.data.model.PlantPlacementMode]).
+     */
+    fun plantGardenPlant(sessionId: String, itemId: String, tileId: Int? = null) {
         val client = clients[sessionId] ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val freeSlot = findFirstFreePlantTile(client)
+        val freeSlot = tileId ?: findFirstFreePlantTile(client)
         if (freeSlot == null) {
             AppLog.w(TAG, "[PlantGardenPlant] No free tile available")
             return
@@ -1758,11 +1761,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val pendingPlantJobs = mutableMapOf<String, Job>()
 
-    /** Plant a seed on the first available dirt tile with optimistic update. */
-    fun plantSeed(sessionId: String, species: String) {
+    /**
+     * Plant a seed with optimistic update, on [tileId] when the player picked one, otherwise on
+     * the first available dirt tile (see [com.mgafk.app.data.model.PlantPlacementMode]).
+     */
+    fun plantSeed(sessionId: String, species: String, tileId: Int? = null) {
         val client = clients[sessionId] ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val freeSlot = findFirstFreePlantTile(client)
+        val freeSlot = tileId ?: findFirstFreePlantTile(client)
         if (freeSlot == null) {
             AppLog.w(TAG, "[PlantSeed] No free tile available")
             return

@@ -28,4 +28,28 @@ object GardenTiles {
     /** Lowest empty tile index, or null when the garden is full. */
     fun firstFreeTile(occupiedTileIds: Set<Int>, capacity: Int = DIRT_TILES_PER_GARDEN): Int? =
         (0 until capacity).firstOrNull { it !in occupiedTileIds }
+
+    /**
+     * Tiles that can take one more [species], for a player picking where to plant by hand.
+     *
+     * @param species the seed being planted, or null for a potted plant, which needs a tile with
+     *   nothing growing on it at all.
+     * @param speciesByTile what grows on each planted tile.
+     * @param plantCountByTile how many grow slots each tile already uses.
+     * @param blockedTileIds tiles holding an egg or a decor, which nothing can be planted on.
+     * @param maxGrowSlots how many of [species] one tile fits (`plantMaxGrowSlots`).
+     */
+    fun plantableTiles(
+        species: String?,
+        speciesByTile: Map<Int, String>,
+        plantCountByTile: Map<Int, Int>,
+        blockedTileIds: Set<Int>,
+        maxGrowSlots: Int,
+        capacity: Int = DIRT_TILES_PER_GARDEN,
+    ): Set<Int> = (0 until capacity).filterTo(mutableSetOf()) { tileId ->
+        if (tileId in blockedTileIds) return@filterTo false
+        val growing = speciesByTile[tileId] ?: return@filterTo true
+        // Topping up a tile only works for the same species, and only while it has room.
+        species != null && growing == species && (plantCountByTile[tileId] ?: 0) < maxGrowSlots
+    }
 }
