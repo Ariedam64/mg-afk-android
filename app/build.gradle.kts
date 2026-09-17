@@ -13,8 +13,8 @@ android {
         applicationId = "com.mgafk.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 67
-        versionName = "2.4.22"
+        versionCode = 68
+        versionName = "2.4.23"
     }
 
     buildTypes {
