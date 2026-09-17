@@ -1933,7 +1933,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (weatherStationJob?.isActive == true) return
         weatherStationJob = viewModelScope.launch {
             while (true) {
-                MgApi.fetchWeatherStation()?.let { forecast ->
+                VersionFetcher.fetchGameWeather()?.let { forecast ->
                     _state.update { it.copy(weatherForecast = forecast) }
                 }
                 delay(WEATHER_STATION_REFRESH_MS)

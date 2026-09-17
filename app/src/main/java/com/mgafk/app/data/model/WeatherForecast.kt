@@ -30,12 +30,6 @@ data class WeatherEvent(
     companion object {
         const val GROUP_LUNAR = "Lunar"
         const val GROUP_HYDRO = "Hydro"
-
-        /** The two lunar weathers, which is what the station has to ask the API for by name. */
-        val LUNAR_IDS = listOf("Dawn", "AmberMoon")
-
-        /** The three hydro weathers, same reason. */
-        val HYDRO_IDS = listOf("Rain", "Frost", "Thunderstorm")
     }
 }
 

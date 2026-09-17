@@ -158,7 +158,12 @@ private fun ForecastCard(
         if (hideIdentity) {
             LunarPair()
         } else {
-            SpriteImage(url = event.spriteUrl, size = 28.dp, contentDescription = event.label)
+            // The game names the weather but not its icon, so it is looked up by id.
+            SpriteImage(
+                url = event.spriteUrl ?: MgApi.weatherInfo(event.id)?.sprite,
+                size = 28.dp,
+                contentDescription = event.label,
+            )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(

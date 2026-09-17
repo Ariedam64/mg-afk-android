@@ -1,5 +1,7 @@
 package com.mgafk.app.data.repository
 
+import com.mgafk.app.data.AppLog
+import com.mgafk.app.data.model.WeatherForecast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.mgafk.app.data.AppJson
@@ -15,8 +17,34 @@ data class AppRelease(
 )
 
 object VersionFetcher {
+    private const val TAG = "VersionFetcher"
     private val client = OkHttpClient()
     private val json = AppJson.default
+
+    /**
+     * The weather the game itself publishes, alongside the shops on the same endpoint.
+     *
+     * This is the schedule rather than a model of it, so it needs no second source: the block
+     * carries the running weather and the next event of each group, which is what the Weather
+     * Station shows. Null on any failure, which just hides the card.
+     */
+    suspend fun fetchGameWeather(host: String = "magicgarden.gg"): WeatherForecast? =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("https://$host/platform/v1/shops")
+                    .header("Accept", "application/json")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    val body = response.body?.string() ?: return@withContext null
+                    GameWeatherParser.parse(json.parseToJsonElement(body).jsonObject)
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Game weather fetch failed: ${e.message}")
+                null
+            }
+        }
 
     suspend fun fetchGameVersion(host: String = "magicgarden.gg"): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()

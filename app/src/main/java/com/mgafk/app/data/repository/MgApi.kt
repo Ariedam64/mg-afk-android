@@ -1,8 +1,6 @@
 package com.mgafk.app.data.repository
 
 import com.mgafk.app.data.AppLog
-import com.mgafk.app.data.model.WeatherEvent
-import com.mgafk.app.data.model.WeatherForecast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -135,65 +133,6 @@ object MgApi {
      * Preload all categories in parallel. Call once at app startup.
      * After this completes, all get*() calls return instantly from cache.
      */
-    /**
-     * The Weather Station forecast: what is running now and what comes next.
-     *
-     * Not cached and not part of [preloadAll]: it is live data with second-level countdowns, so
-     * the caller refreshes it on its own schedule. Returns null on any failure, since a missing
-     * forecast just hides the card rather than breaking anything.
-     */
-    suspend fun fetchWeatherStation(): WeatherForecast? = withContext(Dispatchers.IO) {
-        val dashboard = getJson("/weather-station")?.let(WeatherStationParser::parse)
-            ?: return@withContext null
-
-        // The dashboard only lists the next five events, and both a Hydro and a Lunar card have
-        // to be filled. Whichever kind that list happens to miss is asked for by name, which
-        // scans forward as far as it needs.
-        val now = System.currentTimeMillis()
-        val missing = buildList {
-            if (!dashboard.hasHydro(now)) add(WeatherEvent.HYDRO_IDS)
-            if (!dashboard.hasLunar(now)) add(WeatherEvent.LUNAR_IDS)
-        }
-        if (missing.isEmpty()) return@withContext dashboard
-
-        val extra = missing.flatMap { ids -> fetchNextWeather(ids) }
-        dashboard.copy(upcoming = (dashboard.upcoming + extra).distinctBy { it.startsAtMs to it.id }
-            .sortedBy { it.startsAtMs })
-    }
-
-    /**
-     * The next events among [ids], however far ahead they are. Empty on any failure.
-     *
-     * Two are asked for rather than one: the endpoint counts from now and so can answer with the
-     * event that is running at this very moment, which is the Now card's business and gets
-     * filtered out of the upcoming list. The second entry is what guarantees a future one.
-     */
-    private fun fetchNextWeather(ids: List<String>): List<WeatherEvent> {
-        val query = ids.joinToString(",")
-        return getJson("/weather-station/next?ids=$query&count=2")
-            ?.let(WeatherStationParser::parseEvents)
-            .orEmpty()
-    }
-
-    /** One GET returning a parsed object, or null on any failure. */
-    private fun getJson(path: String): JsonObject? = try {
-        val request = Request.Builder()
-            .url("$BASE_URL$path")
-            .header("Accept", "application/json")
-            .build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                AppLog.w(TAG, "HTTP ${response.code} for $path")
-                null
-            } else {
-                response.body?.string()?.let { json.parseToJsonElement(it).jsonObject }
-            }
-        }
-    } catch (e: Exception) {
-        AppLog.w(TAG, "Request failed for $path: ${e.message}")
-        null
-    }
-
     suspend fun preloadAll() {
         val categories = listOf("pets", "items", "plants", "decors", "eggs", "weathers", "abilities")
         coroutineScope {
