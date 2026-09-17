@@ -112,6 +112,12 @@ class RoomClient {
         private const val TAG = "RoomClient"
 
         /**
+         * Sent the moment the socket opens. The server waits for it to admit the connection and
+         * closes the socket after ten seconds without it.
+         */
+        private const val SOCKET_OPENED = """{"type":"SocketOpened"}"""
+
+        /**
          * Player fields that only carry a value once the server has accepted our
          * mc_jwt cookie - a guest gets none of them. The field was `databaseUserId`
          * until the server renamed it to `discordUserId`; we accept either so an
@@ -357,8 +363,22 @@ class RoomClient {
 
     // ---- Internal handlers ----
 
+    /**
+     * Announces the socket, then says nothing more until the server's Welcome.
+     *
+     * The server only admits a connection once it has seen [SOCKET_OPENED], and drops it after a
+     * ten second admission timeout otherwise. Game messages sent before Welcome go into a socket
+     * that is not admitted yet, so the two this used to send on open now wait for the Welcome
+     * (see [sendPostWelcomeHandshake]).
+     */
     private fun handleOpen() {
-        AppLog.d(TAG, "onOpen, sending handshake")
+        AppLog.d(TAG, "onOpen, announcing the socket")
+        send(SOCKET_OPENED)
+    }
+
+    /** The game messages that may only go out once the server has admitted the socket. */
+    private fun sendPostWelcomeHandshake() {
+        AppLog.d(TAG, "welcomed, sending handshake")
         actions.voteForGame()
         actions.setSelectedGame()
     }
@@ -450,6 +470,7 @@ class RoomClient {
 
         if (!welcomed) {
             welcomed = true
+            sendPostWelcomeHandshake()
             connectedAt = System.currentTimeMillis()
             state = "connected"
             val wasRetry = retryCount > 0
