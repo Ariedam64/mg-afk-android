@@ -269,23 +269,11 @@ fun GardenCard(
     if (safeRarity != selectedRarity) selectedRarity = safeRarity
     if (safeMutations != selectedMutations) selectedMutations = safeMutations
 
-    // Filter entries - mutations combine with AND (e.g. Frozen + Dawnlit finds crops
-    // carrying both at once, not either), matching how players hunt a specific combo.
+    // See GardenFilter: a patch plant is narrowed to its matching crops rather than kept
+    // whole, so a filtered Clover tile shows only the crops that match.
     val minSize = minSizePercent.toDouble()
     val filtered = remember(entries, safeRarity, safeMutations, minSize, searchQuery) {
-        entries.filter { entry ->
-            val matchesRarity = safeRarity == null || entry.rarity == safeRarity
-            val matchesMutations = safeMutations.isEmpty() || when (entry) {
-                is GardenEntry.SingleCrop -> safeMutations.all { it in entry.plant.snapshot.mutations }
-                is GardenEntry.MultiSlotPlant -> entry.crops.any { crop ->
-                    safeMutations.all { it in crop.snapshot.mutations }
-                }
-            }
-            val matchesSize = minSize <= 0.0 || entry.sizePercent() >= minSize
-            val matchesSearch = searchQuery.isBlank() ||
-                entry.displayName.contains(searchQuery.trim(), ignoreCase = true)
-            matchesRarity && matchesMutations && matchesSize && matchesSearch
-        }
+        GardenFilter.apply(entries, safeRarity, safeMutations, minSize, searchQuery)
     }
 
     // Sort entries

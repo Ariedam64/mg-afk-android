@@ -1370,22 +1370,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Move a tool (whole stack) from inventory into the Tool Shack. */
-    fun moveToolToShack(sessionId: String, toolId: String) {
+    /**
+     * Moves a tool to the Tool Shack. [toolKey] is what the game names it by, which is its own
+     * id for the tools it tracks individually (see [InventoryToolItem.storageKey]).
+     */
+    fun moveToolToShack(sessionId: String, toolKey: String) {
         val actions = clients[sessionId]?.actions ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
         actions.putItemInStorage(
-            itemId = toolId,
+            itemId = toolKey,
             storageId = "ToolShack",
             toStorageIndex = session.toolShack.size,
         )
     }
 
     /** Move a tool (whole stack) from the Tool Shack back to inventory. */
-    fun moveToolFromShack(sessionId: String, toolId: String) {
+    fun moveToolFromShack(sessionId: String, toolKey: String) {
         val actions = clients[sessionId]?.actions ?: return
         val session = _state.value.sessions.find { it.id == sessionId } ?: return
         actions.retrieveItemFromStorage(
-            itemId = toolId,
+            itemId = toolKey,
             storageId = "ToolShack",
             toInventoryIndex = totalInventoryCount(session),
         )

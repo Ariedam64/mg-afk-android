@@ -64,6 +64,8 @@ import com.mgafk.app.data.model.PetSnapshot
 import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.model.PetTeamEmblem
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.ui.components.abilityBrush
+import com.mgafk.app.ui.components.abilityColor
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -114,43 +116,6 @@ private fun maxStr(sp: String, sc: Double): Int {
 private fun curStr(sp: String, xp: Double, max: Int): Int {
     val htm = MgApi.findPet(sp)?.hoursToMature ?: return max - S_GAIN
     return ((max - S_GAIN) + minOf(S_GAIN / htm * (xp / XP_H), S_GAIN.toDouble())).toInt()
-}
-
-private fun abilityColor(abilityId: String): Color {
-    val id = abilityId.lowercase().replace(Regex("[\\s_-]+"), "")
-    return when {
-        id.startsWith("moonkisser") -> Color(0xFFFAA623)
-        id.startsWith("dawnkisser") -> Color(0xFFA25CF2)
-        id.startsWith("producescaleboost") || id.startsWith("snowycropsizeboost") -> Color(0xFF228B22)
-        id.startsWith("plantgrowthboost") || id.startsWith("snowyplantgrowthboost") ||
-            id.startsWith("dawnplantgrowthboost") || id.startsWith("amberplantgrowthboost") -> Color(0xFF008080)
-        id.startsWith("egggrowthboost") || id.startsWith("snowyegggrowthboost") -> Color(0xFFB45AF0)
-        id.startsWith("petageboost") -> Color(0xFF9370DB)
-        id.startsWith("pethatchsizeboost") -> Color(0xFF800080)
-        id.startsWith("petxpboost") || id.startsWith("snowypetxpboost") -> Color(0xFF1E90FF)
-        id.startsWith("hungerboost") || id.startsWith("snowyhungerboost") -> Color(0xFFFF1493)
-        id.startsWith("hungerrestore") || id.startsWith("snowyhungerrestore") -> Color(0xFFFF69B4)
-        id.startsWith("sellboost") -> Color(0xFFDC143C)
-        id.startsWith("coinfinder") || id.startsWith("snowycoinfinder") -> Color(0xFFB49600)
-        id.startsWith("seedfinder") -> Color(0xFFA86626)
-        id.startsWith("producemutationboost") || id.startsWith("snowycropmutationboost") ||
-            id.startsWith("dawnboost") || id.startsWith("ambermoonboost") -> Color(0xFF8C0F46)
-        id.startsWith("petmutationboost") -> Color(0xFFA03264)
-        id.startsWith("doubleharvest") -> Color(0xFF0078B4)
-        id.startsWith("doublehatch") -> Color(0xFF3C5AB4)
-        id.startsWith("produceeater") -> Color(0xFFFF4500)
-        id.startsWith("producerefund") -> Color(0xFFFF6347)
-        id.startsWith("petrefund") -> Color(0xFF005078)
-        id.startsWith("copycat") -> Color(0xFFFF8C00)
-        id.startsWith("goldgranter") -> Color(0xFFE1C837)
-        id.startsWith("rainbowgranter") -> Color(0xFF50AAAA)
-        id.startsWith("raindance") -> Color(0xFF4CCCCC)
-        id.startsWith("snowgranter") -> Color(0xFF90B8CC)
-        id.startsWith("frostgranter") -> Color(0xFF94A0CC)
-        id.startsWith("dawnlitgranter") -> Color(0xFFC47CB4)
-        id.startsWith("amberlitgranter") -> Color(0xFFCC9060)
-        else -> Color(0xFF646464)
-    }
 }
 
 /** Unified pet candidate for the team editor picker. */

@@ -53,6 +53,7 @@ import androidx.compose.ui.window.Dialog
 import com.mgafk.app.data.model.GardenEggSnapshot
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.components.mutationSpriteUrl
@@ -123,20 +124,6 @@ private fun formatTimeRemaining(endTime: Long, now: Long): String {
         minutes > 0 -> "${minutes}m ${seconds}s"
         else -> "${seconds}s"
     }
-}
-
-/** Parse ability color - returns a Brush (gradient or solid). Same as PetHungerCard. */
-private fun parseAbilityBrush(raw: String?): Brush {
-    if (raw == null) return SolidColor(Color(0xFF646464))
-    val hexPattern = Regex("#[0-9A-Fa-f]{6}")
-    val hexColors = hexPattern.findAll(raw).mapNotNull { match ->
-        try { Color(android.graphics.Color.parseColor(match.value)) } catch (_: Exception) { null }
-    }.toList()
-    if (hexColors.size >= 2 && raw.contains("gradient", ignoreCase = true)) {
-        return Brush.linearGradient(hexColors)
-    }
-    if (hexColors.isNotEmpty()) return SolidColor(hexColors.first())
-    return try { SolidColor(Color(android.graphics.Color.parseColor(raw))) } catch (_: Exception) { SolidColor(Color(0xFF646464)) }
 }
 
 @Composable
@@ -683,7 +670,7 @@ private fun HatchedPetDialog(
                                 pet.abilities.forEach { abilityId ->
                                     val abilityEntry = remember(abilityId, apiReady) { MgApi.getAbilities()[abilityId] }
                                     val displayName = abilityEntry?.name ?: abilityId
-                                    val bg = remember(abilityEntry?.color) { parseAbilityBrush(abilityEntry?.color) }
+                                    val bg = remember(abilityId, apiReady) { abilityBrush(abilityId) }
                                     Text(
                                         displayName,
                                         fontSize = 9.sp,

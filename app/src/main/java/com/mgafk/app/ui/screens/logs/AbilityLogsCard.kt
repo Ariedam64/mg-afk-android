@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AbilityFormatter
 import com.mgafk.app.data.model.AbilityLog
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -46,20 +47,6 @@ import com.mgafk.app.ui.theme.TextPrimary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-/** Parse ability color string into a Brush (gradient or solid). Same logic as PetHungerCard. */
-private fun parseAbilityBrush(raw: String?): Brush {
-    if (raw == null) return SolidColor(Color(0xFF646464))
-    val hexPattern = Regex("#[0-9A-Fa-f]{6}")
-    val hexColors = hexPattern.findAll(raw).mapNotNull { match ->
-        try { Color(android.graphics.Color.parseColor(match.value)) } catch (_: Exception) { null }
-    }.toList()
-    if (hexColors.size >= 2 && raw.contains("gradient", ignoreCase = true)) {
-        return Brush.linearGradient(hexColors)
-    }
-    if (hexColors.isNotEmpty()) return SolidColor(hexColors.first())
-    return try { SolidColor(Color(android.graphics.Color.parseColor(raw))) } catch (_: Exception) { SolidColor(Color(0xFF646464)) }
-}
 
 @Composable
 fun AbilityLogsCard(
@@ -152,7 +139,7 @@ fun AbilityLogsCard(
 private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Boolean) {
     val entry = remember(log.action, apiReady) { MgApi.getAbilities()[log.action] }
     val abilityName = entry?.name ?: log.action
-    val abilityBrush = remember(entry?.color) { parseAbilityBrush(entry?.color) }
+    val brush = remember(log.action, apiReady) { abilityBrush(log.action) }
     val description = remember(log.action, log.params) { AbilityFormatter.format(log) }
     val petLabel = log.petName.ifBlank { log.petSpecies }
 
@@ -193,7 +180,7 @@ private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Bool
                     maxLines = 1,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(abilityBrush, alpha = 0.85f)
+                        .background(brush, alpha = 0.85f)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 )
                 Spacer(modifier = Modifier.weight(1f))

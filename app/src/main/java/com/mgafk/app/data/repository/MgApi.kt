@@ -61,6 +61,8 @@ object MgApi {
         val hoursToMature: Double? = null,
         val maturitySellPrice: Double? = null,
         val color: String? = null,
+        // Ability-only: the gradient a couple of them are drawn with, instead of [color].
+        val abilityGradient: AbilityGradient? = null,
         val diet: List<String> = emptyList(),
         // Plant-only visual data (from `/data/plants`)
         val plantSprite: String? = null,
@@ -96,6 +98,39 @@ object MgApi {
          * multi-crop plants like FavaBean), else 1 for an ordinary single-harvest plant. */
         val plantMaxGrowSlots: Int
             get() = plantSlotCapacity ?: plantSlotOffsets.size.takeIf { it > 0 } ?: 1
+    }
+
+    /** One colour stop of an ability's gradient: where it sits (0..1) and what it paints. */
+    data class GradientStop(val offset: Double, val color: String)
+
+    /**
+     * The gradient a couple of abilities are drawn with (Rainbow Granter, Gold Granter), as the
+     * API sends it. Abilities without one are a single [GameEntry.color].
+     */
+    data class AbilityGradient(val angleDegrees: Double, val stops: List<GradientStop>)
+
+    /**
+     * Reads an ability's `gradient` block, or null when it has none or holds too few stops to
+     * be one.
+     */
+    fun parseAbilityGradient(obj: JsonObject?): AbilityGradient? {
+        val gradient = obj?.get("gradient") as? JsonObject ?: return null
+        val stops = (gradient["colorStops"] as? JsonArray)
+            ?.mapNotNull { element ->
+                val stop = element as? JsonObject ?: return@mapNotNull null
+                val color = stop["color"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                GradientStop(
+                    offset = stop["offset"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                    color = color,
+                )
+            }
+            ?.sortedBy { it.offset }
+            .orEmpty()
+        if (stops.size < 2) return null
+        return AbilityGradient(
+            angleDegrees = gradient["angleDegrees"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+            stops = stops,
+        )
     }
 
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
@@ -507,6 +542,7 @@ object MgApi {
                     hoursToMature = obj?.get("hoursToMature")?.jsonPrimitive?.doubleOrNull,
                     maturitySellPrice = obj?.get("maturitySellPrice")?.jsonPrimitive?.doubleOrNull,
                     color = obj?.get("color")?.jsonPrimitive?.contentOrNull,
+                    abilityGradient = if (category == "abilities") parseAbilityGradient(obj) else null,
                     diet = dietArray,
                     faunaSpawnWeights = faunaWeights,
                     upgrades = upgrades,

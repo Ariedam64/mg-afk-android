@@ -203,7 +203,19 @@ data class InventoryToolItem(
     val id: String? = null,
     /** Time left on a picked-up crystal shard; absent on a fresh one out of a stack. */
     val remainingActiveSeconds: Int? = null,
-)
+) {
+    /**
+     * How the storage commands name this tool.
+     *
+     * The game keys a tool by its toolId while it sits in a stack, and by its own id once it
+     * tracks the item individually, which is what a crystal shard becomes after being picked
+     * back up. Sending the toolId for one of those matches nothing and the move does nothing.
+     */
+    val storageKey: String get() = id ?: toolId
+
+    /** Whether this tool merges into a matching stack, or needs a slot of its own. */
+    val isStackable: Boolean get() = id == null
+}
 
 @Serializable
 data class InventoryDecorItem(
