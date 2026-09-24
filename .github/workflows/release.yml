@@ -1,0 +1,100 @@
+# Builds, signs and publishes the APK when a version tag is pushed.
+#
+# The app updates itself from releases/latest and the first .apk asset, so a
+# release here is what reaches players. Three guards before anything is
+# published:
+#   - the tag must match versionName, or the in-app "Update" button would
+#     announce one version and install another;
+#   - the signing secrets must be present, never an unsigned or debug-signed APK;
+#   - the new APK must carry the same certificate as the latest release,
+#     because Android refuses to install an update signed with another key and
+#     every player would be stuck.
+#
+# Run it by hand to build and check the signature without publishing anything.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  # A manual run is a dry run: it builds and checks the signature, and keeps
+  # the APK as an artifact, but only a tag publishes.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME but versionName is $version"
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MGAFK_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::MGAFK_KEYSTORE_BASE64 is not set, refusing to build an unsigned release"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "MGAFK_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Unit tests and signed release build
+        env:
+          MGAFK_KEYSTORE_PASSWORD: ${{ secrets.MGAFK_KEYSTORE_PASSWORD }}
+          MGAFK_KEY_ALIAS: ${{ secrets.MGAFK_KEY_ALIAS }}
+          MGAFK_KEY_PASSWORD: ${{ secrets.MGAFK_KEY_PASSWORD }}
+        run: gradle --no-daemon testDebugUnitTest assembleRelease
+
+      - name: Same certificate as the latest release
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          apk=app/build/outputs/apk/release/app-release.apk
+          new=$("$apksigner" verify --print-certs "$apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --output "$RUNNER_TEMP/previous.apk"
+          old=$("$apksigner" verify --print-certs "$RUNNER_TEMP/previous.apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+          echo "new certificate: $new"
+          echo "latest release:  $old"
+          if [ -z "$new" ] || [ "$new" != "$old" ]; then
+            echo "::error::the APK is not signed with the key of the latest release, players could not update"
+            exit 1
+          fi
+
+      - name: Keep the APK of a dry run
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          # The tag message carries the changelog written when the version was bumped.
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/app-release.apk \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
