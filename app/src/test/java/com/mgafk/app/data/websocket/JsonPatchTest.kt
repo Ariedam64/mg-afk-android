@@ -134,6 +134,42 @@ class JsonPatchTest {
         assertEquals("""{"a":1}""", result)
     }
 
+    // ── The pair the server actually sends ──
+
+    /**
+     * Captured from a live room: every frame replaces a whole user slot as a remove followed by
+     * an add at the same index, and a room holds one slot per player.
+     *
+     * Applying that add as a replace drops a slot per frame, which empties the array within
+     * seconds. That is what left players connected but unable to buy, harvest or plant, with an
+     * empty ability log, until reconnecting rebuilt the state from the full snapshot.
+     */
+    @Test fun `a remove and add pair replaces a slot without losing the others`() {
+        val slots = """{"userSlots":[{"who":"me"},{"who":"b"},{"who":"c"}]}"""
+
+        val afterRemove = apply(slots, "/userSlots/0", null, "remove")
+        val afterAdd = JsonPatch.applyPatch(
+            json(afterRemove),
+            "/userSlots/0",
+            json("""{"who":"me2"}"""),
+            "add",
+        ).toString()
+
+        assertEquals("""{"userSlots":[{"who":"me2"},{"who":"b"},{"who":"c"}]}""", afterAdd)
+    }
+
+    @Test fun `the same pair leaves a one player room with exactly one slot`() {
+        val afterRemove = apply("""{"userSlots":[{"who":"me"}]}""", "/userSlots/0", null, "remove")
+        val afterAdd = JsonPatch.applyPatch(
+            json(afterRemove),
+            "/userSlots/0",
+            json("""{"who":"me2"}"""),
+            "add",
+        ).toString()
+
+        assertEquals("""{"userSlots":[{"who":"me2"}]}""", afterAdd)
+    }
+
     // ── Paths the server can send that must not corrupt the tree ──
 
     /**
