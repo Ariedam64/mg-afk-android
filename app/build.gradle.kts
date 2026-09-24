@@ -17,8 +17,23 @@ android {
         versionName = "2.4.24"
     }
 
+    signingConfigs {
+        // Release signing for CI only: the keystore lives in the GitHub
+        // secrets and reaches the build through these variables. Without them,
+        // nothing changes for a local build.
+        System.getenv("MGAFK_KEYSTORE_PATH")?.let { path ->
+            create("ci") {
+                storeFile = file(path)
+                storePassword = System.getenv("MGAFK_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MGAFK_KEY_ALIAS")
+                keyPassword = System.getenv("MGAFK_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("ci")?.let { signingConfig = it }
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
