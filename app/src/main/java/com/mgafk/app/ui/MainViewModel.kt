@@ -2452,11 +2452,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }.map { it.type }.toSet()
                 val newShops = event.shops.map { shop ->
                     val initialStocks = shop.getItemStocks()
-                    val purchaseMap = if (shop.type in restockedTypes) null else purchases
-                        ?.get(shop.type)
-                        ?.let { it as? JsonObject }
-                        ?.get("purchases")
-                        ?.let { it as? JsonObject }
+                    val purchaseMap = if (shop.type in restockedTypes) null
+                        else shop.purchasesThisRestock(purchases?.get(shop.type) as? JsonObject)
                     val remainingStocks = initialStocks.mapValues { (name, initial) ->
                         val bought = purchaseMap?.get(name)?.jsonPrimitive?.intOrNull ?: 0
                         maxOf(0, initial - bought)
