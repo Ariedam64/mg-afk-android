@@ -2,6 +2,7 @@ package com.mgafk.app.data.websocket.state
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -14,6 +15,8 @@ data class ShopModel(
     val type: String,
     val inventory: JsonArray = JsonArray(emptyList()),
     val secondsUntilRestock: Int = 0,
+    /** Id of the restock the inventory belongs to. Null before the shop's first restock. */
+    val restockId: String? = null,
 ) {
     /** Items with initialStock > 0 */
     fun getAvailable(): List<JsonObject> =
@@ -53,6 +56,22 @@ data class ShopModel(
             name to stock
         }.toMap()
 
+    /**
+     * What the player bought in THIS restock, from their `shopPurchases[type]` entry.
+     *
+     * Since game version 1284 an entry is `{ restockId, startedAtMs, purchases }` and is no
+     * longer cleared when the shop restocks: last cycle's counts stay there until the next
+     * purchase. The game only applies them while the entry's restockId matches the shop's
+     * (bootScreen, v1292); anything else counts as nothing bought. Applying them anyway is what
+     * made restocked eggs and Crop Cleansers show up, then drop to zero on the next update.
+     */
+    fun purchasesThisRestock(entry: JsonObject?): JsonObject? {
+        if (entry == null) return null
+        val entryRestock = entry["restockId"]?.jsonPrimitive?.contentOrNull ?: return null
+        if (restockId == null || entryRestock != restockId) return null
+        return entry["purchases"] as? JsonObject
+    }
+
     private fun keyForItemType(itemType: String): String? = when (itemType) {
         "Seed" -> "species"
         "Tool" -> "toolId"
@@ -67,6 +86,7 @@ data class ShopModel(
                 type = type,
                 inventory = data["inventory"] as? JsonArray ?: JsonArray(emptyList()),
                 secondsUntilRestock = data["secondsUntilRestock"]?.jsonPrimitive?.intOrNull ?: 0,
+                restockId = (data["restockId"] as? JsonPrimitive)?.contentOrNull,
             )
         }
     }
