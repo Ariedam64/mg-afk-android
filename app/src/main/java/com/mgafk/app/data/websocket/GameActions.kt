@@ -169,6 +169,18 @@ class GameActions(
             MgApi.getDecors().containsKey(itemId) -> "Decor"
             else -> return
         }
+        purchaseShopItem(shop, itemType, itemId)
+    }
+
+    /**
+     * Since bundle 1292 the server rejects a PurchaseShopItem without `viewMode`
+     * ("list" or "grid", the shop's display setting in the web client) as
+     * invalid_message. The app has no shop view, so it always says "list",
+     * which the server accepts. The same bundle added an optional `quantity`
+     * for the game's Buy All; it is not sent here, because the game only uses
+     * it when the player can pay for the whole stack and has room for it.
+     */
+    internal fun purchaseShopItem(shop: String, itemType: String, itemId: String) {
         val idField = when (itemType) {
             "Seed" -> "species"
             "Tool" -> "toolId"
@@ -178,6 +190,7 @@ class GameActions(
         }
         val params = buildJsonObject {
             put("shop", JsonPrimitive(shop))
+            put("viewMode", JsonPrimitive("list"))
             put("item", buildJsonObject {
                 put("itemType", JsonPrimitive(itemType))
                 put(idField, JsonPrimitive(itemId))

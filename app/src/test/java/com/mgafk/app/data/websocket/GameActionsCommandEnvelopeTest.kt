@@ -367,4 +367,21 @@ class GameActionsCommandEnvelopeTest {
         }
         assertEquals(2, requestIds.toSet().size)
     }
+
+    /**
+     * Bundle 1292 made `viewMode` mandatory on PurchaseShopItem: without it the server
+     * answers invalid_message and nothing is bought. The game leaves `quantity` out for a
+     * single unit, and so do we.
+     */
+    @Test fun `a shop purchase says which view the shop is in`() {
+        actions.purchaseShopItem(shop = "seed", itemType = "Seed", itemId = "Carrot")
+
+        assertWrapped("PurchaseShopItem")
+        val command = lastCommand()
+        assertEquals("seed", command["shop"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("list", command["viewMode"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("Seed", command["item"]?.jsonObject?.get("itemType")?.jsonPrimitive?.contentOrNull)
+        assertEquals("Carrot", command["item"]?.jsonObject?.get("species")?.jsonPrimitive?.contentOrNull)
+        assertNull(command["quantity"])
+    }
 }
