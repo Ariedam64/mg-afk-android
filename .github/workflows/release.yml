@@ -83,6 +83,27 @@ jobs:
             exit 1
           fi
 
+      # Android refuses an update whose versionCode is not above the installed
+      # one. Comparing with the latest release is not enough: v2.4.26 shipped
+      # versionCode 71 and v2.4.27 went out with 70, so everyone on 2.4.26 was
+      # stuck. Check against the recent releases, not just the last one.
+      - name: Higher versionCode than every recent release
+        run: |
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
+          code_of() { "$aapt2" dump badging "$1" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p"; }
+          new=$(code_of app/build/outputs/apk/release/app-release.apk)
+          echo "new versionCode: $new"
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 10 --json tagName -q '.[].tagName'); do
+            [ "$tag" = "$GITHUB_REF_NAME" ] && continue
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --output "$RUNNER_TEMP/$tag.apk" || continue
+            old=$(code_of "$RUNNER_TEMP/$tag.apk")
+            echo "$tag: versionCode $old"
+            if [ -z "$new" ] || [ -z "$old" ] || [ "$new" -le "$old" ]; then
+              echo "::error::versionCode $new is not above $tag ($old), players on $tag could not install this update"
+              exit 1
+            fi
+          done
+
       - name: Keep the APK of a dry run
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
