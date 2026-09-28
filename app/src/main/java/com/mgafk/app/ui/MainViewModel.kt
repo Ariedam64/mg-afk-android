@@ -2445,7 +2445,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val purchases = event.shopPurchases
                 // Detect shop restock: the countdown only ever goes UP when the shop rolled a new
                 // stock. Right then shopPurchases may be stale (its reset arrives in a separate
-                // patch), and the alert/auto-buy dedup has to start a fresh cycle.
+                // patch), and the alert dedup has to start a fresh cycle.
                 val restockedTypes = event.shops.filter { shop ->
                     val prevShop = previousShops.find { it.type == shop.type } ?: return@filter false
                     shop.secondsUntilRestock > prevShop.secondsUntilRestock + RESTOCK_COUNTDOWN_JITTER_SEC

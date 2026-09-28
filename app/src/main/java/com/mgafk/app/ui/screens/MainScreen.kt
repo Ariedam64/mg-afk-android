@@ -422,7 +422,7 @@ private fun DrawerContent(
                 }
         }
 
-        // Mini Games, Alerts, Settings & Debug - pinned at bottom
+        // Social, Alerts, Settings & Debug - pinned at bottom
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(4.dp))
         DrawerItem(
