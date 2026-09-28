@@ -5,16 +5,15 @@ Magic Garden without launching the game. It keeps a session open to display
 pet ability logs, shop inventory, weather and more while minimizing battery
 usage. You can also interact directly from the app: plant seeds and grow
 eggs, water and harvest your garden, buy items from shops, chat with other
-players, feed and swap your pets, sell crops and pets, lock items, play
-casino mini-games, browse public rooms — and when you actually want to
-play, hit **Play in game** to launch the game in-app with the Gemini
+players, feed and swap your pets, sell crops and pets, lock items and
+browse public rooms. When you actually want to play, hit **Play in game** to launch the game in-app with the Gemini
 userscript automatically injected.
 
 ## How it works
 
 MG AFK connects to the game's WebSocket endpoint and authenticates using
 your Discord account. Incoming data is parsed and displayed across dedicated
-sections (dashboard, pets, garden, shops, alerts, mini-games…).
+sections (dashboard, pets, garden, shops, alerts…).
 
 ## Login
 
@@ -39,7 +38,6 @@ drawer. Sections:
 | Garden      | Plant seeds, water, harvest, pot plants, cleanse mutations, grow/hatch eggs     |
 | Shops       | Buy seeds / tools / eggs / decors (single, bulk, hybrid modes)                  |
 | Social      | Browse and join public rooms                                                    |
-| Mini Games  | Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg Hatcher (casino wallet, deposit / withdraw) |
 | Alerts      | Per-section or per-item notification / alarm config (shops, weather, pets, trough) |
 | Settings    | Background & battery, reconnection, purchase mode, storages auto-stock, alarm (sound, volume, schedule), developer options |
 | Debug       | WebSocket logs, service logs, alert testing                                     |
@@ -160,22 +158,6 @@ greyed out with an **OWNED** or **MAX** badge so you don't waste taps.
 Browse public rooms fetched from the Aries Mod API. Each entry shows the
 host's avatar and the room's player count — tap **Join** to switch rooms
 instantly.
-
-## Mini Games
-
-A full casino with a dedicated wallet:
-- **Deposit**: transfer in-game breads into the casino (amount capped by
-  game-side limits).
-- **Withdraw**: the casino sends breads back to your in-game account via
-  the `/doughnate` command. Since the game refuses a doughnate that would
-  push your balance past **2,000,000**, the app refreshes your in-game
-  balance on every withdraw action and caps the withdraw amount at
-  `min(casinoBalance, 2,000,000 − gameBalance)` so you never lose coins to
-  a failed transfer.
-
-Games available: **Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg
-Hatcher**. The Egg Hatcher animates the hatch with per-pet mutation (Gold,
-Rainbow) composed directly on the sprite.
 
 ## Play in game
 

@@ -75,8 +75,7 @@ sealed class ClientEvent {
      * Crystals standing in the garden, with every occupied tile of both maps.
      *
      * Separate from [GardenChanged] on purpose: a crystal is not a plant, so planting or
-     * picking one up leaves the plant list untouched and would never be reported. Keeping it
-     * apart also means a crystal burning down does not wake the auto-harvest pipeline.
+     * picking one up leaves the plant list untouched and would never be reported.
      */
     data class CrystalsChanged(
         val crystals: List<PlacedCrystal>,
