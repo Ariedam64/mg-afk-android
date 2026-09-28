@@ -657,7 +657,10 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
 @Composable
 private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
     val color = rarityColor(entry.rarity)
-    val species = remember(entry.tileId) { entry.crops.firstOrNull()?.snapshot?.species ?: "" }
+    // Keyed on the crops, not the tile: a tile keeps its id across a harvest and
+    // replant, so remembering the base per tile drew every later plant on the first
+    // species ever grown there - a garden of trees all sitting on a cacao base.
+    val species = entry.crops.firstOrNull()?.snapshot?.species ?: ""
     val slots = remember(entry.crops) {
         entry.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, MgApi.cropSizeMultiplier(it.snapshot.species, it.snapshot.size)) }
     }
@@ -1038,7 +1041,8 @@ private fun MultiSlotPlantDetailDialog(
     onDismiss: () -> Unit,
 ) {
     val color = rarityColor(plant.rarity)
-    val species = remember(plant.tileId) { plant.crops.firstOrNull()?.snapshot?.species ?: "" }
+    // Not keyed on the tile - see [MultiSlotPlantTile].
+    val species = plant.crops.firstOrNull()?.snapshot?.species ?: ""
     val headerSlots = remember(plant.crops) {
         plant.crops.map { PlantSlotRender(it.snapshot.species, it.snapshot.mutations, MgApi.cropSizeMultiplier(it.snapshot.species, it.snapshot.size)) }
     }

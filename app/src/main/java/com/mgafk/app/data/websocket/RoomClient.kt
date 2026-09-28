@@ -97,6 +97,18 @@ sealed class ClientEvent {
  * file's dispatch + [com.mgafk.app.data.websocket.state.GameState]) keeps
  * working unchanged for both the old and new server versions.
  */
+/**
+ * Whether [path] addresses our own user slot, or anything inside it.
+ *
+ * The server replaces a whole slot rather than naming what changed in it, so watching for a
+ * specific field never fires. The comparison stops at the slot's own segment: matching on a bare
+ * prefix would make slot 10 look like slot 1.
+ */
+internal fun touchesUserSlot(path: String, userSlotIndex: Int): Boolean {
+    val slot = "/child/data/userSlots/$userSlotIndex"
+    return path == slot || path.startsWith("$slot/")
+}
+
 internal fun normalizeIncomingMessage(msg: JsonObject): JsonObject {
     if (msg["type"]?.jsonPrimitive?.contentOrNull != "RoomFrame") return msg
     val patches = msg["state"]?.jsonObject?.get("patches") ?: return msg
@@ -508,11 +520,14 @@ class RoomClient {
     private fun handlePartialState(msg: JsonObject) {
         val patches = msg["patches"] as? JsonArray
 
-        // Check if any patch touches our player's activityLogs
+        // Look for new ability logs whenever anything in our own slot changed, not only when a
+        // patch names the log. Captured traffic says the server never names it: it replaces the
+        // whole slot every frame, with the new entries inside, so watching for the log's own
+        // path meant never looking at all.
         val userSlotIndex = gameState.findUserSlotIndex(playerId)
         val touchesLogs = userSlotIndex != null && patches?.any { el ->
             val path = (el as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
-            path != null && path.startsWith("/child/data/userSlots/$userSlotIndex/data/activityLogs")
+            path != null && touchesUserSlot(path, userSlotIndex)
         } == true
 
         // Delegate patch application to GameState
