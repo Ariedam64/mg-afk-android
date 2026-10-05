@@ -145,7 +145,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
          */
         const val ON_CONNECT_COLLECT_ATTEMPTS = 20
         const val ON_CONNECT_COLLECT_RETRY_MS = 1_500L
-        /** A shop countdown may tick back up by a hair on its own; only a jump past this is a restock. */
+        /** A shop deadline may shift later by a hair on its own; only a jump past this is a restock. */
         const val RESTOCK_COUNTDOWN_JITTER_SEC = 30
     }
     private val repo = SessionRepository(application)
@@ -2381,12 +2381,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is ClientEvent.ShopsChanged -> {
                 val previousShops = _state.value.sessions.find { it.id == sessionId }?.shops.orEmpty()
                 val purchases = event.shopPurchases
-                // Detect shop restock: the countdown only ever goes UP when the shop rolled a new
-                // stock. Right then shopPurchases may be stale (its reset arrives in a separate
+                // Detect shop restock: the deadline only ever moves LATER when the shop rolled a
+                // new stock. Right then shopPurchases may be stale (its reset arrives in a separate
                 // patch), and the alert/auto-buy dedup has to start a fresh cycle.
                 val restockedTypes = event.shops.filter { shop ->
                     val prevShop = previousShops.find { it.type == shop.type } ?: return@filter false
-                    shop.secondsUntilRestock > prevShop.secondsUntilRestock + RESTOCK_COUNTDOWN_JITTER_SEC
+                    shop.deadlineMs > prevShop.deadlineMs + RESTOCK_COUNTDOWN_JITTER_SEC * 1000L
                 }.map { it.type }.toSet()
                 val newShops = event.shops.map { shop ->
                     val initialStocks = shop.getItemStocks()
@@ -2401,7 +2401,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         itemNames = shop.getItemNames(),
                         itemStocks = remainingStocks,
                         initialStocks = initialStocks,
-                        secondsUntilRestock = shop.secondsUntilRestock,
+                        restockId = shop.restockId,
+                        deadlineMs = shop.deadlineMs,
                     )
                 }
                 // Server confirmed - cancel any pending rollback jobs for this session

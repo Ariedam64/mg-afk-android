@@ -28,7 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -188,7 +188,7 @@ fun ShopsCards(
     }
 
     shops.filter { it.type !in CORE_SHOP_KEYS }.forEach { shop ->
-        val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock > 0
+        val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock(System.currentTimeMillis()) > 0
         if (!isActive) return@forEach
         // Alerts and Autobuy label these "Rain Shop", "Amber Shop"... - match them.
         val label = "${shop.type.replaceFirstChar { it.uppercase() }} Shop"
@@ -216,12 +216,11 @@ private fun ShopCategoryCard(
     onBuyAll: (itemName: String) -> Unit,
 ) {
     val items = shop?.itemNames ?: emptyList()
-    val restockSec = shop?.secondsUntilRestock ?: 0
     val shopType = shop?.type ?: ""
 
     AppCard(
         title = label,
-        trailing = { RestockTimer(restockSec) },
+        trailing = { RestockTimer(shop) },
         collapsible = true,
         persistKey = "shops.${shop?.type ?: label}",
     ) {
@@ -378,11 +377,14 @@ private fun ShopItemTile(
 }
 
 @Composable
-private fun RestockTimer(initialSeconds: Int) {
-    var remaining by remember(initialSeconds) { mutableStateOf(initialSeconds) }
-    LaunchedEffect(initialSeconds) {
-        while (remaining > 0) { delay(1000); remaining-- }
+private fun RestockTimer(shop: ShopSnapshot?) {
+    // Counts down against the shop's deadline rather than from a starting value, so a restock
+    // (a new deadline) picks up on its own and a paused screen never drifts.
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) { delay(1000); nowMs = System.currentTimeMillis() }
     }
+    val remaining = shop?.secondsUntilRestock(nowMs) ?: 0
 
     val color = if (remaining <= 60) Accent else Accent.copy(alpha = 0.6f)
 
