@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /**
  * Shop model with inventory and restock timer.
@@ -14,9 +15,14 @@ import kotlinx.serialization.json.jsonPrimitive
 data class ShopModel(
     val type: String,
     val inventory: JsonArray = JsonArray(emptyList()),
-    val secondsUntilRestock: Int = 0,
     /** Id of the restock the inventory belongs to. Null before the shop's first restock. */
     val restockId: String? = null,
+    /**
+     * When the stock on display runs out. Bundle 1422 sends this instead of a
+     * `secondsUntilRestock` countdown: the game counts down to it itself, and so do we
+     * (see [com.mgafk.app.data.model.ShopSnapshot.secondsUntilRestock]).
+     */
+    val deadlineMs: Long = 0L,
 ) {
     /** Items with initialStock > 0 */
     fun getAvailable(): List<JsonObject> =
@@ -85,8 +91,8 @@ data class ShopModel(
             return ShopModel(
                 type = type,
                 inventory = data["inventory"] as? JsonArray ?: JsonArray(emptyList()),
-                secondsUntilRestock = data["secondsUntilRestock"]?.jsonPrimitive?.intOrNull ?: 0,
                 restockId = (data["restockId"] as? JsonPrimitive)?.contentOrNull,
+                deadlineMs = data["deadlineMs"]?.jsonPrimitive?.longOrNull ?: 0L,
             )
         }
     }

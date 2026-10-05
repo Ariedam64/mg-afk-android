@@ -280,8 +280,21 @@ data class ShopSnapshot(
     val itemNames: List<String> = emptyList(),
     val itemStocks: Map<String, Int> = emptyMap(),
     val initialStocks: Map<String, Int> = emptyMap(),
-    val secondsUntilRestock: Int = 0,
-)
+    /** Identifies the stock currently on display. Null while the shop is closed. */
+    val restockId: String? = null,
+    /** When the stock on display runs out, in server epoch milliseconds. */
+    val deadlineMs: Long = 0L,
+) {
+    /**
+     * Seconds left before the shop restocks, the way the game computes it: rounded up, never
+     * below zero, and zero for a closed shop (one with no stock cycle).
+     */
+    fun secondsUntilRestock(nowMs: Long): Int {
+        if (restockId == null) return 0
+        val leftMs = deadlineMs - nowMs
+        return if (leftMs <= 0) 0 else ((leftMs + 999) / 1000).toInt()
+    }
+}
 
 /** WebSocket debug log entry */
 @Serializable
