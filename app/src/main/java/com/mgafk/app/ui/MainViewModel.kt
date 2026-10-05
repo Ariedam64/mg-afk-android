@@ -811,12 +811,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Send to server
-        toAdd.forEachIndexed { index, item ->
-            actions.putItemInStorage(
-                itemId = item.id,
-                storageId = "FeedingTrough",
-                toStorageIndex = currentCount + index,
-            )
+        toAdd.forEach { item ->
+            actions.putItemInStorage(itemId = item.id, storageId = "FeedingTrough")
         }
 
         // Rollback after 5s if server hasn't confirmed
@@ -953,11 +949,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (potionCountIn(session.inventory.tools, potionId) == 0) {
                 if (potionCountIn(session.toolShack, potionId) == 0) return@launch
-                client.actions.retrieveItemFromStorage(
-                    itemId = potionId,
-                    storageId = POTION_STORAGE_ID,
-                    toInventoryIndex = totalInventoryCount(session),
-                )
+                client.actions.retrieveItemFromStorage(itemId = potionId, storageId = POTION_STORAGE_ID)
                 val arrived = withTimeoutOrNull(POTION_RETRIEVAL_TIMEOUT_MS) {
                     _state.first { state ->
                         val tools = state.sessions.find { it.id == sessionId }?.inventory?.tools
@@ -1309,68 +1301,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Move a pet from inventory into the Pet Hutch. */
     fun movePetToHutch(sessionId: String, petId: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.putItemInStorage(
-            itemId = petId,
-            storageId = "PetHutch",
-            toStorageIndex = session.petHutch.size,
-        )
+        clients[sessionId]?.actions?.putItemInStorage(itemId = petId, storageId = "PetHutch")
     }
 
     /** Move a pet from the Pet Hutch back to the inventory. */
     fun movePetFromHutch(sessionId: String, petId: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.retrieveItemFromStorage(
-            itemId = petId,
-            storageId = "PetHutch",
-            toInventoryIndex = totalInventoryCount(session),
-        )
+        clients[sessionId]?.actions?.retrieveItemFromStorage(itemId = petId, storageId = "PetHutch")
     }
 
     /** Move a seed (whole stack) from inventory into the Seed Silo. */
     fun moveSeedToSilo(sessionId: String, species: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.putItemInStorage(
-            itemId = species,
-            storageId = "SeedSilo",
-            toStorageIndex = session.seedSilo.size,
-        )
+        clients[sessionId]?.actions?.putItemInStorage(itemId = species, storageId = "SeedSilo")
     }
 
     /** Move a seed (whole stack) from the Seed Silo back to inventory. */
     fun moveSeedFromSilo(sessionId: String, species: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.retrieveItemFromStorage(
-            itemId = species,
-            storageId = "SeedSilo",
-            toInventoryIndex = totalInventoryCount(session),
-        )
+        clients[sessionId]?.actions?.retrieveItemFromStorage(itemId = species, storageId = "SeedSilo")
     }
 
     /** Move a decor (whole stack) from inventory into the Decor Shed. */
     fun moveDecorToShed(sessionId: String, decorId: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.putItemInStorage(
-            itemId = decorId,
-            storageId = "DecorShed",
-            toStorageIndex = session.decorShed.size,
-        )
+        clients[sessionId]?.actions?.putItemInStorage(itemId = decorId, storageId = "DecorShed")
     }
 
     /** Move a decor (whole stack) from the Decor Shed back to inventory. */
     fun moveDecorFromShed(sessionId: String, decorId: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.retrieveItemFromStorage(
-            itemId = decorId,
-            storageId = "DecorShed",
-            toInventoryIndex = totalInventoryCount(session),
-        )
+        clients[sessionId]?.actions?.retrieveItemFromStorage(itemId = decorId, storageId = "DecorShed")
     }
 
     /** Move a tool (whole stack) from inventory into the Tool Shack. */
@@ -1379,24 +1335,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * id for the tools it tracks individually (see [InventoryToolItem.storageKey]).
      */
     fun moveToolToShack(sessionId: String, toolKey: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.putItemInStorage(
-            itemId = toolKey,
-            storageId = "ToolShack",
-            toStorageIndex = session.toolShack.size,
-        )
+        clients[sessionId]?.actions?.putItemInStorage(itemId = toolKey, storageId = "ToolShack")
     }
 
     /** Move a tool (whole stack) from the Tool Shack back to inventory. */
     fun moveToolFromShack(sessionId: String, toolKey: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        actions.retrieveItemFromStorage(
-            itemId = toolKey,
-            storageId = "ToolShack",
-            toInventoryIndex = totalInventoryCount(session),
-        )
+        clients[sessionId]?.actions?.retrieveItemFromStorage(itemId = toolKey, storageId = "ToolShack")
     }
 
     private fun totalInventoryCount(session: Session): Int {
@@ -1410,9 +1354,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * corresponding setting is on AND the player owns the storage.
      *
      * For each inventory item whose species/decorId already has a slot in the
-     * storage, fire a single PutItemInStorage. Stacks merge server-side, so the
-     * `toStorageIndex` here is irrelevant for the merge but must still be valid;
-     * we just point at the current end of the storage.
+     * storage, fire a single move into it. Stacks merge server-side.
      */
     private fun runAutoStock(
         sessionId: String,
@@ -1427,41 +1369,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val actions = clients[sessionId]?.actions ?: return
         val settings = _state.value.settings
 
-        // Each move as the storage it targets, the key the game names the item by, and where
-        // the storage currently ends. Gathered first so the tracker can weed out the ones
-        // already asked for: auto-stock runs on every inventory change, and a move the server
-        // refuses leaves the item in place, so an unguarded retry never stops.
+        // Each move as the storage it targets and the key the game names the item by.
+        // Gathered first so the tracker can weed out the ones already asked for: auto-stock
+        // runs on every inventory change, and a move the server refuses leaves the item in
+        // place, so an unguarded retry never stops.
         val moves = buildList {
             if (settings.autoStockSeedSilo && "SeedSilo" in availableStorages) {
                 val siloSpecies = siloSeeds.map { it.species }.toSet()
                 invSeeds.filter { it.species in siloSpecies }
-                    .forEach { add(Triple("SeedSilo", it.species, siloSeeds.size)) }
+                    .forEach { add("SeedSilo" to it.species) }
             }
             if (settings.autoStockDecorShed && "DecorShed" in availableStorages) {
                 val shedIds = shedDecors.map { it.decorId }.toSet()
                 invDecors.filter { it.decorId in shedIds }
-                    .forEach { add(Triple("DecorShed", it.decorId, shedDecors.size)) }
+                    .forEach { add("DecorShed" to it.decorId) }
             }
             if (settings.autoStockToolShack && "ToolShack" in availableStorages) {
                 val shackIds = shackTools.map { it.toolId }.toSet()
                 // By storageKey, not toolId: a crystal shard the game tracks individually
                 // answers to its own id, and asking for its toolId is refused every time.
                 invTools.filter { it.toolId in shackIds }
-                    .forEach { add(Triple("ToolShack", it.storageKey, shackTools.size)) }
+                    .forEach { add("ToolShack" to it.storageKey) }
             }
         }
 
         val worthSending = autoStockTracker
-            .pending(sessionId, moves.map { (storage, key, _) -> "$storage:$key" })
+            .pending(sessionId, moves.map { (storage, key) -> "$storage:$key" })
             .toSet()
 
-        for ((storageId, itemKey, endIndex) in moves) {
+        for ((storageId, itemKey) in moves) {
             if ("$storageId:$itemKey" !in worthSending) continue
-            actions.putItemInStorage(
-                itemId = itemKey,
-                storageId = storageId,
-                toStorageIndex = endIndex,
-            )
+            actions.putItemInStorage(itemId = itemKey, storageId = storageId)
         }
     }
 

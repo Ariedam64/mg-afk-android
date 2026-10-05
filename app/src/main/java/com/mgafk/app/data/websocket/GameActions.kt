@@ -492,9 +492,6 @@ class GameActions(
     // Inventory / Storage
     // =====================
 
-    fun moveInventoryItem(moveItemId: String, toInventoryIndex: Int) =
-        game("MoveInventoryItem", obj("moveItemId" to JsonPrimitive(moveItemId), "toInventoryIndex" to JsonPrimitive(toInventoryIndex)))
-
     fun setSelectedItem(itemIndex: Int) =
         game("SetSelectedItem", obj("itemIndex" to JsonPrimitive(itemIndex)))
 
@@ -508,65 +505,47 @@ class GameActions(
 
     fun pickupObject() = game("PickupObject")
 
-    // toStorageIndex and quantity are both optional on the wire: the game leaves the index out
-    // when the item goes to the end of the storage, and only sends a quantity when moving part
-    // of a stack.
-    fun putItemInStorage(itemId: String, storageId: String, toStorageIndex: Int? = null, quantity: Int? = null) {
-        val params = buildJsonObject {
-            put("itemId", JsonPrimitive(itemId))
-            put("storageId", JsonPrimitive(storageId))
-            if (toStorageIndex != null) put("toStorageIndex", JsonPrimitive(toStorageIndex))
-            if (quantity != null) put("quantity", JsonPrimitive(quantity))
-        }
-        game("PutItemInStorage", params)
-    }
-
-    fun retrieveItemFromStorage(itemId: String, storageId: String, toInventoryIndex: Int? = null, quantity: Int? = null) {
-        val params = buildJsonObject {
-            put("itemId", JsonPrimitive(itemId))
-            put("storageId", JsonPrimitive(storageId))
-            if (toInventoryIndex != null) put("toInventoryIndex", JsonPrimitive(toInventoryIndex))
-            if (quantity != null) put("quantity", JsonPrimitive(quantity))
-        }
-        game("RetrieveItemFromStorage", params)
-    }
-
-    fun moveStorageItem(itemId: String, storageId: String, toStorageIndex: Int) =
-        game("MoveStorageItem", obj(
-            "itemId" to JsonPrimitive(itemId),
-            "storageId" to JsonPrimitive(storageId),
-            "toStorageIndex" to JsonPrimitive(toStorageIndex),
-        ))
-
     /**
-     * Exchanges an inventory item for a stored one in a single action, which keeps both
-     * capacities unchanged (unlike a retrieve followed by a put).
+     * Moves an item between the inventory and a storage, or reorders it inside one. Since
+     * bundle 1422 this single command replaces PutItemInStorage, RetrieveItemFromStorage,
+     * MoveStorageItem, MoveInventoryItem and SwapItemWithStorage.
      *
-     * [draggedQuantity] splits a stack: the game only sends it when the player drags part of
-     * one, and always alongside [draggedFromInventory] (which side the drag started on).
+     * [from] and [to] are [INVENTORY] or a storage id (PetHutch, SeedSilo, ...). One side must
+     * be the inventory, unless both name the same container, which reorders it. [itemId] is
+     * the key the game names the item by: the species, decor or tool id for a stack, the
+     * item's own id otherwise.
+     *
+     * The rest is optional and left off the wire when unset, as the game does. Without
+     * [beforeItemId] the item lands at the end. [quantity] moves part of a stack.
+     * [evictionItemId] swaps: that item goes from the destination back to the source in the
+     * same action, which keeps both capacities unchanged. A reorder takes neither of the two.
      */
-    fun swapItemWithStorage(
-        storageId: String,
-        inventoryItemId: String,
-        storageItemId: String,
-        toStorageIndex: Int? = null,
-        toInventoryIndex: Int? = null,
-        draggedQuantity: Int? = null,
-        draggedFromInventory: Boolean = false,
+    fun moveItem(
+        from: String,
+        to: String,
+        itemId: String,
+        quantity: Int? = null,
+        beforeItemId: String? = null,
+        evictionItemId: String? = null,
     ) {
         val params = buildJsonObject {
-            put("storageId", JsonPrimitive(storageId))
-            put("inventoryItemId", JsonPrimitive(inventoryItemId))
-            put("storageItemId", JsonPrimitive(storageItemId))
-            if (toStorageIndex != null) put("toStorageIndex", JsonPrimitive(toStorageIndex))
-            if (toInventoryIndex != null) put("toInventoryIndex", JsonPrimitive(toInventoryIndex))
-            if (draggedQuantity != null) {
-                put("draggedQuantity", JsonPrimitive(draggedQuantity))
-                put("draggedFromInventory", JsonPrimitive(draggedFromInventory))
-            }
+            put("from", JsonPrimitive(from))
+            put("to", JsonPrimitive(to))
+            put("itemId", JsonPrimitive(itemId))
+            if (quantity != null) put("quantity", JsonPrimitive(quantity))
+            if (beforeItemId != null) put("beforeItemId", JsonPrimitive(beforeItemId))
+            if (evictionItemId != null) put("evictionItemId", JsonPrimitive(evictionItemId))
         }
-        game("SwapItemWithStorage", params)
+        game("MoveItem", params)
     }
+
+    /** Moves a whole item or stack from the inventory to the end of [storageId]. */
+    fun putItemInStorage(itemId: String, storageId: String) =
+        moveItem(from = INVENTORY, to = storageId, itemId = itemId)
+
+    /** Moves a whole item or stack from [storageId] to the end of the inventory. */
+    fun retrieveItemFromStorage(itemId: String, storageId: String) =
+        moveItem(from = storageId, to = INVENTORY, itemId = itemId)
 
     fun logItems() = game("LogItems")
 
@@ -590,6 +569,9 @@ class GameActions(
     }
 
     companion object {
+        /** The [moveItem] side that names the inventory rather than a storage. */
+        const val INVENTORY = "inventory"
+
         private const val GAME = Constants.GAME_NAME
         private val ROOM_SCOPE = listOf("Room")
         private val GAME_SCOPE = listOf("Room", GAME)

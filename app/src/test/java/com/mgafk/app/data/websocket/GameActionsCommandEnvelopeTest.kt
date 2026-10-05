@@ -165,7 +165,7 @@ class GameActionsCommandEnvelopeTest {
         assertWrapped("SellAllCrops")
 
         actions.putItemInStorage(itemId = "i1", storageId = "PetHutch")
-        assertWrapped("PutItemInStorage")
+        assertWrapped("MoveItem")
 
         actions.toggleLockItem(itemId = "i1")
         assertWrapped("ToggleLockItem")
@@ -283,10 +283,6 @@ class GameActionsCommandEnvelopeTest {
         assertWrapped("Preserve")
         assertEquals(2, lastCommand()["growSlotIdx"]?.jsonPrimitive?.intOrNull)
 
-        actions.swapItemWithStorage(storageId = "PetHutch", inventoryItemId = "i1", storageItemId = "s1")
-        assertWrapped("SwapItemWithStorage")
-        assertEquals("s1", lastCommand()["storageItemId"]?.jsonPrimitive?.contentOrNull)
-
         actions.applyPetTeam(teamId = "t1")
         assertWrapped("ApplyPetTeam")
         assertEquals("t1", lastCommand()["teamId"]?.jsonPrimitive?.contentOrNull)
@@ -298,6 +294,53 @@ class GameActionsCommandEnvelopeTest {
         actions.equipPetCosmetic(petItemId = "p1", slotCategory = "Hat", cosmeticId = "c1")
         assertWrapped("EquipPetCosmetic")
         assertEquals("Hat", lastCommand()["slotCategory"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    /**
+     * Bundle 1422 folded every inventory and storage move (PutItemInStorage,
+     * RetrieveItemFromStorage, MoveStorageItem, MoveInventoryItem, SwapItemWithStorage) into
+     * one MoveItem naming both sides. The old commands are gone from the game.
+     */
+    @Test fun `storing an item is a MoveItem out of the inventory`() {
+        actions.putItemInStorage(itemId = "OrangeTulip", storageId = "SeedSilo")
+
+        assertWrapped("MoveItem")
+        val command = lastCommand()
+        assertEquals("inventory", command["from"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("SeedSilo", command["to"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("OrangeTulip", command["itemId"]?.jsonPrimitive?.contentOrNull)
+        // Left out, the item lands at the end and the whole stack moves, as in the game.
+        assertNull(command["beforeItemId"])
+        assertNull(command["quantity"])
+        assertNull(command["evictionItemId"])
+        assertNull(command["storageId"])
+    }
+
+    @Test fun `retrieving an item is a MoveItem into the inventory`() {
+        actions.retrieveItemFromStorage(itemId = "pet_1", storageId = "PetHutch")
+
+        assertWrapped("MoveItem")
+        val command = lastCommand()
+        assertEquals("PetHutch", command["from"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("inventory", command["to"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("pet_1", command["itemId"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    @Test fun `a move can place the item, split a stack or swap`() {
+        actions.moveItem(
+            from = "inventory",
+            to = "SeedSilo",
+            itemId = "OrangeTulip",
+            quantity = 3,
+            beforeItemId = "PricklyPear",
+            evictionItemId = "Carrot",
+        )
+
+        assertWrapped("MoveItem")
+        val command = lastCommand()
+        assertEquals("PricklyPear", command["beforeItemId"]?.jsonPrimitive?.contentOrNull)
+        assertEquals(3, command["quantity"]?.jsonPrimitive?.intOrNull)
+        assertEquals("Carrot", command["evictionItemId"]?.jsonPrimitive?.contentOrNull)
     }
 
     @Test fun `markChatRead is room scoped`() {
