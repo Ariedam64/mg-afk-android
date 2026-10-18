@@ -396,8 +396,8 @@ class RoomClient {
     }
 
     private fun handleMessage(raw: String) {
-        if (raw == "ping" || raw == "\"ping\"") {
-            send("pong")
+        heartbeatReply(raw)?.let { reply ->
+            send(reply)
             return
         }
 

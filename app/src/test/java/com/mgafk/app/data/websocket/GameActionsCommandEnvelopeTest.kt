@@ -185,13 +185,6 @@ class GameActionsCommandEnvelopeTest {
         assertNull(msg["commandSequence"])
     }
 
-    @Test fun `ping stays a plain message`() {
-        actions.ping(id = 1234L)
-
-        assertFlat("Ping")
-        assertEquals(1234L, lastMessage()["id"]?.jsonPrimitive?.longOrNull)
-    }
-
     @Test fun `player position stays a plain message`() {
         actions.move(x = 5.0, y = 6.0)
 
@@ -369,7 +362,6 @@ class GameActionsCommandEnvelopeTest {
         sequencer.seed(10)
 
         actions.harvestCrop(slot = 1)
-        actions.ping(id = 1L)
         actions.move(x = 1.0, y = 1.0)
         actions.teleport(x = 1.0, y = 1.0)
         actions.chat("hi")

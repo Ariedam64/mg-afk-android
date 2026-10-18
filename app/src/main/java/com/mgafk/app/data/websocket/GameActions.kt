@@ -84,11 +84,10 @@ class GameActions(
     }
 
     // =====================
-    // Session / Heartbeat
+    // Session
     // =====================
 
-    fun ping(id: Long = System.currentTimeMillis()) =
-        game("Ping", obj("id" to JsonPrimitive(id)))
+    // The heartbeat is not a game message any more: see heartbeatReply.
 
     // The web client names this field `gameName`, not `gameId`.
     fun setSelectedGame(gameName: String = GAME) =
@@ -587,15 +586,15 @@ class GameActions(
         /**
          * Quinoa messages the game still sends flat, as of client version 1029.
          *
-         * `Ping` answers Pong and `PlayerPosition` feeds the movement snapshot channel, so
-         * those two are not commands by nature; the rest simply have not been migrated yet.
+         * `PlayerPosition` feeds the movement snapshot channel, so it is not a command by
+         * nature; the rest simply have not been migrated yet. `Ping` used to be here too, until
+         * build 1625 moved the heartbeat to bare text frames (see [heartbeatReply]).
          * The game is moving them across one release at a time, so re-derive this list from
          * the bundle when a newly muted action shows up: the flat sender is
          * `sendMessage({scopePath:["Room","Quinoa"], ...msg})`, the command sender wraps the
          * message in a `QuinoaCommand` envelope.
          */
         private val RAW_MESSAGE_TYPES = setOf(
-            "Ping",
             "PlayerPosition",
             "Teleport",
             "SetSelectedItem",
