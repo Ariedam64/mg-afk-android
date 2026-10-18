@@ -6,7 +6,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.os.Build
 import com.mgafk.app.data.AppLog
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -339,21 +338,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startAfkService() {
-        val app = getApplication<Application>()
         // Watchdog is independent of the in-memory serviceRunning flag -
         // scheduling is idempotent (KEEP policy) so it's safe to call every time.
-        AfkWatchdogWorker.schedule(app)
+        // If the start below is refused it finds no service and posts the "tap to resume"
+        // notification, which brings the app back on screen where the start is retried.
+        AfkWatchdogWorker.schedule(getApplication())
         if (serviceRunning) return
+        // A refusal means the app is in the background. The session still connects (its
+        // socket lives in this process), and ensureAfkService() tries again once the app
+        // is back on screen.
+        serviceRunning = sendToAfkService(_state.value.settings, asForeground = true)
+    }
+
+    /**
+     * Starts AfkService with [settings], or hands them to the running one. Returns false
+     * when Android refuses.
+     *
+     * Android 12+ refuses a foreground-service start from the background with
+     * ForegroundServiceStartNotAllowedException, and a plain start is refused there too
+     * unless a foreground service already runs. Both are IllegalStateExceptions. Some callers
+     * are coroutines that resume long after the player left the app, such as the
+     * auto-reconnect that waits for the game data and sprites to load, and an uncaught
+     * refusal there took the whole app down.
+     */
+    private fun sendToAfkService(settings: AppSettings, asForeground: Boolean): Boolean {
+        val app = getApplication<Application>()
         val intent = Intent(app, AfkService::class.java)
-            .putExtra(AfkService.EXTRA_WIFI_LOCK, _state.value.settings.wifiLockEnabled)
-            .putExtra(AfkService.EXTRA_WAKE_LOCK_MODE, _state.value.settings.wakeLockMode.toServiceMode())
-            .putExtra(AfkService.EXTRA_WAKE_LOCK_DELAY_MIN, _state.value.settings.wakeLockAutoDelayMin)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            app.startForegroundService(intent)
-        } else {
-            app.startService(intent)
+            .putExtra(AfkService.EXTRA_WIFI_LOCK, settings.wifiLockEnabled)
+            .putExtra(AfkService.EXTRA_WAKE_LOCK_MODE, settings.wakeLockMode.toServiceMode())
+            .putExtra(AfkService.EXTRA_WAKE_LOCK_DELAY_MIN, settings.wakeLockAutoDelayMin)
+        return try {
+            if (asForeground) app.startForegroundService(intent) else app.startService(intent)
+            true
+        } catch (e: IllegalStateException) {
+            AppLog.w(TAG, "[Service] start refused, app in background: ${e.message}")
+            false
         }
-        serviceRunning = true
+    }
+
+    /**
+     * Starts the foreground service if a session needs it and it is not running. Called when
+     * the app comes back on screen, where Android allows the start, so a start refused in the
+     * background does not leave the session without it for good.
+     *
+     * A session that wants to connect but has no cookie is left out, as auto-reconnect leaves
+     * it out: it can never connect, and the service would run for nothing.
+     */
+    fun ensureAfkService() {
+        val needed = _state.value.sessions.any {
+            it.connected || (it.wantConnected && it.cookie.isNotBlank())
+        }
+        if (needed) startAfkService()
     }
 
     private fun stopAfkServiceIfIdle() {
@@ -1922,16 +1957,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         alertNotifier.alarmVolume = settings.alarmVolume
         // Update AfkService locks if service is running
         if (serviceRunning) {
-            val app = getApplication<Application>()
-            val intent = Intent(app, AfkService::class.java)
-                .putExtra(AfkService.EXTRA_WIFI_LOCK, settings.wifiLockEnabled)
-                .putExtra(AfkService.EXTRA_WAKE_LOCK_MODE, settings.wakeLockMode.toServiceMode())
-                .putExtra(AfkService.EXTRA_WAKE_LOCK_DELAY_MIN, settings.wakeLockAutoDelayMin)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                app.startForegroundService(intent)
-            } else {
-                app.startService(intent)
-            }
+            // The service is already in the foreground, so a plain start is enough to hand it
+            // the new settings, and it is allowed even from the background.
+            if (!sendToAfkService(settings, asForeground = false)) serviceRunning = false
         }
         // Update reconnect config on all active clients
         val reconnectDelays = com.mgafk.app.data.model.ReconnectDelays(
