@@ -1,8 +1,13 @@
 # Compiles the app and runs the unit tests on every fix branch and pull request.
 #
-# The maintenance bot writes fixes on fix/* branches. It cannot compile Kotlin
-# on its own server, so this run is what tells it whether a fix builds and
-# keeps the tests green before it is ever proposed.
+# The maintenance bot and the bug report worker write fixes on fix/* branches.
+# They cannot compile Kotlin on their own server, so this run is what tells
+# them whether a fix builds and keeps the tests green before it is ever
+# proposed. The worker reads the JUnit results test by test: it needs the
+# test-results artifact, even when the run fails.
+#
+# The code under test here was written by an agent and not reviewed yet: the
+# token is read-only, it is not left in .git/config, and no secret is used.
 
 name: verify
 
@@ -11,6 +16,9 @@ on:
     branches: ["fix/**"]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: verify-${{ github.ref }}
@@ -22,6 +30,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v4
         with:
@@ -36,3 +46,12 @@ jobs:
 
       - name: Unit tests and debug build
         run: gradle --no-daemon testDebugUnitTest assembleDebug
+
+      - name: Keep the test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: ignore
+          retention-days: 7
