@@ -64,6 +64,7 @@ import com.mgafk.app.data.repository.AppRelease
 import com.mgafk.app.data.repository.VersionFetcher
 import com.mgafk.app.data.websocket.ClientEvent
 import com.mgafk.app.data.websocket.RoomClient
+import com.mgafk.app.data.websocket.state.PetTile
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.service.AfkWatchdogWorker
 import com.mgafk.app.service.AlertNotifier
@@ -1023,19 +1024,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Reads the pet's current tile position from the player's own live petSlotInfos.
-     * The game has used two shapes for this over time - `{ motion: { at: {x,y} } }`
-     * (current) and a flatter `{ position: {x,y} }` (older) - so both are checked.
+     * Reads the pet's current tile from the player's own live petSlotInfos, in whichever of
+     * the shapes the game has used (see [PetTile]): since build 1650 a path walked over time.
      */
     private fun findPetPosition(client: RoomClient, petId: String): Pair<Double, Double>? {
         val me = client.gameState.getPlayer(client.playerId) ?: return null
-        val info = me.petSlotInfos?.get(petId) as? JsonObject ?: return null
-        val posObj = (info["motion"] as? JsonObject)?.get("at") as? JsonObject
-            ?: info["position"] as? JsonObject
-            ?: return null
-        val x = posObj["x"]?.jsonPrimitive?.doubleOrNull ?: return null
-        val y = posObj["y"]?.jsonPrimitive?.doubleOrNull ?: return null
-        return x to y
+        return PetTile.of(me.petSlotInfos?.get(petId) as? JsonObject, System.currentTimeMillis())
     }
 
     // ---- Crystals ----
@@ -1214,11 +1208,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val slotInfos = me.petSlotInfos
         AppLog.d(TAG, "[FindTile] petSlotInfos keys: ${slotInfos?.keys}")
         if (slotInfos != null) {
+            val now = System.currentTimeMillis()
             for ((key, infoEl) in slotInfos) {
-                val info = infoEl as? JsonObject ?: continue
-                val pos = info["position"] as? JsonObject ?: continue
-                val px = pos["x"]?.jsonPrimitive?.intOrNull ?: continue
-                val py = pos["y"]?.jsonPrimitive?.intOrNull ?: continue
+                val tile = PetTile.of(infoEl as? JsonObject, now) ?: continue
+                val px = tile.first.toInt()
+                val py = tile.second.toInt()
                 AppLog.d(TAG, "[FindTile] Pet $key occupies tile ($px, $py)")
                 occupiedPositions.add(px to py)
             }
