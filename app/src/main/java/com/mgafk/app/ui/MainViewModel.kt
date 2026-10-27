@@ -1022,20 +1022,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    /**
-     * Reads the pet's current tile position from the player's own live petSlotInfos.
-     * The game has used two shapes for this over time - `{ motion: { at: {x,y} } }`
-     * (current) and a flatter `{ position: {x,y} }` (older) - so both are checked.
-     */
+    /** Reads the pet's current tile position from the player's own live petSlotInfos. */
     private fun findPetPosition(client: RoomClient, petId: String): Pair<Double, Double>? {
         val me = client.gameState.getPlayer(client.playerId) ?: return null
         val info = me.petSlotInfos?.get(petId) as? JsonObject ?: return null
-        val posObj = (info["motion"] as? JsonObject)?.get("at") as? JsonObject
-            ?: info["position"] as? JsonObject
-            ?: return null
-        val x = posObj["x"]?.jsonPrimitive?.doubleOrNull ?: return null
-        val y = posObj["y"]?.jsonPrimitive?.doubleOrNull ?: return null
-        return x to y
+        return petTileFromSlotInfo(info)
     }
 
     // ---- Crystals ----
