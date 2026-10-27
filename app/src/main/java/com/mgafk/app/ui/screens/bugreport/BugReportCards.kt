@@ -105,6 +105,7 @@ fun BugReportCards(
         onRemoveScreenshot = { id -> bugViewModel.removeScreenshot(id) },
         onSend = { bugViewModel.submit(snapshot()) },
         onDismissSent = { bugViewModel.dismissSent() },
+        onDiscardPending = { bugViewModel.discardPending() },
     )
     MyReportsCard(
         state = state,
@@ -125,9 +126,12 @@ private fun ReportFormCard(
     onRemoveScreenshot: (Long) -> Unit,
     onSend: () -> Unit,
     onDismissSent: () -> Unit,
+    onDiscardPending: () -> Unit,
 ) {
     val draft = state.draft
     val editable = !state.sending
+    // A report the server already holds keeps its text: only its screenshots are left to send.
+    val textEditable = editable && state.pendingRef == null
     val errorField = state.fieldError?.field
     var showDetails by rememberSaveable { mutableStateOf(false) }
     val detailsOpen = showDetails || errorField == "steps" || errorField == "expected" || errorField == "actual"
@@ -157,7 +161,7 @@ private fun ReportFormCard(
                 OptionChip(
                     label = category.label,
                     selected = draft.category == category,
-                    enabled = editable,
+                    enabled = textEditable,
                     onClick = { onDraftChange { it.copy(category = category) } },
                 )
             }
@@ -171,7 +175,7 @@ private fun ReportFormCard(
             label = "Title",
             placeholder = "Pet team hotkeys do nothing",
             max = BugReportPayload.TITLE_MAX,
-            enabled = editable,
+            enabled = textEditable,
             isError = errorField == "title",
             singleLine = true,
         )
@@ -182,7 +186,7 @@ private fun ReportFormCard(
             label = "What happened?",
             placeholder = "What you did, what went wrong, since when.",
             max = BugReportPayload.DESCRIPTION_MAX,
-            enabled = editable,
+            enabled = textEditable,
             isError = errorField == "description",
             minLines = 4,
         )
@@ -206,7 +210,7 @@ private fun ReportFormCard(
                 label = "Steps to reproduce",
                 placeholder = "1. Open Pets\n2. Tap a team",
                 max = BugReportPayload.DETAIL_MAX,
-                enabled = editable,
+                enabled = textEditable,
                 isError = errorField == "steps",
                 minLines = 3,
             )
@@ -216,7 +220,7 @@ private fun ReportFormCard(
                 onValueChange = { value -> onDraftChange { it.copy(expected = value) } },
                 label = "Expected result",
                 max = BugReportPayload.DETAIL_MAX,
-                enabled = editable,
+                enabled = textEditable,
                 isError = errorField == "expected",
                 minLines = 2,
             )
@@ -226,7 +230,7 @@ private fun ReportFormCard(
                 onValueChange = { value -> onDraftChange { it.copy(actual = value) } },
                 label = "Actual result",
                 max = BugReportPayload.DETAIL_MAX,
-                enabled = editable,
+                enabled = textEditable,
                 isError = errorField == "actual",
                 minLines = 2,
             )
@@ -245,7 +249,7 @@ private fun ReportFormCard(
                 OptionChip(
                     label = frequency.label,
                     selected = draft.frequency == frequency,
-                    enabled = editable,
+                    enabled = textEditable,
                     onClick = { onDraftChange { it.copy(frequency = frequency) } },
                 )
             }
@@ -259,7 +263,7 @@ private fun ReportFormCard(
             label = "Contact (optional)",
             placeholder = "Discord name, if you want to be reached outside the app",
             max = BugReportPayload.CONTACT_MAX,
-            enabled = editable,
+            enabled = textEditable,
             isError = errorField == "contact",
             singleLine = true,
         )
@@ -293,7 +297,7 @@ private fun ReportFormCard(
         Spacer(modifier = Modifier.height(12.dp))
         AccountStateRow(
             checked = draft.includeAccountState,
-            enabled = editable,
+            enabled = textEditable,
             sessionConnected = sessionConnected,
             onCheckedChange = { checked -> onDraftChange { it.copy(includeAccountState = checked) } },
         )
@@ -313,6 +317,20 @@ private fun ReportFormCard(
         if (error != null) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(error, fontSize = 12.sp, color = StatusError, lineHeight = 16.sp)
+        }
+        val pendingRef = state.pendingRef
+        if (pendingRef != null && !state.sending) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Start a new report instead (leaves $pendingRef as it is)",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Accent,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { onDiscardPending() }
+                    .padding(vertical = 4.dp),
+            )
         }
         val sentRef = state.sentRef
         if (sentRef != null) {
@@ -343,7 +361,12 @@ private fun ReportFormCard(
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(state.progress.ifBlank { "Sending…" }, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             } else {
-                Text("Send report", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    if (state.pendingRef != null) "Send the missing screenshots" else "Send report",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
             }
         }
     }

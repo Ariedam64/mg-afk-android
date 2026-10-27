@@ -71,6 +71,11 @@ object BugReportContext {
     /** Only the end of the crash log is sent: the most recent crashes. */
     const val CRASH_TAIL_CHARS = 8000
     const val MAX_CRASH_ENTRIES = CRASH_TAIL_CHARS / MAX_LOG_MESSAGE
+    /**
+     * Older crashes are left out. The backend groups reports by their first error: a crash
+     * from last week would otherwise speak for every report sent from this device since.
+     */
+    const val RECENT_CRASH_MS = 72L * 60 * 60 * 1000
     const val MAX_WS_ENTRIES = 100
     const val MAX_SERVICE_ENTRIES = 100
     const val SURFACE = "android"
@@ -99,12 +104,13 @@ object BugReportContext {
         logEntry(timestamp, "info", joinMessage(event, detail), "service")
 
     /**
-     * The end of the crash log as `error` entries: its last [CRASH_TAIL_CHARS]
-     * characters, split per crash and then into 500-character messages. When there is
-     * more than [MAX_CRASH_ENTRIES] of it, the most recent crashes win, each one kept
-     * from its header down (the exception and its top frames matter most).
+     * The end of the crash log as `error` entries: the crashes of the last
+     * [RECENT_CRASH_MS] within its last [CRASH_TAIL_CHARS] characters, split per crash and
+     * then into 500-character messages. When there is more than [MAX_CRASH_ENTRIES] of it,
+     * the most recent crashes win, each one kept from its header down (the exception and
+     * its top frames matter most). A piece cut mid-crash has no header to date it: left out.
      */
-    fun crashLogEntries(crashLog: String): List<BugLogEntry> {
+    fun crashLogEntries(crashLog: String, nowMs: Long = System.currentTimeMillis()): List<BugLogEntry> {
         if (crashLog.isBlank()) return emptyList()
         val blocks = splitCrashBlocks(crashLog.takeLast(CRASH_TAIL_CHARS))
         val kept = mutableListOf<List<BugLogEntry>>()
@@ -112,7 +118,8 @@ object BugReportContext {
         for (block in blocks.asReversed()) {
             val room = MAX_CRASH_ENTRIES - count
             if (room <= 0) break
-            val stamp = crashStamp(block)
+            val stamp = crashStamp(block) ?: continue
+            if (nowMs - stamp > RECENT_CRASH_MS) continue
             val entries = block.chunked(MAX_LOG_MESSAGE).take(room).map { logEntry(stamp, "error", it, "crash") }
             kept.add(0, entries)
             count += entries.size
@@ -121,19 +128,25 @@ object BugReportContext {
     }
 
     /**
-     * Crash entries first (they are the ones that matter, and the backend keeps the
-     * tail of the list), then the most recent other entries by time, 200 at most.
+     * The crash entries, which always stay, and the most recent other entries, 200 at
+     * most, oldest first: the backend reads the logs in that order and groups reports by
+     * their first error.
      */
     fun mergeLogs(crash: List<BugLogEntry>, others: List<BugLogEntry>): List<BugLogEntry> {
         val keptCrash = crash.takeLast(MAX_LOG_ENTRIES)
         val room = MAX_LOG_ENTRIES - keptCrash.size
         val recent = others.sortedBy { it.t ?: 0L }.takeLast(room)
-        return keptCrash + recent
+        return (keptCrash + recent).sortedBy { it.t ?: 0L }
     }
 
     /** The whole `context` object, redacted. */
-    fun build(env: BugReportEnvironment, snapshot: BugReportSnapshot, crashLog: String): JsonObject {
-        val logs = mergeLogs(crashLogEntries(crashLog), snapshot.logs)
+    fun build(
+        env: BugReportEnvironment,
+        snapshot: BugReportSnapshot,
+        crashLog: String,
+        nowMs: Long = System.currentTimeMillis(),
+    ): JsonObject {
+        val logs = mergeLogs(crashLogEntries(crashLog, nowMs), snapshot.logs)
         val raw = buildJsonObject {
             putJsonObject("environment") {
                 put("surface", SURFACE)

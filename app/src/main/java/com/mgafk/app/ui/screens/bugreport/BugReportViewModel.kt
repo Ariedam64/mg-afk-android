@@ -47,6 +47,11 @@ data class BugReportUiState(
     /** Ref (BR-xx) of the report just sent, shown until dismissed or the next send. */
     val sentRef: String? = null,
     val sentNote: String? = null,
+    /**
+     * Ref of a report the server already holds while some of its screenshots are not through.
+     * Its text is locked: Send only retries the missing screenshots, or the player starts over.
+     */
+    val pendingRef: String? = null,
     /** Reports sent from this device, newest first. */
     val storedReports: List<StoredBugReport> = emptyList(),
     /** Their status as the server last returned it. */
@@ -77,12 +82,25 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
     val state: StateFlow<BugReportUiState> = _state.asStateFlow()
 
     /**
-     * Idempotency key of the submission in progress: created on the first Send and kept
-     * until the report and all its screenshots are through. A retry after a timeout or a
-     * failed screenshot then gets back the report the server may already have created
-     * (200 with attachmentsReceived) instead of a duplicate.
+     * A submission the server may already hold. Its follow token is the idempotency key: a
+     * retry after a timeout sends the same content under the same token and gets back the
+     * report the server may have created instead of a duplicate. The token stays tied to
+     * that content: the server answers by token alone, so edited text sent under it would
+     * be dropped silently.
      */
-    private var pendingFollowToken: String? = null
+    private class Pending(
+        val token: String,
+        val draft: BugReportDraft,
+        val shotIds: List<Long>,
+    ) {
+        /** Set once the server confirmed the report: from then on only screenshots are retried. */
+        var created: BugReportCreated? = null
+        /** Screenshots uploaded, or refused for good: never sent again. */
+        val doneIds = mutableSetOf<Long>()
+        var refused = 0
+    }
+
+    private var pending: Pending? = null
     private var nextScreenshotId = 1L
     private var mineJob: Job? = null
 
@@ -99,6 +117,13 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun dismissSent() {
         _state.update { it.copy(sentRef = null, sentNote = null) }
+    }
+
+    /** Forgets a report whose screenshots did not all go through, and unlocks the form. */
+    fun discardPending() {
+        if (_state.value.sending) return
+        pending = null
+        _state.update { it.copy(pendingRef = null, error = null) }
     }
 
     // ---- Screenshots ----
@@ -146,9 +171,20 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update { it.copy(fieldError = invalid, error = invalid.message) }
             return
         }
-        val token = pendingFollowToken ?: BugReportPayload.newFollowToken().also { pendingFollowToken = it }
         val draft = current.draft
         val screenshots = current.screenshots
+        val shotIds = screenshots.map { it.id }
+        val previous = pending
+        val submission = when {
+            previous == null -> Pending(BugReportPayload.newFollowToken(), draft, shotIds)
+            // The report exists: its text is locked, only its screenshots are left.
+            previous.created != null -> previous
+            // Unchanged since an attempt the server may have taken: same token.
+            previous.draft == draft && previous.shotIds == shotIds -> previous
+            // Changed before the server confirmed anything: a new submission.
+            else -> Pending(BugReportPayload.newFollowToken(), draft, shotIds)
+        }
+        pending = submission
         _state.update {
             it.copy(
                 sending = true,
@@ -162,7 +198,7 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
                 try {
-                    send(draft, screenshots, snapshot, token)
+                    send(submission, screenshots, snapshot)
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Bug report failed", e)
                     SendOutcome.Failed("Something went wrong while sending the report. Try again.", null)
@@ -170,11 +206,12 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
             }
             when (outcome) {
                 is SendOutcome.Done -> {
-                    pendingFollowToken = null
+                    pending = null
                     _state.update {
                         it.copy(
                             sending = false,
                             progress = "",
+                            pendingRef = null,
                             // The account-state choice carries over to the next report.
                             draft = BugReportDraft(includeAccountState = it.draft.includeAccountState),
                             screenshots = emptyList(),
@@ -190,38 +227,22 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
                         progress = "",
                         error = outcome.message,
                         fieldError = outcome.fieldError,
+                        pendingRef = submission.created?.ref,
                     )
                 }
             }
         }
     }
 
-    /** Runs on IO. The report first, then each screenshot the server does not have yet. */
+    /** Runs on IO. The report first, unless the server already confirmed it, then each screenshot not through yet. */
     private fun send(
-        draft: BugReportDraft,
+        submission: Pending,
         screenshots: List<PickedScreenshot>,
         snapshot: BugReportSnapshot,
-        token: String,
     ): SendOutcome {
-        val app = getApplication<Application>()
-        val crashLog = try {
-            CrashLog.read(app)
-        } catch (_: Exception) {
-            ""
-        }
-        val body = BugReportPayload.submitBody(
-            draft = BugReportPayload.redactDraft(draft, snapshot.mask),
-            appVersion = BuildConfig.VERSION_NAME,
-            followToken = token,
-            attachmentsExpected = screenshots.size,
-            playerId = snapshot.playerId,
-            playerName = snapshot.playerName,
-            gameVersion = snapshot.gameVersion,
-            context = BugReportContext.build(environment(), snapshot, crashLog),
-        )
-
-        val created: BugReportCreated = when (val result = BugReportApi.submit(body, token)) {
-            is BugReportResult.Ok -> result.value
+        val confirmed = submission.created
+        val created: BugReportCreated = if (confirmed != null) confirmed else when (val result = submitReport(submission, snapshot)) {
+            is BugReportResult.Ok -> result.value.also { submission.created = it }
             is BugReportResult.Failed -> {
                 val error = result.error
                 val field = error.field
@@ -236,23 +257,25 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
 
-        // Stored before the screenshots: the report exists now, whatever happens to them.
-        store.add(
-            StoredBugReport(
-                id = created.id,
-                followToken = created.followToken,
-                ref = created.ref,
-                title = BugReportPayload.normalizeTitle(draft.title),
-                createdAtMs = System.currentTimeMillis(),
+        if (confirmed == null) {
+            // Stored before the screenshots: the report exists now, whatever happens to them.
+            store.add(
+                StoredBugReport(
+                    id = created.id,
+                    followToken = created.followToken,
+                    ref = created.ref,
+                    title = BugReportPayload.normalizeTitle(submission.draft.title),
+                    createdAtMs = System.currentTimeMillis(),
+                )
             )
-        )
-        val stored = store.load()
-        _state.update { it.copy(storedReports = stored) }
+            val stored = store.load()
+            _state.update { it.copy(storedReports = stored) }
+        }
 
-        // On a retry the server already holds the first ones (identical bytes are
-        // recognised anyway, so a resend never takes a second slot).
-        val remaining = screenshots.drop(created.attachmentsReceived)
-        var refused = 0
+        // Each screenshot by its own id: a retry sends only those not through yet, whatever
+        // was added or removed since. The server recognises identical bytes, so one whose
+        // upload timed out but did arrive never takes a second slot.
+        val remaining = screenshots.filter { it.id !in submission.doneIds }
         remaining.forEachIndexed { index, shot ->
             _state.update { it.copy(progress = "Uploading screenshot ${index + 1} of ${remaining.size}…") }
             val upload = BugReportApi.uploadAttachment(
@@ -275,17 +298,39 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 // Refused for good (window closed, invalid image...): sending it again won't help.
                 AppLog.w(TAG, "Screenshot ${index + 1} of ${created.ref} refused: ${upload.error.code}")
-                refused++
+                submission.refused++
             }
+            submission.doneIds += shot.id
         }
 
         val note = when {
-            refused == 1 -> "1 screenshot was refused by the server and is not attached."
-            refused > 1 -> "$refused screenshots were refused by the server and are not attached."
-            !created.created -> "This report had already reached the server."
+            submission.refused == 1 -> "1 screenshot was refused by the server and is not attached."
+            submission.refused > 1 -> "${submission.refused} screenshots were refused by the server and are not attached."
+            confirmed == null && !created.created -> "This report had already reached the server."
             else -> null
         }
         return SendOutcome.Done(created.ref, note)
+    }
+
+    /** The report itself, with the content and token of [submission]. */
+    private fun submitReport(submission: Pending, snapshot: BugReportSnapshot): BugReportResult<BugReportCreated> {
+        val app = getApplication<Application>()
+        val crashLog = try {
+            CrashLog.read(app)
+        } catch (_: Exception) {
+            ""
+        }
+        val body = BugReportPayload.submitBody(
+            draft = BugReportPayload.redactDraft(submission.draft, snapshot.mask),
+            appVersion = BuildConfig.VERSION_NAME,
+            followToken = submission.token,
+            attachmentsExpected = submission.shotIds.size,
+            playerId = snapshot.playerId,
+            playerName = snapshot.playerName,
+            gameVersion = snapshot.gameVersion,
+            context = BugReportContext.build(environment(), snapshot, crashLog),
+        )
+        return BugReportApi.submit(body, submission.token)
     }
 
     private fun environment(): BugReportEnvironment {

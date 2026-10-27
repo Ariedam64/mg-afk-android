@@ -9,9 +9,10 @@ import kotlinx.serialization.json.long
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
  * The automatic `context` of a report: what it says about the device and the
@@ -32,6 +33,12 @@ class BugReportContextTest {
 
     private fun crash(stamp: String, body: String): String =
         "==== $stamp | process=main | thread=main ====\n$body\n"
+
+    /** A crash header's time, read the way CrashLog writes it (device local time). */
+    private fun at(stamp: String): Long =
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse(stamp)!!.time
+
+    private val now = at("2026-10-21 12:00:00")
 
     @Test
     fun `environment says android and describes the device`() {
@@ -90,8 +97,14 @@ class BugReportContextTest {
             mask = listOf(token, "mc_jwt=$token"),
         )
 
-        val json = BugReportContext.build(env, snapshot, crashLog = "boom $token").toString()
+        val json = BugReportContext.build(
+            env,
+            snapshot,
+            crashLog = crash("2026-10-21 11:00:00", "java.lang.IllegalStateException: boom $token"),
+            nowMs = now,
+        ).toString()
 
+        assertTrue(json.contains("IllegalStateException: boom"))
         assertFalse(json.contains(token))
         assertFalse(json.contains("c2lnbmF0dXJlLXZhbHVl"))
     }
@@ -138,7 +151,7 @@ class BugReportContextTest {
         val log = crash("2026-10-20 10:00:00", "java.lang.IllegalStateException: first\n\tat a.b(C.kt:1)") +
             crash("2026-10-21 11:00:00", "java.lang.NullPointerException: second\n\tat d.e(F.kt:2)")
 
-        val entries = BugReportContext.crashLogEntries(log)
+        val entries = BugReportContext.crashLogEntries(log, now)
 
         assertEquals(2, entries.size)
         assertTrue(entries.all { it.level == "error" && it.source == "crash" })
@@ -155,31 +168,47 @@ class BugReportContextTest {
     }
 
     @Test
-    fun `only the tail of a long crash log is sent`() {
-        val old = crash("2026-01-01 00:00:00", "old crash\n" + "\tat old.frame(Old.kt:1)\n".repeat(600))
+    fun `only the tail of a long crash log is sent, without a piece cut mid-crash`() {
+        val long = crash("2026-10-21 09:00:00", "first crash\n" + "\tat long.frame(Long.kt:1)\n".repeat(600))
         val recent = crash("2026-10-21 11:00:00", "java.lang.RuntimeException: recent")
 
-        val entries = BugReportContext.crashLogEntries(old + recent)
+        val entries = BugReportContext.crashLogEntries(long + recent, now)
 
         assertTrue(entries.size <= BugReportContext.MAX_CRASH_ENTRIES)
         assertTrue(entries.all { it.msg.length <= BugReportContext.MAX_LOG_MESSAGE })
         assertTrue(entries.last().msg.contains("RuntimeException: recent"))
-        assertFalse(entries.any { it.msg.contains("old crash") })
-        // Cut mid-crash: that piece has no header to date it.
-        assertNull(entries.first().t)
+        // The long crash starts before the tail: what is left of it has no header, so it is dropped.
+        assertFalse(entries.any { it.msg.contains("long.frame") })
+        assertTrue(entries.all { it.t != null })
     }
 
     @Test
-    fun `crash entries come first and stay when other logs overflow`() {
+    fun `crashes older than three days are left out`() {
+        val log = crash("2026-10-10 10:00:00", "java.lang.IllegalStateException: last week") +
+            crash("2026-10-21 11:00:00", "java.lang.RuntimeException: this morning")
+
+        val entries = BugReportContext.crashLogEntries(log, now)
+
+        assertEquals(1, entries.size)
+        assertTrue(entries[0].msg.contains("this morning"))
+        assertEquals(at("2026-10-21 11:00:00"), entries[0].t)
+    }
+
+    @Test
+    fun `crash entries stay when other logs overflow, and all of them run oldest first`() {
         val crashEntries = BugReportContext.crashLogEntries(
-            crash("2026-10-21 11:00:00", "java.lang.RuntimeException: boom")
+            crash("2026-10-21 11:00:00", "java.lang.RuntimeException: boom"),
+            now,
         )
         val others = (1..300).map { BugReportContext.logEntry(it.toLong(), "info", "line $it", "service") }
 
         val merged = BugReportContext.mergeLogs(crashEntries, others)
 
         assertEquals(BugReportContext.MAX_LOG_ENTRIES, merged.size)
-        assertEquals("crash", merged.first().source)
-        assertEquals("line 300", merged.last().msg)
+        assertEquals(1, merged.count { it.source == "crash" })
+        assertTrue(merged.any { it.msg == "line 300" })
+        assertFalse(merged.any { it.msg == "line 101" })
+        assertEquals(merged.map { it.t ?: 0L }.sorted(), merged.map { it.t ?: 0L })
+        assertEquals("crash", merged.last().source)
     }
 }
