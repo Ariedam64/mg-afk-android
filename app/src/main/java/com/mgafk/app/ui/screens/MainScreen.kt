@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.Inventory2
@@ -85,6 +86,7 @@ import com.mgafk.app.ui.components.CardCollapseState
 import com.mgafk.app.ui.components.LocalCardCollapseState
 import com.mgafk.app.ui.components.verticalScrollbar
 import com.mgafk.app.ui.screens.alerts.AlertsCards
+import com.mgafk.app.ui.screens.bugreport.BugReportCards
 import com.mgafk.app.ui.screens.debug.DebugCards
 import com.mgafk.app.ui.screens.settings.SettingsCards
 import com.mgafk.app.ui.screens.connection.ConnectionCard
@@ -143,6 +145,7 @@ enum class NavSection(
     SOCIAL("Social", Icons.Outlined.People),
     ALERTS("Alerts", Icons.Outlined.Notifications),
     SETTINGS("Settings", Icons.Outlined.Settings),
+    REPORT_BUG("Report a bug", Icons.Outlined.Feedback),
     DEBUG("Debug", Icons.Outlined.BugReport),
 }
 
@@ -253,6 +256,7 @@ fun MainScreen(
                                         viewModel = viewModel,
                                         onLoginRequest = onLoginRequest,
                                         onPlayRequest = onPlayRequest,
+                                        isVisible = isVisible,
                                     )
                                     Spacer(modifier = Modifier.height(24.dp))
                                 }
@@ -422,7 +426,7 @@ private fun DrawerContent(
                 }
         }
 
-        // Mini Games, Alerts, Settings & Debug - pinned at bottom
+        // Social, Alerts, Settings, Report a bug & Debug - pinned at bottom
         HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(4.dp))
         DrawerItem(
@@ -445,6 +449,14 @@ private fun DrawerContent(
             selected = selected == NavSection.SETTINGS,
             enabled = true,
             onClick = { onSelect(NavSection.SETTINGS) },
+        )
+        // Always there, connected or not: a player who cannot connect is the one with something to report.
+        DrawerItem(
+            icon = NavSection.REPORT_BUG.icon,
+            label = NavSection.REPORT_BUG.label,
+            selected = selected == NavSection.REPORT_BUG,
+            enabled = true,
+            onClick = { onSelect(NavSection.REPORT_BUG) },
         )
         if (showDebugMenu) {
             DrawerItem(
@@ -540,6 +552,7 @@ private fun SectionContent(
     viewModel: MainViewModel,
     onLoginRequest: (sessionId: String) -> Unit,
     onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
+    isVisible: Boolean = false,
 ) {
     when (section) {
         NavSection.DASHBOARD -> {
@@ -946,6 +959,14 @@ private fun SectionContent(
                 onUpdate = { newSettings -> viewModel.updateSettings { newSettings } },
                 onPreviewAlarm = { viewModel.previewAlarmSound() },
                 onStopPreviewAlarm = { viewModel.stopPreviewAlarmSound() },
+            )
+        }
+        NavSection.REPORT_BUG -> {
+            BugReportCards(
+                visible = isVisible,
+                sessionConnected = session.status == SessionStatus.CONNECTED,
+                // Read at tap time only: the session data and logs of that moment.
+                snapshot = { viewModel.bugReportSnapshot() },
             )
         }
         NavSection.DEBUG -> {
