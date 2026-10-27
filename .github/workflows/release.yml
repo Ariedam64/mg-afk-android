@@ -11,6 +11,11 @@
 #     every player would be stuck.
 #
 # Run it by hand to build and check the signature without publishing anything.
+#
+# The unit tests run in a job of their own, on another machine, before the
+# signed build: test code (some of it written by the bug report worker, then
+# reviewed) never runs next to the keystore. The release job only compiles,
+# and the worker never lets a fix change a workflow or a Gradle file.
 
 name: release
 
@@ -25,7 +30,30 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Unit tests
+        run: gradle --no-daemon testDebugUnitTest
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -62,12 +90,12 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "MGAFK_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
-      - name: Unit tests and signed release build
+      - name: Signed release build
         env:
           MGAFK_KEYSTORE_PASSWORD: ${{ secrets.MGAFK_KEYSTORE_PASSWORD }}
           MGAFK_KEY_ALIAS: ${{ secrets.MGAFK_KEY_ALIAS }}
           MGAFK_KEY_PASSWORD: ${{ secrets.MGAFK_KEY_PASSWORD }}
-        run: gradle --no-daemon testDebugUnitTest assembleRelease
+        run: gradle --no-daemon assembleRelease
 
       - name: Same certificate as the latest release
         run: |
