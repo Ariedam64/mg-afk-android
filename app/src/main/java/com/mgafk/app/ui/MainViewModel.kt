@@ -54,6 +54,9 @@ import com.mgafk.app.data.model.WeatherForecast
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.ShopSnapshot
 import com.mgafk.app.data.repository.AriesApi
+import com.mgafk.app.data.repository.BugReportConnection
+import com.mgafk.app.data.repository.BugReportContext
+import com.mgafk.app.data.repository.BugReportSnapshot
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.data.repository.StateCollector
@@ -2465,6 +2468,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+    }
+
+    // ---- Bug reports ----
+
+    /**
+     * What a bug report may carry about the active session: the player's stable id and
+     * name, the connection state and the in-memory WebSocket and service logs. Never
+     * the Session itself, which holds the mc_jwt token: the tokens only go in as values
+     * to mask, should one ever surface inside a log line. Call on the main thread.
+     */
+    fun bugReportSnapshot(): BugReportSnapshot {
+        val current = _state.value
+        val session = current.activeSession
+        val client = clients[session.id]
+        val selfId = client?.playerId.orEmpty()
+        val me = if (client != null && selfId.isNotBlank()) client.gameState.getPlayer(selfId) else null
+        val now = System.currentTimeMillis()
+        val connectedForSec = if (session.status == SessionStatus.CONNECTED && session.connectedAt > 0) {
+            (now - session.connectedAt) / 1000
+        } else {
+            null
+        }
+        val serviceEntries = current.serviceLogs
+            .take(BugReportContext.MAX_SERVICE_ENTRIES)
+            .asReversed()
+            .map { BugReportContext.serviceLogEntry(it.timestamp, it.event, it.detail) }
+        val tokens = current.sessions
+            .map { it.cookie.trim() }
+            .filter { it.isNotEmpty() }
+            .flatMap { listOf(it, it.removePrefix("mc_jwt=")) }
+            .distinct()
+        return BugReportSnapshot(
+            // The Discord id /collect-state files the account under, not the room's p_ id.
+            playerId = me?.databaseUserId?.takeIf { it.isNotBlank() },
+            playerName = me?.name?.takeIf { it.isNotBlank() } ?: session.playerName.takeIf { it.isNotBlank() },
+            gameVersion = session.gameVersion.takeIf { it.isNotBlank() },
+            connection = BugReportConnection(
+                status = session.status.name,
+                roomId = session.roomId.ifBlank { session.room },
+                playersInRoom = session.players,
+                gameHost = session.gameUrl,
+                connectedForSec = connectedForSec,
+                lastError = session.error,
+                accountsTotal = current.sessions.size,
+                accountsConnected = current.sessions.count { it.status == SessionStatus.CONNECTED },
+            ),
+            logs = BugReportContext.wsLogEntries(session.wsLogs) + serviceEntries,
+            mask = tokens,
+        )
     }
 
     // ---- Backend state reporting (online flag + data sync) ----
