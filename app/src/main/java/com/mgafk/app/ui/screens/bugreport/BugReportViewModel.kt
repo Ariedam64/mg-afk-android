@@ -277,6 +277,8 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
         // upload timed out but did arrive never takes a second slot.
         val remaining = screenshots.filter { it.id !in submission.doneIds }
         remaining.forEachIndexed { index, shot ->
+            // Its place in the form, which is what the player sees.
+            val position = screenshots.indexOf(shot) + 1
             _state.update { it.copy(progress = "Uploading screenshot ${index + 1} of ${remaining.size}…") }
             val upload = BugReportApi.uploadAttachment(
                 created.id,
@@ -291,13 +293,13 @@ class BugReportViewModel(application: Application) : AndroidViewModel(applicatio
             if (upload is BugReportResult.Failed) {
                 if (upload.error.retryable) {
                     return SendOutcome.Failed(
-                        "Report ${created.ref} was sent, but screenshot ${index + 1} could not be uploaded: " +
+                        "Report ${created.ref} was sent, but screenshot $position could not be uploaded: " +
                             "${upload.error.message} Tap Send again to upload the rest.",
                         null,
                     )
                 }
                 // Refused for good (window closed, invalid image...): sending it again won't help.
-                AppLog.w(TAG, "Screenshot ${index + 1} of ${created.ref} refused: ${upload.error.code}")
+                AppLog.w(TAG, "Screenshot $position of ${created.ref} refused: ${upload.error.code}")
                 submission.refused++
             }
             submission.doneIds += shot.id
