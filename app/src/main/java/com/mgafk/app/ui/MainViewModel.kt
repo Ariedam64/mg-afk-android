@@ -54,6 +54,7 @@ import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.WeatherForecast
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.ShopSnapshot
+import com.mgafk.app.data.model.Tip
 import com.mgafk.app.data.repository.AriesApi
 import com.mgafk.app.data.repository.BugReportConnection
 import com.mgafk.app.data.repository.BugReportContext
@@ -113,15 +114,8 @@ data class UiState(
     val loadingStep: String = "",
     val updateAvailable: AppRelease? = null,
     val purchaseError: String = "",
-    val showShopTip: Boolean = false,
-    val showTroughTip: Boolean = false,
-    val showPetTip: Boolean = false,
-    val showTeamTip: Boolean = false,
-    val showGardenTip: Boolean = false,
-    val showStorageTip: Boolean = false,
-    val showSeedTip: Boolean = false,
-    val showEggTip: Boolean = false,
-    val showPlantTip: Boolean = false,
+    /** Tips still on screen. Empty until the dismissed ones are read from disk. */
+    val visibleTips: Set<Tip> = emptySet(),
     val settings: AppSettings = AppSettings(),
     val serviceLogs: List<AfkService.ServiceLog> = emptyList(),
     val currencyBalance: Long? = null,
@@ -184,9 +178,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val activeId = repo.loadActiveSessionId() ?: sessions.first().id
             val alerts = repo.loadAlerts()
             val collapsedCards = repo.loadCollapsedCards()
-            val shopTipDismissed = repo.isShopTipDismissed()
-            val troughTipDismissed = repo.isTroughTipDismissed()
-            val petTipDismissed = repo.isPetTipDismissed()
             val settings = repo.loadSettings()
             alertNotifier.alarmSoundUri = settings.alarmSoundUri
             alertNotifier.alarmSchedules = settings.alarmSchedules
@@ -196,25 +187,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // (same teams on every session) is preserved.
             // Pet teams are server state now (see PetTeams); nothing is seeded from disk.
             val migratedSessions = sessions
-            val teamTipDismissed = repo.isTeamTipDismissed()
-            val gardenTipDismissed = repo.isGardenTipDismissed()
-            val seedTipDismissed = repo.isSeedTipDismissed()
-            val eggTipDismissed = repo.isEggTipDismissed()
-            val plantTipDismissed = repo.isPlantTipDismissed()
+            val dismissedTips = repo.loadDismissedTips()
             _state.value = UiState(
                 sessions = migratedSessions,
                 activeSessionId = activeId,
                 alerts = alerts,
                 collapsedCards = collapsedCards,
-                showShopTip = !shopTipDismissed,
-                showTroughTip = !troughTipDismissed,
-                showPetTip = !petTipDismissed,
-                showTeamTip = !teamTipDismissed,
-                showGardenTip = !gardenTipDismissed,
-                showStorageTip = !repo.isStorageTipDismissed(),
-                showSeedTip = !seedTipDismissed,
-                showEggTip = !eggTipDismissed,
-                showPlantTip = !plantTipDismissed,
+                visibleTips = Tip.entries.toSet() - dismissedTips,
                 settings = settings,
             )
             // Collect service logs (wake lock events etc.)
@@ -614,49 +593,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Optimistic purchase: decrement stock locally, send to server, rollback if no confirmation
     private val pendingPurchaseJobs = mutableMapOf<String, Job>()
 
-    fun dismissShopTip() {
-        _state.update { it.copy(showShopTip = false) }
-        viewModelScope.launch { repo.dismissShopTip() }
-    }
-
-    fun dismissTroughTip() {
-        _state.update { it.copy(showTroughTip = false) }
-        viewModelScope.launch { repo.dismissTroughTip() }
-    }
-
-    fun dismissPetTip() {
-        _state.update { it.copy(showPetTip = false) }
-        viewModelScope.launch { repo.dismissPetTip() }
-    }
-
-    fun dismissTeamTip() {
-        _state.update { it.copy(showTeamTip = false) }
-        viewModelScope.launch { repo.dismissTeamTip() }
-    }
-
-    fun dismissGardenTip() {
-        _state.update { it.copy(showGardenTip = false) }
-        viewModelScope.launch { repo.dismissGardenTip() }
-    }
-
-    fun dismissSeedTip() {
-        _state.update { it.copy(showSeedTip = false) }
-        viewModelScope.launch { repo.dismissSeedTip() }
-    }
-
-    fun dismissEggTip() {
-        _state.update { it.copy(showEggTip = false) }
-        viewModelScope.launch { repo.dismissEggTip() }
-    }
-
-    fun dismissPlantTip() {
-        _state.update { it.copy(showPlantTip = false) }
-        viewModelScope.launch { repo.dismissPlantTip() }
-    }
-
-    fun dismissStorageTip() {
-        _state.update { it.copy(showStorageTip = false) }
-        viewModelScope.launch { repo.dismissStorageTip() }
+    /** Hides [tip] now and remembers it, so it stays hidden on the next launch. */
+    fun dismissTip(tip: Tip) {
+        _state.update { it.copy(visibleTips = it.visibleTips - tip) }
+        viewModelScope.launch { repo.dismissTip(tip) }
     }
 
     // ---- Currency balance ----

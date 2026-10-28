@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import com.mgafk.app.data.model.REPLENISH_POTION_ID
 import com.mgafk.app.data.model.XP_POTION_ID
 import com.mgafk.app.data.repository.Crystals
+import com.mgafk.app.data.model.Tip
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.UiState
 import com.mgafk.app.ui.screens.logs.AbilityLogsCard
@@ -22,8 +23,8 @@ fun PetsScreen(
         inventoryPets = session.inventory.pets,
         hutchPets = session.petHutch,
         apiReady = state.apiReady,
-        showTip = state.showPetTip,
-        onDismissTip = { viewModel.dismissPetTip() },
+        showTip = Tip.PET in state.visibleTips,
+        onDismissTip = { viewModel.dismissTip(Tip.PET) },
         potionsInInventory = session.inventory.tools
             .find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0,
         potionsInShack = session.toolShack
@@ -69,8 +70,8 @@ fun PetsScreen(
         onDelete = { teamId -> viewModel.deletePetTeam(session.id, teamId) },
         onReorder = { from, to -> viewModel.reorderPetTeams(session.id, from, to) },
         onActivate = { team -> viewModel.activateTeam(session.id, team) },
-        showTip = state.showTeamTip,
-        onDismissTip = { viewModel.dismissTeamTip() },
+        showTip = Tip.TEAM in state.visibleTips,
+        onDismissTip = { viewModel.dismissTip(Tip.TEAM) },
     )
     AbilityLogsCard(logs = session.logs, apiReady = state.apiReady, onClear = { viewModel.clearLogs(session.id) })
 }

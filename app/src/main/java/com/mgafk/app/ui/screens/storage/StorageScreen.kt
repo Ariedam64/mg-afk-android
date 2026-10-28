@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.mgafk.app.data.model.PlantPlacementMode
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.model.Tip
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.UiState
 import com.mgafk.app.ui.components.SectionTip
@@ -22,9 +23,9 @@ fun StorageScreen(
 ) {
     val session = state.activeSession
     SectionTip(
-        visible = state.showStorageTip,
+        visible = Tip.STORAGE in state.visibleTips,
         text = "Tap any item to view its details, lock/unlock it, or perform actions like planting, selling and more.",
-        onDismiss = { viewModel.dismissStorageTip() },
+        onDismiss = { viewModel.dismissTip(Tip.STORAGE) },
     )
     val inv = session.inventory
     val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
@@ -179,8 +180,8 @@ fun StorageScreen(
             crops = session.feedingTrough,
             produce = session.inventory.produce,
             apiReady = state.apiReady,
-            showTip = state.showTroughTip,
-            onDismissTip = { viewModel.dismissTroughTip() },
+            showTip = Tip.TROUGH in state.visibleTips,
+            onDismissTip = { viewModel.dismissTip(Tip.TROUGH) },
             onAddItems = { items ->
                 viewModel.putItemsInFeedingTrough(session.id, items)
             },

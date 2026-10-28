@@ -12,6 +12,7 @@ import com.mgafk.app.data.model.AppSettings
 import com.mgafk.app.data.model.migrated
 import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.model.Session
+import com.mgafk.app.data.model.Tip
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -26,17 +27,8 @@ class SessionRepository(private val context: Context) {
         private val KEY_SESSIONS = stringPreferencesKey("mgafk.sessions")
         private val KEY_ACTIVE = stringPreferencesKey("mgafk.activeSession")
         private val KEY_ALERTS = stringPreferencesKey("mgafk.alerts")
-        private val KEY_SHOP_TIP = booleanPreferencesKey("mgafk.shopTipDismissed")
-        private val KEY_TROUGH_TIP = booleanPreferencesKey("mgafk.troughTipDismissed")
-        private val KEY_PET_TIP = booleanPreferencesKey("mgafk.petTipDismissed")
         private val KEY_COLLAPSED_CARDS = stringPreferencesKey("mgafk.collapsedCards")
         private val KEY_SETTINGS = stringPreferencesKey("mgafk.settings")
-        private val KEY_TEAM_TIP = booleanPreferencesKey("mgafk.teamTipDismissed")
-        private val KEY_GARDEN_TIP = booleanPreferencesKey("mgafk.gardenTipDismissed")
-        private val KEY_SEED_TIP = booleanPreferencesKey("mgafk.seedTipDismissed")
-        private val KEY_EGG_TIP = booleanPreferencesKey("mgafk.eggTipDismissed")
-        private val KEY_PLANT_TIP = booleanPreferencesKey("mgafk.plantTipDismissed")
-        private val KEY_STORAGE_TIP = booleanPreferencesKey("mgafk.storageTipDismissed")
         private val KEY_NOTIFIED_VERSION = stringPreferencesKey("mgafk.lastNotifiedVersion")
     }
 
@@ -91,36 +83,6 @@ class SessionRepository(private val context: Context) {
         }
     }
 
-    suspend fun isShopTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_SHOP_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissShopTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_SHOP_TIP] = true
-        }
-    }
-
-    suspend fun isTroughTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_TROUGH_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissTroughTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_TROUGH_TIP] = true
-        }
-    }
-
-    suspend fun isPetTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_PET_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissPetTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_PET_TIP] = true
-        }
-    }
-
     suspend fun loadCollapsedCards(): Map<String, Boolean> {
         val raw = context.dataStore.data.map { it[KEY_COLLAPSED_CARDS] }.first()
         if (raw.isNullOrBlank()) return emptyMap()
@@ -153,63 +115,15 @@ class SessionRepository(private val context: Context) {
         }
     }
 
-    suspend fun isTeamTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_TEAM_TIP] ?: false }.first()
+    /** The tips the player has dismissed, read in one pass. */
+    suspend fun loadDismissedTips(): Set<Tip> {
+        val prefs = context.dataStore.data.first()
+        return Tip.entries.filter { prefs[booleanPreferencesKey(it.key)] ?: false }.toSet()
     }
 
-    suspend fun dismissTeamTip() {
+    suspend fun dismissTip(tip: Tip) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_TEAM_TIP] = true
-        }
-    }
-
-    suspend fun isGardenTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_GARDEN_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissGardenTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_GARDEN_TIP] = true
-        }
-    }
-
-    suspend fun isSeedTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_SEED_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissSeedTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_SEED_TIP] = true
-        }
-    }
-
-    suspend fun isEggTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_EGG_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissEggTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_EGG_TIP] = true
-        }
-    }
-
-    suspend fun isPlantTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_PLANT_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissPlantTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_PLANT_TIP] = true
-        }
-    }
-
-    suspend fun isStorageTipDismissed(): Boolean {
-        return context.dataStore.data.map { it[KEY_STORAGE_TIP] ?: false }.first()
-    }
-
-    suspend fun dismissStorageTip() {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_STORAGE_TIP] = true
+            prefs[booleanPreferencesKey(tip.key)] = true
         }
     }
 

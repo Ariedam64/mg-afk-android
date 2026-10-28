@@ -2,6 +2,7 @@ package com.mgafk.app.ui.screens.garden
 
 import androidx.compose.runtime.Composable
 import com.mgafk.app.data.model.SessionStatus
+import com.mgafk.app.data.model.Tip
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.UiState
 import com.mgafk.app.ui.components.SectionTip
@@ -14,9 +15,9 @@ fun GardenScreen(
 ) {
     val session = state.activeSession
     SectionTip(
-        visible = state.showGardenTip,
+        visible = Tip.GARDEN in state.visibleTips,
         text = "Tap any crop or egg to view its details and perform actions like watering, harvesting, potting and hatching.",
-        onDismiss = { viewModel.dismissGardenTip() },
+        onDismiss = { viewModel.dismissTip(Tip.GARDEN) },
     )
     GardenCard(
         plants = session.garden,
