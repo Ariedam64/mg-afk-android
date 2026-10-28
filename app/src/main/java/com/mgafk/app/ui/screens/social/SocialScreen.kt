@@ -17,7 +17,7 @@ fun SocialScreen(
         loading = state.publicRoomsLoading,
         currentRoomId = session.roomId.ifBlank { session.room },
         isConnected = session.status == SessionStatus.CONNECTED,
-        onRefresh = { viewModel.fetchPublicRooms() },
-        onJoin = { roomId -> viewModel.joinPublicRoom(session.id, roomId) },
+        onRefresh = { viewModel.room.fetchPublicRooms() },
+        onJoin = { roomId -> viewModel.room.joinPublicRoom(session.id, roomId) },
     )
 }

@@ -20,7 +20,7 @@ fun ShopsScreen(
         purchaseError = state.purchaseError,
         showTip = Tip.SHOP in state.visibleTips,
         onDismissTip = { viewModel.dismissTip(Tip.SHOP) },
-        onBuy = { shopType, itemName -> viewModel.purchaseShopItem(session.id, shopType, itemName) },
-        onBuyAll = { shopType, itemName -> viewModel.purchaseAllShopItem(session.id, shopType, itemName) },
+        onBuy = { shopType, itemName -> viewModel.shops.purchaseShopItem(session.id, shopType, itemName) },
+        onBuyAll = { shopType, itemName -> viewModel.shops.purchaseAllShopItem(session.id, shopType, itemName) },
     )
 }

@@ -71,6 +71,9 @@ import com.mgafk.app.service.AfkWatchdogWorker
 import com.mgafk.app.service.AlertNotifier
 import com.mgafk.app.service.AutoStockTracker
 import com.mgafk.app.service.cancelResumeNotification
+import com.mgafk.app.ui.actions.RoomActions
+import com.mgafk.app.ui.actions.SessionContext
+import com.mgafk.app.ui.actions.ShopActions
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -91,8 +94,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private class TokenExpiredException : Exception("Discord token expired")
 
 private fun WakeLockMode.toServiceMode(): Int = when (this) {
     WakeLockMode.OFF -> AfkService.MODE_OFF
@@ -151,9 +152,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val collectorJobs = mutableMapOf<String, Job>()
     /** Reports player state to the backend (online flag + data sync). */
     private val stateCollector = StateCollector()
-    // Populate bots, scoped per session. Outer map keyed by sessionId, inner by botId.
-    private val botClients = mutableMapOf<String, MutableMap<String, BotClient>>()
-    private val botJobs = mutableMapOf<String, Job>()
     private var serviceRunning = false
     private val connectivityManager =
         application.getSystemService(ConnectivityManager::class.java)
@@ -167,6 +165,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    private val ctx = SessionContext(
+        app = application,
+        scope = viewModelScope,
+        state = _state,
+        clients = clients,
+        repo = repo,
+        alertNotifier = alertNotifier,
+    )
+
+    val shops = ShopActions(ctx)
+    val room = RoomActions(ctx, connect = ::connect, disconnect = ::disconnect)
 
     init {
         val networkRequest = NetworkRequest.Builder()
@@ -264,7 +274,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val newSession = Session(name = "Session ${s.sessions.size + 1}")
             s.copy(sessions = s.sessions + newSession, activeSessionId = newSession.id)
         }
-        persist()
+        ctx.persist()
     }
 
     fun removeSession(id: String) {
@@ -278,7 +288,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val activeId = if (s.activeSessionId == id) sessions.first().id else s.activeSessionId
             s.copy(sessions = sessions, activeSessionId = activeId)
         }
-        persist()
+        ctx.persist()
     }
 
     fun selectSession(id: String) {
@@ -286,21 +296,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repo.saveActiveSessionId(id) }
     }
 
+    /** Applies [transform] to one session and saves the sessions, see [SessionContext.updateSession]. */
     fun updateSession(id: String, transform: (Session) -> Session) {
-        updateSessionInMemory(id, transform)
-        persist()
-    }
-
-    /**
-     * Same, minus the write to disk.
-     *
-     * For state the server hands back on every reconnect and that changes on its own schedule:
-     * persisting it buys nothing and would turn a ticking countdown into a disk write per tick.
-     */
-    private fun updateSessionInMemory(id: String, transform: (Session) -> Session) {
-        _state.update { s ->
-            s.copy(sessions = s.sessions.map { if (it.id == id) transform(it) else it })
-        }
+        ctx.updateSession(id, transform)
     }
 
     // ---- Connection ----
@@ -466,7 +464,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         stateCollector.reset(sessionId)
         clients[sessionId]?.disconnect()
         // Bots are tied to the parent session - kill them when the user disconnects.
-        disconnectAllBots(sessionId)
+        room.disconnectAllBots(sessionId)
         // Only clear wantConnected on an explicit user disconnect (stopServiceIfIdle=true).
         // For the PlayActivity flow (keepService=false) we want the auto-resume
         // path to fire if the process dies while the game is open.
@@ -483,92 +481,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (stopServiceIfIdle) stopAfkServiceIfIdle()
     }
-
-    // ──── Populate (guest bots for sell bonus) ─────────────────────────────
-
-    /** Max players a Magic Garden room can hold (game-side constraint). */
-    private val ROOM_MAX_PLAYERS = 6
-
-    /**
-     * Spawn enough guest bots to fill empty slots in this session's room.
-     * Host-only. Caller is expected to gate the action in the UI; we still
-     * guard here.
-     */
-    fun populateRoom(sessionId: String) {
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        if (!session.connected) return
-        if (session.playerId.isBlank() || session.playerId != session.hostPlayerId) return
-
-        val activeBots = session.bots.count { it.status != BotStatus.DISCONNECTED }
-        val freeSlots = ROOM_MAX_PLAYERS - session.players - activeBots
-        if (freeSlots <= 0) return
-
-        val host = session.gameUrl
-            .removePrefix("https://")
-            .removePrefix("http://")
-            .ifBlank { "magicgarden.gg" }
-        val version = session.gameVersion
-        if (version.isBlank()) return
-
-        val takenNames = session.bots.map { it.name }.toMutableSet()
-        val sessionBots = botClients.getOrPut(sessionId) { mutableMapOf() }
-
-        repeat(freeSlots) {
-            val (name, avatar) = BotNameGenerator.next(takenNames)
-            takenNames.add(name)
-            val botId = UUID.randomUUID().toString()
-            val playerId = IdGenerator.generatePlayerId()
-            val bot = BotClient(botId = botId, playerId = playerId, name = name, avatar = avatar)
-            sessionBots[botId] = bot
-
-            val snapshot = BotSnapshot(
-                id = botId,
-                playerId = playerId,
-                name = name,
-                avatar = avatar,
-                status = BotStatus.CONNECTING,
-            )
-            updateSession(sessionId) { it.copy(bots = it.bots + snapshot) }
-
-            // Subscribe to bot events to update its snapshot in session state.
-            viewModelScope.launch {
-                bot.events.collect { event ->
-                    if (event is BotEvent.StatusChanged) {
-                        updateSession(sessionId) { s ->
-                            s.copy(bots = s.bots.map {
-                                if (it.id == botId) it.copy(
-                                    status = event.status,
-                                    statusMessage = event.message,
-                                ) else it
-                            })
-                        }
-                    }
-                }
-            }
-
-            bot.connect(
-                version = version,
-                room = session.room,
-                host = host,
-                versionFetcher = { VersionFetcher.fetchVersionForRoom(host = host, room = session.room) },
-            )
-        }
-    }
-
-    /** Disconnect a single bot and remove it from the session. */
-    fun disconnectBot(sessionId: String, botId: String) {
-        val sessionBots = botClients[sessionId] ?: return
-        sessionBots.remove(botId)?.disconnect()
-        updateSession(sessionId) { it.copy(bots = it.bots.filter { b -> b.id != botId }) }
-    }
-
-    /** Disconnect every bot tied to this session. */
-    fun disconnectAllBots(sessionId: String) {
-        botClients.remove(sessionId)?.values?.forEach { it.disconnect() }
-        updateSession(sessionId) { it.copy(bots = emptyList()) }
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
 
     fun setToken(sessionId: String, token: String) {
         updateSession(sessionId) { it.copy(cookie = token) }
@@ -590,155 +502,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(serviceLogs = emptyList()) }
     }
 
-    // Optimistic purchase: decrement stock locally, send to server, rollback if no confirmation
-    private val pendingPurchaseJobs = mutableMapOf<String, Job>()
-
     /** Hides [tip] now and remembers it, so it stays hidden on the next launch. */
     fun dismissTip(tip: Tip) {
         _state.update { it.copy(visibleTips = it.visibleTips - tip) }
         viewModelScope.launch { repo.dismissTip(tip) }
-    }
-
-    // ---- Currency balance ----
-
-    fun fetchCurrencyBalance(sessionId: String) {
-        val session = _state.value.sessions.find { it.id == sessionId } ?: run {
-            AppLog.w(TAG, "[Balance] Session $sessionId not found")
-            return
-        }
-        if (session.cookie.isBlank() || session.gameVersion.isBlank() || session.room.isBlank()) {
-            AppLog.w(TAG, "[Balance] Skipped: cookie=${session.cookie.isNotBlank()}, version=${session.gameVersion}, room=${session.room}")
-            return
-        }
-        _state.update { it.copy(currencyBalanceLoading = true) }
-        viewModelScope.launch {
-            try {
-                val host = session.gameUrl
-                    .removePrefix("https://")
-                    .removePrefix("http://")
-                    .ifBlank { "magicgarden.gg" }
-                val url = "https://$host/version/${session.gameVersion}/api/rooms/${session.room}/me"
-                AppLog.d(TAG, "[Balance] GET $url")
-                AppLog.d(TAG, "[Balance] Cookie: mc_jwt=${session.cookie}")
-                val balance = withContext(Dispatchers.IO) {
-                    val request = okhttp3.Request.Builder()
-                        .url(url)
-                        .header("Cookie", "mc_jwt=${session.cookie}")
-                        .build()
-                    val client = okhttp3.OkHttpClient()
-                    val response = client.newCall(request).execute()
-                    val code = response.code
-                    AppLog.d(TAG, "[Balance] HTTP $code")
-                    val body = response.body?.string() ?: throw Exception("Empty response")
-                    AppLog.d(TAG, "[Balance] Body: $body")
-                    if (code == 401) {
-                        throw TokenExpiredException()
-                    }
-                    if (!response.isSuccessful) {
-                        throw Exception("HTTP $code")
-                    }
-                    val obj = com.mgafk.app.data.AppJson.default
-                        .parseToJsonElement(body).jsonObject
-                    obj["currencyBalance"]?.jsonPrimitive?.longOrNull
-                        ?: throw Exception("No currencyBalance field in response")
-                }
-                AppLog.d(TAG, "[Balance] OK -> $balance breads")
-                _state.update { it.copy(currencyBalance = balance, currencyBalanceLoading = false, currencyBalanceError = null) }
-            } catch (e: TokenExpiredException) {
-                AppLog.e(TAG, "[Balance] Token expired, need re-login")
-                _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = "token_expired") }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "[Balance] Failed: ${e.message}", e)
-                _state.update { it.copy(currencyBalanceLoading = false, currencyBalanceError = e.message) }
-            }
-        }
-    }
-
-
-    fun purchaseShopItem(sessionId: String, shopType: String, itemName: String) {
-        val actions = clients[sessionId]?.actions ?: return
-
-        // Check current stock before optimistic update
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val shop = session.shops.find { it.type == shopType } ?: return
-        val currentStock = shop.itemStocks[itemName] ?: 0
-        if (currentStock <= 0) return
-
-        // Optimistic: decrement stock locally
-        val previousShops = session.shops
-        updateSession(sessionId) { s ->
-            s.copy(shops = s.shops.map { snap ->
-                if (snap.type == shopType) {
-                    snap.copy(itemStocks = snap.itemStocks.mapValues { (name, stock) ->
-                        if (name == itemName) maxOf(0, stock - 1) else stock
-                    })
-                } else snap
-            })
-        }
-
-        // Send to server
-        actions.purchaseShopItem(shopType, itemName)
-
-        // Rollback after 5s if server hasn't confirmed (ShopsChanged would overwrite first)
-        val key = "$sessionId:$shopType:$itemName"
-        pendingPurchaseJobs[key]?.cancel()
-        pendingPurchaseJobs[key] = viewModelScope.launch {
-            delay(5000)
-            // If we get here, server never confirmed - rollback
-            updateSession(sessionId) { s ->
-                val current = s.shops.find { it.type == shopType }
-                if (current != null) s.copy(shops = previousShops) else s
-            }
-            pendingPurchaseJobs.remove(key)
-            // Show error briefly
-            _state.update { it.copy(purchaseError = "Purchase failed: $itemName") }
-            delay(3000)
-            _state.update { if (it.purchaseError == "Purchase failed: $itemName") it.copy(purchaseError = "") else it }
-        }
-    }
-
-    fun purchaseAllShopItem(sessionId: String, shopType: String, itemName: String) {
-        val actions = clients[sessionId]?.actions ?: return
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val shop = session.shops.find { it.type == shopType } ?: return
-        val currentStock = shop.itemStocks[itemName] ?: 0
-        if (currentStock <= 0) return
-
-        // Optimistic: set stock to 0
-        val previousShops = session.shops
-        updateSession(sessionId) { s ->
-            s.copy(shops = s.shops.map { snap ->
-                if (snap.type == shopType) {
-                    snap.copy(itemStocks = snap.itemStocks.mapValues { (name, stock) ->
-                        if (name == itemName) 0 else stock
-                    })
-                } else snap
-            })
-        }
-
-        // Send N purchase commands to server
-        repeat(currentStock) { actions.purchaseShopItem(shopType, itemName) }
-
-        // Rollback after 5s if server hasn't confirmed
-        val key = "$sessionId:$shopType:$itemName"
-        pendingPurchaseJobs[key]?.cancel()
-        pendingPurchaseJobs[key] = viewModelScope.launch {
-            delay(5000)
-            updateSession(sessionId) { s ->
-                val current = s.shops.find { it.type == shopType }
-                if (current != null) s.copy(shops = previousShops) else s
-            }
-            pendingPurchaseJobs.remove(key)
-            _state.update { it.copy(purchaseError = "Purchase failed: $itemName") }
-            delay(3000)
-            _state.update { if (it.purchaseError == "Purchase failed: $itemName") it.copy(purchaseError = "") else it }
-        }
-    }
-
-    fun sendChat(sessionId: String, message: String) {
-        val trimmed = message.trim()
-        if (trimmed.isBlank()) return
-        clients[sessionId]?.actions?.chat(trimmed)
     }
 
     private val pendingTroughJobs = mutableMapOf<String, Job>()
@@ -1186,29 +953,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val actions = clients[sessionId]?.actions ?: return
         actions.pickupPet(petId = petId)
         actions.putItemInStorage(itemId = petId, storageId = "PetHutch")
-    }
-
-    // ---- Public Rooms (Aries API) ----
-
-    fun fetchPublicRooms() {
-        _state.update { it.copy(publicRoomsLoading = true) }
-        viewModelScope.launch(Dispatchers.IO) {
-            val rooms = AriesApi.fetchRooms()
-            _state.update { it.copy(publicRooms = rooms, publicRoomsLoading = false) }
-        }
-    }
-
-    /** Join a public room: disconnect if connected, change room code, reconnect. */
-    fun joinPublicRoom(sessionId: String, roomId: String) {
-        val session = _state.value.sessions.find { it.id == sessionId } ?: return
-        val wasConnected = session.status == SessionStatus.CONNECTED || session.status == SessionStatus.CONNECTING
-        if (wasConnected) disconnect(sessionId)
-        updateSession(sessionId) { it.copy(room = roomId) }
-        viewModelScope.launch { repo.saveSessions(_state.value.sessions) }
-        viewModelScope.launch {
-            if (wasConnected) delay(500)
-            connect(sessionId)
-        }
     }
 
     // ---- Favorites (lock/unlock) ----
@@ -2112,7 +1856,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is ClientEvent.CrystalsChanged -> {
                 // Not persisted: the server reports it again on every reconnect, and it changes
                 // as often as a crystal burns down.
-                updateSessionInMemory(sessionId) {
+                ctx.updateSessionInMemory(sessionId) {
                     it.copy(
                         crystals = event.crystals,
                         occupiedTiles = event.occupiedTiles,
@@ -2384,9 +2128,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
                 // Server confirmed - cancel any pending rollback jobs for this session
-                pendingPurchaseJobs.keys.filter { it.startsWith("$sessionId:") }.forEach { key ->
-                    pendingPurchaseJobs.remove(key)?.cancel()
-                }
+                shops.cancelPendingPurchases(sessionId)
                 updateSession(sessionId) { it.copy(shops = newShops) }
                 // Only check alerts when actual items changed, not just the restock timer. A
                 // restock counts as a change even when it rolled the same items: the stock behind
@@ -2512,12 +2254,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (sent) return@launch
                 delay(ON_CONNECT_COLLECT_RETRY_MS)
             }
-        }
-    }
-
-    private fun persist() {
-        viewModelScope.launch {
-            repo.saveSessions(_state.value.sessions)
         }
     }
 

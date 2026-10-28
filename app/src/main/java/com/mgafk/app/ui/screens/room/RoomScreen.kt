@@ -28,9 +28,9 @@ fun RoomScreen(
             isHost = session.playerId.isNotBlank() && session.playerId == session.hostPlayerId,
             playersConnected = session.players,
             bots = session.bots,
-            onPopulate = { viewModel.populateRoom(session.id) },
-            onDisconnectBot = { botId -> viewModel.disconnectBot(session.id, botId) },
-            onDisconnectAll = { viewModel.disconnectAllBots(session.id) },
+            onPopulate = { viewModel.room.populateRoom(session.id) },
+            onDisconnectBot = { botId -> viewModel.room.disconnectBot(session.id, botId) },
+            onDisconnectAll = { viewModel.room.disconnectAllBots(session.id) },
         )
     }
     ChatCard(
@@ -38,6 +38,6 @@ fun RoomScreen(
         players = session.playersList,
         gameVersion = session.gameVersion,
         gameHost = session.gameUrl,
-        onSend = { message -> viewModel.sendChat(session.id, message) },
+        onSend = { message -> viewModel.room.sendChat(session.id, message) },
     )
 }
