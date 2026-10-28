@@ -120,6 +120,9 @@ data class AppSettings(
 
     // Developer
     val showDebugMenu: Boolean = false,
+
+    // Look and feel, edited on the Customize screen
+    val appearance: Appearance = Appearance(),
 )
 
 /**

@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mgafk.app.data.model.Appearance
+import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.BgDark
 import com.mgafk.app.ui.theme.MgAfkTheme
@@ -69,7 +72,11 @@ class AlarmActivity : ComponentActivity() {
         val sprites = intent.getStringArrayExtra(EXTRA_SPRITES) ?: emptyArray()
 
         setContent {
-            MgAfkTheme {
+            // The alarm can fire with no MainActivity alive, so read the look from storage.
+            val appearance by produceState(initialValue = Appearance()) {
+                value = SessionRepository(applicationContext).loadSettings().appearance
+            }
+            MgAfkTheme(appearance = appearance) {
                 AlarmScreen(
                     title = title,
                     itemNames = names.toList(),

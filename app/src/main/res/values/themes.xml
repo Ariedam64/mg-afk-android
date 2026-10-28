@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.MgAfk" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0B0F14</item>
-        <item name="android:navigationBarColor">#0B0F14</item>
-        <item name="android:windowBackground">#0B0F14</item>
+        <item name="android:statusBarColor">#17141F</item>
+        <item name="android:navigationBarColor">#17141F</item>
+        <item name="android:windowBackground">#17141F</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -9,6 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import com.mgafk.app.auth.OAuthActivity
 import com.mgafk.app.play.PlayActivity
@@ -51,7 +53,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestNotificationPermission()
         setContent {
-            MgAfkTheme {
+            val state by viewModel.state.collectAsState()
+            MgAfkTheme(appearance = state.settings.appearance) {
                 MainScreen(
                     viewModel = viewModel,
                     onLoginRequest = { sessionId ->

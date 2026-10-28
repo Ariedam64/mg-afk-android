@@ -58,6 +58,7 @@ import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
+import com.mgafk.app.ui.theme.rarityColor
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.StatusConnected
 import com.mgafk.app.ui.theme.SurfaceCard
@@ -71,24 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // Rarity colors
-private val RarityCommon = Color(0xFFE7E7E7)
-private val RarityUncommon = Color(0xFF67BD4D)
-private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFC734)
-private val RarityMythical = Color(0xFF9944A7)
-private val RarityDivine = Color(0xFFFF7835)
-private val RarityCelestial = Color(0xFFFF00FF)
 
-private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
-    "common" -> RarityCommon
-    "uncommon" -> RarityUncommon
-    "rare" -> RarityRare
-    "legendary" -> RarityLegendary
-    "mythical", "mythic" -> RarityMythical
-    "divine" -> RarityDivine
-    "celestial" -> RarityCelestial
-    else -> TextMuted
-}
 
 private val TILE_MIN_WIDTH = 76.dp
 private val TILE_SPACING = 6.dp

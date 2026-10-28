@@ -54,6 +54,7 @@ import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.repository.StorageCapacity
+import com.mgafk.app.ui.theme.rarityColor
 import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityBrush
@@ -70,19 +71,7 @@ import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
-private val RarityCommon = Color(0xFFE7E7E7)
-private val RarityUncommon = Color(0xFF67BD4D)
-private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFC734)
-private val RarityMythical = Color(0xFF9944A7)
-private val RarityDivine = Color(0xFFFF7835)
-private val RarityCelestial = Color(0xFFFF00FF)
 
-private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
-    "common" -> RarityCommon; "uncommon" -> RarityUncommon; "rare" -> RarityRare
-    "legendary" -> RarityLegendary; "mythical", "mythic" -> RarityMythical
-    "divine" -> RarityDivine; "celestial" -> RarityCelestial; else -> TextMuted
-}
 
 private val TILE_MIN = 76.dp
 private val GAP = 6.dp

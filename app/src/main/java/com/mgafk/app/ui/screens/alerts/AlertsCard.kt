@@ -35,6 +35,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,28 +64,10 @@ import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 
-// Game-authentic rarity colors
-private val RarityCommon = Color(0xFFE7E7E7)
-private val RarityUncommon = Color(0xFF67BD4D)
-private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFC734)
-private val RarityMythical = Color(0xFF9944A7)
-private val RarityDivine = Color(0xFFFF7835)
-private val RarityCelestial = Color(0xFFFF00FF)
 
 private val CustomModeColor = Color(0xFF8B5CF6) // indigo/violet - distinct from Accent (blue) and Alarm (red)
 private val AlarmModeColor = Color(0xFFF87171) // red - section/item alarm mode
 
-private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
-    "common" -> RarityCommon
-    "uncommon" -> RarityUncommon
-    "rare" -> RarityRare
-    "legendary" -> RarityLegendary
-    "mythical", "mythic" -> RarityMythical
-    "divine" -> RarityDivine
-    "celestial" -> RarityCelestial
-    else -> TextMuted
-}
 
 private val WEATHER_ITEMS = listOf(
     "Sunny" to "Clear Skies",
@@ -846,6 +829,8 @@ private fun AbilityAlertChip(
 }
 
 /** Solid color for an ability's badge dot, parsed from its API color string. */
+@Composable
+@ReadOnlyComposable
 private fun abilityDotColor(raw: String?): Color {
     if (raw == null) return TextMuted
     val hex = Regex("#[0-9A-Fa-f]{6}").find(raw)?.value ?: return TextMuted

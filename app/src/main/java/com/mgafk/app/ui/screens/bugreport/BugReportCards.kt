@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -910,6 +911,8 @@ private fun StatusBadge(status: String, label: String) {
     )
 }
 
+@Composable
+@ReadOnlyComposable
 private fun statusColor(status: String): Color = when (status) {
     "fixed" -> StatusConnected
     "needs_info" -> StatusConnecting

@@ -61,6 +61,7 @@ import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SearchFilterBar
 import com.mgafk.app.ui.components.SpriteImage
+import com.mgafk.app.ui.theme.rarityColor
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.SurfaceCard
@@ -74,25 +75,7 @@ import androidx.compose.ui.window.Dialog
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
-// Game-authentic rarity colors
-private val RarityCommon = Color(0xFFE7E7E7)
-private val RarityUncommon = Color(0xFF67BD4D)
-private val RarityRare = Color(0xFF0071C6)
-private val RarityLegendary = Color(0xFFFFD700)
-private val RarityMythical = Color(0xFF9944A7)
-private val RarityDivine = Color(0xFFFF7835)
-private val RarityCelestial = Color(0xFFFF00FF)
 
-private fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
-    "common" -> RarityCommon
-    "uncommon" -> RarityUncommon
-    "rare" -> RarityRare
-    "legendary" -> RarityLegendary
-    "mythical", "mythic" -> RarityMythical
-    "divine" -> RarityDivine
-    "celestial" -> RarityCelestial
-    else -> TextMuted
-}
 
 private val RARITY_TIERS = listOf("Common", "Uncommon", "Rare", "Legendary", "Mythic", "Divine", "Celestial")
 

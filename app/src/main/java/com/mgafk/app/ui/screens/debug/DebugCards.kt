@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,8 @@ import com.mgafk.app.data.model.WsLog
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.theme.Accent
+import com.mgafk.app.ui.theme.StatusConnected
+import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.SurfaceBorder
 import com.mgafk.app.ui.theme.TextMuted
@@ -207,16 +210,20 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
 
 private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
+@Composable
+@ReadOnlyComposable
 private fun levelColor(level: String): Color = when (level) {
-    "error" -> Color(0xFFF87171)
-    "warn" -> Color(0xFFFBBF24)
+    "error" -> StatusError
+    "warn" -> StatusConnecting
     else -> Accent
 }
 
+@Composable
+@ReadOnlyComposable
 private fun levelDotColor(level: String): Color = when (level) {
-    "error" -> Color(0xFFF87171)
-    "warn" -> Color(0xFFFBBF24)
-    "info" -> Color(0xFF34D399)
+    "error" -> StatusError
+    "warn" -> StatusConnecting
+    "info" -> StatusConnected
     else -> TextMuted
 }
 

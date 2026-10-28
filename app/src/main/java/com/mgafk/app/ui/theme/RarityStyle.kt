@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -57,7 +58,8 @@ private const val CELESTIAL_SPAN = 400f
 // so we only ever see a sliver of yellow at peak shift.
 private const val CELESTIAL_MAX_SHIFT = 240f
 
-fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
+/** The game's color for a rarity tier, or null for an unknown tier. */
+fun rarityColorOrNull(rarity: String?): Color? = when (rarity?.lowercase()) {
     "common" -> RarityCommonColor
     "uncommon" -> RarityUncommonColor
     "rare" -> RarityRareColor
@@ -65,8 +67,13 @@ fun rarityColor(rarity: String?): Color = when (rarity?.lowercase()) {
     "mythical", "mythic" -> RarityMythicalColor
     "divine" -> RarityDivineColor
     "celestial" -> RarityCelestialColor
-    else -> TextMuted
+    else -> null
 }
+
+/** The game's color for a rarity tier, muted text color for an unknown tier. */
+@Composable
+@ReadOnlyComposable
+fun rarityColor(rarity: String?): Color = rarityColorOrNull(rarity) ?: TextMuted
 
 /**
  * Brush that mirrors Gemini's rarity badge background:
