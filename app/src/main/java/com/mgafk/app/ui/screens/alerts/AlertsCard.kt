@@ -11,8 +11,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,33 +28,17 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
-import com.mgafk.app.data.model.AlertItem
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AlertSection
-import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.Accent
@@ -66,12 +48,8 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
-import com.mgafk.app.data.repository.CoreShops
 
-
-
-
-private val WEATHER_ITEMS = listOf(
+internal val WEATHER_ITEMS = listOf(
     "Sunny" to "Clear Skies",
     "Rain" to "Rain",
     "Frost" to "Snow",
@@ -80,10 +58,10 @@ private val WEATHER_ITEMS = listOf(
     "Thunderstorm" to "Thunderstorm",
 )
 
-private const val HUNGER_KEY = "hunger<5"
-private const val TROUGH_KEY = "trough_low"
+internal const val HUNGER_KEY = "hunger<5"
+internal const val TROUGH_KEY = "trough_low"
 
-private val HUNGER_THRESHOLDS = listOf(5, 10, 15, 20, 25)
+internal val HUNGER_THRESHOLDS = listOf(5, 10, 15, 20, 25)
 
 /** Emits 4 separate collapsible cards with per-section mode. */
 @Composable
@@ -165,7 +143,7 @@ private fun AlertConfig.isExpanded(key: String, defaultExpanded: Boolean = true)
 // ── Compact mode picker (reused inside each card) ──
 
 @Composable
-private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) -> Unit) {
+internal fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -207,7 +185,7 @@ private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) 
 }
 
 @Composable
-private fun CustomModeHint() {
+internal fun CustomModeHint() {
     Text(
         "Long press an item to switch between notification and alarm.",
         fontSize = 10.sp,
@@ -218,7 +196,7 @@ private fun CustomModeHint() {
 
 /** Small inline mode toggle for switch-based items (Weather / Pet / Trough). */
 @Composable
-private fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit) {
+internal fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit) {
     val isAlarm = currentMode == AlertMode.ALARM
     val color = if (isAlarm) StatusError else Accent
     Box(
@@ -240,605 +218,11 @@ private fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit
     }
 }
 
-// ── Shop Alerts ──
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ShopAlertsCard(
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-    onItemModeChange: (String, AlertMode) -> Unit,
-    expanded: Boolean,
-    onCollapseChange: (String, Boolean) -> Unit,
-    currentMode: AlertMode,
-    onModeChange: (AlertMode) -> Unit,
-) {
-    val totalActive = alerts.items.count { (key, item) -> key.startsWith("shop:") && item.enabled }
-
-    AppCard(
-        title = "Shop Alerts",
-        collapsible = true,
-        expanded = expanded,
-        onExpandedChange = { onCollapseChange("shop_alerts", !it) },
-        trailing = {
-            if (totalActive > 0) {
-                Text(
-                    text = "$totalActive active",
-                    fontSize = 11.sp,
-                    color = Accent,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
-        },
-    ) {
-        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (currentMode == AlertMode.CUSTOM) {
-            CustomModeHint()
-        } else {
-            Text(
-                "Tap items to get notified when they appear in shop.",
-                fontSize = 11.sp,
-                color = TextMuted,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        val allCategories = remember(MgApi.isReady) {
-            val allEntries = MgApi.getPlants().values + MgApi.getEggs().values +
-                MgApi.getItems().values + MgApi.getDecors().values
-            val dynamic = allEntries
-                .flatMap { it.eligibleShops }
-                .distinct()
-                .map { it.lowercase() }
-                .filter { it !in CoreShops.KEYS }
-                .sorted()
-                .map { key -> "${key.replaceFirstChar { c -> c.uppercase() }} Shop" to key }
-            CoreShops.LABELED + dynamic
-        }
-
-        allCategories.forEachIndexed { index, (label, category) ->
-            val items = remember(category, MgApi.isReady) {
-                when (category) {
-                    "seed" -> MgApi.getPlants().values.filter {
-                        it.eligibleShops.isEmpty() || "Seed" in it.eligibleShops
-                    }
-                    "tool" -> MgApi.getItems().values.toList()
-                    "egg" -> MgApi.getEggs().values.filter {
-                        it.eligibleShops.isEmpty() || "Egg" in it.eligibleShops
-                    }
-                    "decor" -> MgApi.getDecors().values.toList()
-                    else -> {
-                        val shopName = category.replaceFirstChar { it.uppercase() }
-                        (MgApi.getPlants().values + MgApi.getEggs().values +
-                            MgApi.getItems().values + MgApi.getDecors().values)
-                            .filter { shopName in it.eligibleShops }
-                    }
-                }
-            }
-            val activeCount = items.count { entry ->
-                alerts.items["shop:$category:${entry.id}"]?.enabled == true
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                if (activeCount > 0) {
-                    Text("$activeCount", fontSize = 11.sp, color = Accent)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            if (items.isEmpty() && !MgApi.isReady) {
-                Text("Loading...", fontSize = 11.sp, color = TextMuted)
-            } else if (items.isEmpty()) {
-                Text("No items.", fontSize = 11.sp, color = TextMuted)
-            } else {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    items.forEach { entry ->
-                        val key = "shop:$category:${entry.id}"
-                        val item = alerts.items[key]
-                        val enabled = item?.enabled == true
-                        val itemMode = item?.mode ?: AlertMode.NOTIFICATION
-                        AlertItemTile(
-                            spriteUrl = entry.sprite,
-                            name = entry.name,
-                            rarity = entry.rarity,
-                            enabled = enabled,
-                            showModeIndicator = currentMode == AlertMode.CUSTOM && enabled,
-                            itemMode = itemMode,
-                            onClick = { onToggle(key, !enabled) },
-                            onLongPress = {
-                                if (currentMode == AlertMode.CUSTOM) {
-                                    val next = if (itemMode == AlertMode.ALARM) AlertMode.NOTIFICATION else AlertMode.ALARM
-                                    onItemModeChange(key, next)
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            if (index < allCategories.lastIndex) {
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-        }
-    }
-}
-
-// ── Weather Alerts ──
-
-@Composable
-private fun WeatherAlertsCard(
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-    onItemModeChange: (String, AlertMode) -> Unit,
-    expanded: Boolean,
-    onCollapseChange: (String, Boolean) -> Unit,
-    currentMode: AlertMode,
-    onModeChange: (AlertMode) -> Unit,
-) {
-    val weatherSprites = remember(MgApi.isReady) { MgApi.getWeathers().mapValues { it.value.sprite } }
-    val activeCount = WEATHER_ITEMS.count { (_, display) ->
-        alerts.items["weather:$display"]?.enabled == true
-    }
-
-    AppCard(
-        title = "Weather Alerts",
-        collapsible = true,
-        expanded = expanded,
-        onExpandedChange = { onCollapseChange("weather_alerts", !it) },
-        trailing = {
-            if (activeCount > 0) {
-                Text(
-                    text = "$activeCount active",
-                    fontSize = 11.sp,
-                    color = Accent,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
-        },
-    ) {
-        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (currentMode == AlertMode.CUSTOM) {
-            CustomModeHint()
-        } else {
-            Text(
-                "Get notified on weather changes.",
-                fontSize = 11.sp,
-                color = TextMuted,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            WEATHER_ITEMS.forEach { (apiKey, displayName) ->
-                val key = "weather:$displayName"
-                val item = alerts.items[key]
-                val enabled = item?.enabled == true
-                val itemMode = item?.mode ?: AlertMode.NOTIFICATION
-                val spriteUrl = weatherSprites[apiKey]
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(AppTheme.shapes.smallShape)
-                        .background(SurfaceBorder.copy(alpha = 0.2f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (spriteUrl != null) {
-                        SpriteImage(url = spriteUrl, size = 20.dp, contentDescription = displayName)
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text(displayName, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
-                    if (currentMode == AlertMode.CUSTOM && enabled) {
-                        ItemModeToggle(currentMode = itemMode) { onItemModeChange(key, it) }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                        Switch(
-                            checked = enabled,
-                            onCheckedChange = { onToggle(key, it) },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── Pet Alerts ──
-
-@Composable
-private fun PetAlertsCard(
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-    onItemModeChange: (String, AlertMode) -> Unit,
-    expanded: Boolean,
-    onCollapseChange: (String, Boolean) -> Unit,
-    currentMode: AlertMode,
-    onThresholdChange: (Int) -> Unit,
-    onModeChange: (AlertMode) -> Unit,
-) {
-    val item = alerts.items[HUNGER_KEY]
-    val enabled = item?.enabled == true
-    val itemMode = item?.mode ?: AlertMode.NOTIFICATION
-    val threshold = alerts.petHungerThreshold
-
-    AppCard(
-        title = "Pet Alerts",
-        collapsible = true,
-        expanded = expanded,
-        onExpandedChange = { onCollapseChange("pet_alerts", !it) },
-        trailing = {
-            if (enabled) {
-                Text(
-                    text = "1 active",
-                    fontSize = 11.sp,
-                    color = Accent,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
-        },
-    ) {
-        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
-
-        if (currentMode == AlertMode.CUSTOM) {
-            Spacer(modifier = Modifier.height(6.dp))
-            CustomModeHint()
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
-                .padding(horizontal = 10.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Hunger < $threshold%",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary,
-                modifier = Modifier.weight(1f),
-            )
-            if (currentMode == AlertMode.CUSTOM && enabled) {
-                ItemModeToggle(currentMode = itemMode) { onItemModeChange(HUNGER_KEY, it) }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = { onToggle(HUNGER_KEY, it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        ThresholdPicker(
-            label = "Threshold",
-            values = HUNGER_THRESHOLDS,
-            selected = threshold,
-            format = { "$it%" },
-            onSelect = onThresholdChange,
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            "Get notified when any pet drops below $threshold% hunger.",
-            fontSize = 11.sp,
-            color = TextMuted,
-        )
-    }
-}
-
-// ── Feeding Trough Alerts ──
-
-@Composable
-private fun FeedingTroughAlertsCard(
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-    onItemModeChange: (String, AlertMode) -> Unit,
-    expanded: Boolean,
-    onCollapseChange: (String, Boolean) -> Unit,
-    currentMode: AlertMode,
-    onModeChange: (AlertMode) -> Unit,
-) {
-    val item = alerts.items[TROUGH_KEY]
-    val enabled = item?.enabled == true
-    val itemMode = item?.mode ?: AlertMode.NOTIFICATION
-
-    AppCard(
-        title = "Feeding Trough Alerts",
-        collapsible = true,
-        expanded = expanded,
-        onExpandedChange = { onCollapseChange("trough_alerts", !it) },
-        trailing = {
-            if (enabled) {
-                Text(
-                    text = "1 active",
-                    fontSize = 11.sp,
-                    color = Accent,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
-        },
-    ) {
-        SectionModePicker(currentMode = currentMode, onModeChange = onModeChange)
-
-        if (currentMode == AlertMode.CUSTOM) {
-            Spacer(modifier = Modifier.height(6.dp))
-            CustomModeHint()
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Trough low (≤ 1 item)",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary,
-                modifier = Modifier.weight(1f),
-            )
-            if (currentMode == AlertMode.CUSTOM && enabled) {
-                ItemModeToggle(currentMode = itemMode) { onItemModeChange(TROUGH_KEY, it) }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = { onToggle(TROUGH_KEY, it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            "Get notified when the feeding trough has 1 or fewer items.",
-            fontSize = 11.sp,
-            color = TextMuted,
-        )
-    }
-}
-
-// ── Threshold picker (reusable) ──
-
-@Composable
-private fun ThresholdPicker(
-    label: String,
-    values: List<Int>,
-    selected: Int,
-    format: (Int) -> String,
-    onSelect: (Int) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("$label:", fontSize = 11.sp, color = TextMuted)
-        values.forEach { value ->
-            val isSelected = value == selected
-            Box(
-                modifier = Modifier
-                    .clip(AppTheme.shapes.smallShape)
-                    .background(if (isSelected) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
-                    .then(
-                        if (isSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
-                    )
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = 8.dp, vertical = 5.dp),
-            ) {
-                Text(
-                    text = format(value),
-                    fontSize = 11.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) Accent else TextMuted,
-                )
-            }
-        }
-    }
-}
-
-// ── Ability Alerts ──
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AbilityAlertsCard(
-    alerts: AlertConfig,
-    onToggle: (String, Boolean) -> Unit,
-    expanded: Boolean,
-    onCollapseChange: (String, Boolean) -> Unit,
-) {
-    val abilities = remember(MgApi.isReady) {
-        MgApi.getAbilities().values.sortedBy { it.name.lowercase() }
-    }
-    var query by rememberSaveable { mutableStateOf("") }
-    val filtered = remember(abilities, query) {
-        if (query.isBlank()) {
-            abilities
-        } else {
-            val q = query.trim().lowercase()
-            abilities.filter { it.name.lowercase().contains(q) || it.id.lowercase().contains(q) }
-        }
-    }
-    val totalActive = alerts.items.count { (key, item) -> key.startsWith("ability:") && item.enabled }
-
-    AppCard(
-        title = "Ability Alerts",
-        collapsible = true,
-        expanded = expanded,
-        onExpandedChange = { onCollapseChange("ability_alerts", !it) },
-        trailing = {
-            if (totalActive > 0) {
-                Text(
-                    text = "$totalActive active",
-                    fontSize = 11.sp,
-                    color = Accent,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
-        },
-    ) {
-        Text(
-            "Get notified when one of your pets procs an ability.",
-            fontSize = 11.sp,
-            color = TextMuted,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (abilities.isEmpty()) {
-            Text(
-                if (MgApi.isReady) "No abilities." else "Loading...",
-                fontSize = 11.sp,
-                color = TextMuted,
-            )
-            return@AppCard
-        }
-
-        TextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text("Search ability...", fontSize = 12.sp) },
-            singleLine = true,
-            textStyle = TextStyle(fontSize = 12.sp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(AppTheme.shapes.smallShape),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = SurfaceDark,
-                unfocusedContainerColor = SurfaceDark,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = Accent,
-            ),
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        if (filtered.isEmpty()) {
-            Text("No matching abilities.", fontSize = 11.sp, color = TextMuted)
-        } else {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                filtered.forEach { entry ->
-                    val key = "ability:${entry.id}"
-                    val enabled = alerts.items[key]?.enabled == true
-                    AbilityAlertChip(
-                        name = entry.name,
-                        dotColor = abilityDotColor(entry.color),
-                        enabled = enabled,
-                        onClick = { onToggle(key, !enabled) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AbilityAlertChip(
-    name: String,
-    dotColor: Color,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val shape = AppTheme.shapes.smallShape
-    Row(
-        modifier = Modifier
-            .clip(shape)
-            .then(if (enabled) Modifier.border(1.5.dp, Accent, shape) else Modifier)
-            .background(if (enabled) Accent.copy(alpha = 0.12f) else SurfaceDark)
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(dotColor),
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = name,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (enabled) TextPrimary else TextSecondary,
-        )
-        if (enabled) {
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Active",
-                tint = Accent,
-                modifier = Modifier.size(12.dp),
-            )
-        }
-    }
-}
-
-/** Solid color for an ability's badge dot, parsed from its API color string. */
-@Composable
-@ReadOnlyComposable
-private fun abilityDotColor(raw: String?): Color {
-    if (raw == null) return TextMuted
-    val hex = Regex("#[0-9A-Fa-f]{6}").find(raw)?.value ?: return TextMuted
-    return try {
-        Color(android.graphics.Color.parseColor(hex))
-    } catch (_: Exception) {
-        TextMuted
-    }
-}
-
 // ── Alert item tile (tappable grid item) ──
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AlertItemTile(
+internal fun AlertItemTile(
     spriteUrl: String?,
     name: String,
     rarity: String?,
