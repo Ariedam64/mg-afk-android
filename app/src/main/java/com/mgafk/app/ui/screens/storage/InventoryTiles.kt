@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.storage
 
+import com.mgafk.app.ui.components.formatQuantity
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,7 +70,7 @@ internal fun QuantityTile(itemId: String, quantity: Int, apiReady: Boolean) {
         Spacer(modifier = Modifier.height(2.dp))
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Text(fmtQty(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent, lineHeight = 11.sp)
+        Text(formatQuantity(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent, lineHeight = 11.sp)
     }
 }
 

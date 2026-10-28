@@ -42,19 +42,8 @@ import com.mgafk.app.data.repository.RaritySort
 import com.mgafk.app.ui.components.GridOf
 import com.mgafk.app.ui.components.LockOverlay
 
-// ── Rarity colors ──
-
-
-
 private fun itemRarity(itemId: String): String? = MgApi.findItem(itemId)?.rarity
 private fun petRarity(species: String): String? = MgApi.findPet(species)?.rarity
-
-internal fun fmtQty(q: Int): String = when {
-    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0).removeSuffix(".0M") + "M".takeIf { "M" !in "%.1fM".format(q / 1_000_000.0) }.orEmpty()
-    q >= 10_000 -> "${q / 1000}K"
-    q >= 1_000 -> "%.1fK".format(q / 1000.0)
-    else -> "$q"
-}
 
 // ── Main ──
 

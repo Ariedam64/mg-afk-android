@@ -57,6 +57,13 @@ class FormatTest {
         assertEquals("12K", formatQuantity(12_345))
         assertEquals("999K", formatQuantity(999_999))
         assertEquals("%.1fM".format(1.2), formatQuantity(1_234_567))
-        assertEquals("%.1fM".format(2.0), formatQuantity(2_000_000))
+    }
+
+    @Test
+    fun `quantity drops a trailing zero decimal`() {
+        assertEquals("1K", formatQuantity(1_000))
+        assertEquals("1K", formatQuantity(1_049))
+        assertEquals("2M", formatQuantity(2_000_000))
+        assertEquals("2M", formatQuantity(2_040_000))
     }
 }

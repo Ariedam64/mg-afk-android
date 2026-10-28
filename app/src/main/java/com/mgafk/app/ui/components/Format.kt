@@ -41,10 +41,16 @@ fun formatTimeRemaining(endTime: Long, now: Long): String {
     }
 }
 
-/** Compact item count for a tile badge: "999", "1.5K", "12K", "1.2M". */
+/** Compact item count for a tile badge: "999", "1K", "1.5K", "12K", "2M", "1.2M". */
 fun formatQuantity(q: Int): String = when {
-    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0)
+    q >= 1_000_000 -> oneDecimal(q / 1_000_000.0) + "M"
     q >= 10_000 -> "${q / 1000}K"
-    q >= 1_000 -> "%.1fK".format(q / 1000.0)
+    q >= 1_000 -> oneDecimal(q / 1000.0) + "K"
     else -> "$q"
+}
+
+/** One decimal in the device locale, or none when it would read ".0". */
+private fun oneDecimal(value: Double): String {
+    val tenths = Math.round(value * 10)
+    return if (tenths % 10 == 0L) "${tenths / 10}" else "%.1f".format(tenths / 10.0)
 }
