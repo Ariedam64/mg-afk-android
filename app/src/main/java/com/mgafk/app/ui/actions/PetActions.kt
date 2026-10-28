@@ -441,11 +441,9 @@ class PetActions(private val ctx: SessionContext) {
         return session.petTeams.firstOrNull { PetTeams.isActive(it, activePetIds) }?.id
     }
 
-    /** The server sent the inventory: every pending trough and feed rollback is moot. */
-    internal fun onInventoryConfirmed() {
-        pendingTroughJobs.values.forEach { it.cancel() }
-        pendingTroughJobs.clear()
-        pendingFeedJobs.values.forEach { it.cancel() }
-        pendingFeedJobs.clear()
+    /** The server sent this session's inventory: its trough and feed rollbacks are moot. */
+    internal fun onInventoryConfirmed(sessionId: String) {
+        pendingTroughJobs.cancelForSession(sessionId)
+        pendingFeedJobs.cancelForSession(sessionId)
     }
 }

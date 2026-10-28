@@ -353,7 +353,7 @@ class ClientEventHandler(
                     }
                 }
                 // Server confirmed - cancel any pending rollbacks
-                petActions.onInventoryConfirmed()
+                petActions.onInventoryConfirmed(sessionId)
                 gardenActions.onInventoryConfirmed(sessionId)
 
                 // Detect newly hatched pet
