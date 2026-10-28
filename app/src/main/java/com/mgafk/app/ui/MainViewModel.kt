@@ -75,9 +75,6 @@ data class UiState(
     val visibleTips: Set<Tip> = emptySet(),
     val settings: AppSettings = AppSettings(),
     val serviceLogs: List<AfkService.ServiceLog> = emptyList(),
-    val currencyBalance: Long? = null,
-    val currencyBalanceLoading: Boolean = false,
-    val currencyBalanceError: String? = null,
     val publicRooms: List<AriesApi.PublicRoom> = emptyList(),
     val publicRoomsLoading: Boolean = false,
 ) {

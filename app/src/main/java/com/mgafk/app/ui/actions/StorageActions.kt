@@ -110,12 +110,6 @@ class StorageActions(private val ctx: SessionContext) {
         ctx.actions(sessionId)?.retrieveItemFromStorage(itemId = toolKey, storageId = "ToolShack")
     }
 
-    private fun totalInventoryCount(session: Session): Int {
-        val inv = session.inventory
-        return inv.seeds.size + inv.eggs.size + inv.produce.size + inv.plants.size +
-            inv.pets.size + inv.tools.size + inv.decors.size
-    }
-
     /**
      * Auto-consolidate inventory stacks into matching storage slots when the
      * corresponding setting is on AND the player owns the storage.

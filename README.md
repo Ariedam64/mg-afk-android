@@ -5,21 +5,20 @@ Magic Garden without launching the game. It keeps a session open to display
 pet ability logs, shop inventory, weather and more while minimizing battery
 usage. You can also interact directly from the app: plant seeds and grow
 eggs, water and harvest your garden, buy items from shops, chat with other
-players, feed and swap your pets, sell crops and pets, lock items, play
-casino mini-games, browse public rooms — and when you actually want to
-play, hit **Play in game** to launch the game in-app with the Gemini
-userscript automatically injected.
+players, feed and swap your pets, sell crops and pets, lock items and
+browse public rooms. When you actually want to play, hit **Play in game**
+to launch the game in-app with the Gemini userscript automatically injected.
 
 ## How it works
 
 MG AFK connects to the game's WebSocket endpoint and authenticates using
 your Discord account. Incoming data is parsed and displayed across dedicated
-sections (dashboard, pets, garden, shops, alerts, mini-games…).
+screens (home, pets, garden, shops, alerts...).
 
 ## Login
 
-Tap **Login with Discord** in the Dashboard. A browser window opens on
-Discord's OAuth page — log in and the app captures your session token
+Tap **Login with Discord** on Home. A browser window opens on
+Discord's OAuth page: log in and the app captures your session token
 automatically. The token is stored persistently so you only need to log in
 once.
 
@@ -27,31 +26,40 @@ To log out, tap **Logout**. This clears the stored token.
 
 ## Navigation
 
-Swipe from the left edge or tap the hamburger menu to open the navigation
-drawer. Sections:
+A floating bar at the bottom of the screen holds the five main screens.
+Everything else is one tap away under **More**.
 
-| Section     | Content                                                                         |
+| Screen      | Content                                                                         |
 |-------------|---------------------------------------------------------------------------------|
-| Dashboard   | Connection setup, live status, **Play in game** (in-app WebView with Gemini)    |
-| Room        | Chat with players in the room                                                   |
+| Home        | Account switcher, connection, weather, **Play in game**, pet hunger, shop restock timers |
+| Garden      | Plant seeds, water, harvest, pot plants, cleanse mutations, grow/hatch eggs, crystals |
 | Pets        | Active pets, pet teams, ability logs                                            |
-| Storage     | Seed silo, inventory, feeding trough, pet hutch (with Magic Dust upgrades), decor shed |
-| Garden      | Plant seeds, water, harvest, pot plants, cleanse mutations, grow/hatch eggs     |
 | Shops       | Buy seeds / tools / eggs / decors (single, bulk, hybrid modes)                  |
+| More        | Room, Storage, Social, Alerts, Customize, Settings, Report a bug, Debug          |
+| Room        | Players and chat in the room                                                    |
+| Storage     | Inventory, seed silo, decor shed, tool shack, pet hutch (with Magic Dust upgrades), feeding trough |
 | Social      | Browse and join public rooms                                                    |
-| Mini Games  | Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg Hatcher (casino wallet, deposit / withdraw) |
 | Alerts      | Per-section or per-item notification / alarm config (shops, weather, pets, trough) |
+| Customize   | Accent color, theme, corners, spacing, text size, Home cards                    |
 | Settings    | Background & battery, reconnection, purchase mode, storages auto-stock, alarm (sound, volume, schedule), developer options |
 | Debug       | WebSocket logs, service logs, alert testing                                     |
 
-Sections that require an active connection are greyed out when offline.
-The Debug section is hidden by default and can be enabled in Settings.
+Screens that require an active connection are dimmed while offline.
+The Debug screen is hidden by default and can be enabled in Settings.
+
+## Customize
+
+Under **More > Customize** you can pick an accent color (eight presets or
+any hue) and the whole app is tinted from it, not just the buttons. You can
+also choose a dark, light or system theme, sharp, soft or round corners,
+compact or comfortable spacing, the text size, and which cards show on Home.
+Changes apply instantly.
 
 ## Multiple accounts
 
-MG AFK supports multiple sessions. Use the tabs bar to add a new account (+)
-and switch between sessions. Each tab keeps its own login, room code, and
-reconnect settings.
+MG AFK supports multiple sessions. Tap the account name at the top of Home
+to switch accounts, add one, or remove the current one. Each account keeps
+its own login, room code, and reconnect settings.
 
 ## Background & lock screen
 
@@ -75,8 +83,8 @@ can flip it.
 ## Updates
 
 MG AFK checks GitHub Releases every hour and posts a system notification
-when a new version is available. A green **Update vX.Y.Z** button also
-appears at the top of the navigation drawer — tap it to download and
+when a new version is available. A **Download vX.Y.Z** button also
+appears at the bottom of the More screen: tap it to download and
 install the new APK directly from the app, no Play Store required.
 
 ## Pets
@@ -94,17 +102,17 @@ found 25552 coins", "Turtle reduced 1 plant growth by 4m 54s") alongside a
 colored ability badge matching the game UI.
 
 Every pet and crop sprite across the app renders with its current mutations
-baked in (Gold, Rainbow, Wet, Frozen, Ambershine, Dawnlit, etc.) — no more
-plain icons; you see at a glance what each pet or produce looks like.
+baked in (Gold, Rainbow, Wet, Frozen, Ambershine, Dawnlit, etc.), so no more
+plain icons: you see at a glance what each pet or produce looks like.
 
 ## Garden
 
-The Garden section mirrors your in-game plot. You can:
+The Garden screen mirrors your in-game plot. You can:
 - Plant seeds onto free tiles.
 - Water growing plants to speed up growth.
 - Harvest mature crops from single-slot and multi-slot plants.
 - Pot a grown plant back into your inventory using Planter Pots.
-- **Cleanse mutations** off a crop with a Crop Cleanser tool — available
+- **Cleanse mutations** off a crop with a Crop Cleanser tool, available
   on both single-crop and multi-slot plant dialogs (per-slot for the
   latter), disabled when the crop has no mutation or you have no Cleanser.
 - Grow and hatch eggs into pets.
@@ -115,7 +123,7 @@ position, sized by its `targetScale` and composited with its own mutations.
 
 ## Storage
 
-Inventory, feeding trough, seed silo, pet hutch, and decor shed — each
+Inventory, feeding trough, seed silo, pet hutch, and decor shed: each
 category shows its contents with rarity borders and quantity badges. The
 Celestial border is animated with the same blue → violet → gold gradient
 as the in-game badge.
@@ -137,7 +145,7 @@ as the in-game badge.
 - **Pet Hutch upgrades**: the hutch panel shows your dust balance, current
   capacity, and a one-tap **Upgrade** button when you have enough dust to
   unlock the next capacity tier (max level 10).
-- **Seed Silo upgrades**: same panel pattern in the Seed Silo card — 5
+- **Seed Silo upgrades**: same panel pattern in the Seed Silo card: 5
   tiers add +5 capacity each (25 → 50) for a Magic Dust cost per tier.
 - **Auto-stock**: in Settings → Storages, toggles **Auto-stock Seed Silo**
   / **Auto-stock Decor Shed** automatically move newly-acquired stackable
@@ -150,38 +158,22 @@ Three purchase modes are available (configurable in Settings):
 - **Hybrid**: tap to buy x1, long-press to buy all remaining stock.
 - **Single**: tap always buys x1.
 
-Items you already own at max — tools at their stack cap (Watering Can,
+Items you already own at max are greyed out with an **OWNED** or **MAX**
+badge so you don't waste taps: tools at their stack cap (Watering Can,
 Crop Cleanser at 99) and one-time-purchase items (Shovel, mutation
-potions, Seed Silo / Decor Shed / Pet Hutch you already placed) — are
-greyed out with an **OWNED** or **MAX** badge so you don't waste taps.
+potions, Seed Silo / Decor Shed / Pet Hutch you already placed).
 
 ## Social
 
 Browse public rooms fetched from the Aries Mod API. Each entry shows the
-host's avatar and the room's player count — tap **Join** to switch rooms
+host's avatar and the room's player count. Tap **Join** to switch rooms
 instantly.
-
-## Mini Games
-
-A full casino with a dedicated wallet:
-- **Deposit**: transfer in-game breads into the casino (amount capped by
-  game-side limits).
-- **Withdraw**: the casino sends breads back to your in-game account via
-  the `/doughnate` command. Since the game refuses a doughnate that would
-  push your balance past **2,000,000**, the app refreshes your in-game
-  balance on every withdraw action and caps the withdraw amount at
-  `min(casinoBalance, 2,000,000 − gameBalance)` so you never lose coins to
-  a failed transfer.
-
-Games available: **Coin Flip, Mines, Slots, Dice, Crash, Blackjack, Egg
-Hatcher**. The Egg Hatcher animates the hatch with per-pet mutation (Gold,
-Rainbow) composed directly on the sprite.
 
 ## Play in game
 
-When you actually want to play (not just AFK), tap **Play in game** on the
-Dashboard. The app opens a full-screen WebView pre-authenticated with your
-session cookie — no need to log back in.
+When you actually want to play (not just AFK), tap **Play in game** on
+Home. The app opens a full-screen WebView pre-authenticated with your
+session cookie, so no need to log back in.
 
 By default the latest [Gemini userscript](https://github.com/Ariedam64/Gemini)
 is downloaded from the GitHub releases and injected on every launch with
@@ -202,7 +194,7 @@ three modes:
 
 - **Notification**: silent system notification when the alert fires.
 - **Alarm**: full-screen alarm with looping sound and vibration until
-  dismissed — useful when you're not looking at the phone.
+  dismissed, useful when you're not looking at the phone.
 - **Custom**: pick the mode per item. Long-press a shop tile to flip it
   between notification and alarm; switch-based items (Weather, Pet, Trough)
   get an inline bell/alarm toggle next to their switch.
@@ -211,13 +203,13 @@ Alerts work in the background and when the phone is locked.
 
 **Alarm settings** (Settings → Alarm) let you choose a custom ringtone,
 adjust the alarm volume with a live test button, and define a silence
-schedule with day-of-week selection — alarms are downgraded to silent
+schedule with day-of-week selection: alarms are downgraded to silent
 notifications during the configured hours, perfect for muting at night
 or during recurring meetings.
 
 ## Sprite cache
 
-Sprites are loaded from the Magic Garden API and cached locally via Coil —
+Sprites are loaded from the Magic Garden API and cached locally via Coil:
 256 MB of persistent disk cache survives app restarts, so composed mutation
 sprites aren't re-fetched between sessions.
 

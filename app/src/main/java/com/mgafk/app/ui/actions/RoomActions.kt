@@ -29,7 +29,6 @@ class RoomActions(
 ) {
     // Populate bots, scoped per session. Outer map keyed by sessionId, inner by botId.
     private val botClients = mutableMapOf<String, MutableMap<String, BotClient>>()
-    private val botJobs = mutableMapOf<String, Job>()
 
     fun sendChat(sessionId: String, message: String) {
         val trimmed = message.trim()
