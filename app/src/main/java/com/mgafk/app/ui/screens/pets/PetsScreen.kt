@@ -35,22 +35,22 @@ fun PetsScreen(
             .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
         strengthBonus = Crystals.effects(session.crystals).strengthBonus,
         onFeedPet = { petItemId, cropItemIds ->
-            viewModel.feedPet(session.id, petItemId, cropItemIds)
+            viewModel.pets.feedPet(session.id, petItemId, cropItemIds)
         },
         onUsePotionOnPet = { petItemId ->
-            viewModel.useReplenishPotionOnPet(session.id, petItemId)
+            viewModel.pets.useReplenishPotionOnPet(session.id, petItemId)
         },
         onUseXpPotionOnPet = { petItemId ->
-            viewModel.useXpPotionOnPet(session.id, petItemId)
+            viewModel.pets.useXpPotionOnPet(session.id, petItemId)
         },
         onSwapPet = { activePetId, targetPetId, isInHutch ->
-            viewModel.swapPet(session.id, activePetId, targetPetId, isInHutch)
+            viewModel.pets.swapPet(session.id, activePetId, targetPetId, isInHutch)
         },
         onEquipPet = { targetPetId, isInHutch ->
-            viewModel.equipPet(session.id, targetPetId, isInHutch)
+            viewModel.pets.equipPet(session.id, targetPetId, isInHutch)
         },
         onUnequipPet = { petId ->
-            viewModel.unequipPet(session.id, petId)
+            viewModel.pets.unequipPet(session.id, petId)
         },
     )
     PetTeamCard(
@@ -59,17 +59,17 @@ fun PetsScreen(
         inventoryPets = session.inventory.pets,
         hutchPets = session.petHutch,
         activeTeamId = remember(session.pets, session.petTeams) {
-            viewModel.detectActiveTeamId(session.id)
+            viewModel.pets.detectActiveTeamId(session.id)
         },
         apiReady = state.apiReady,
         strengthBonus = Crystals.effects(session.crystals).strengthBonus,
-        onCreate = { name, petIds -> viewModel.createPetTeam(session.id, name, petIds) },
+        onCreate = { name, petIds -> viewModel.pets.createPetTeam(session.id, name, petIds) },
         onUpdate = { teamId, name, petIds ->
-            viewModel.updatePetTeam(session.id, teamId, name, petIds)
+            viewModel.pets.updatePetTeam(session.id, teamId, name, petIds)
         },
-        onDelete = { teamId -> viewModel.deletePetTeam(session.id, teamId) },
-        onReorder = { from, to -> viewModel.reorderPetTeams(session.id, from, to) },
-        onActivate = { team -> viewModel.activateTeam(session.id, team) },
+        onDelete = { teamId -> viewModel.pets.deletePetTeam(session.id, teamId) },
+        onReorder = { from, to -> viewModel.pets.reorderPetTeams(session.id, from, to) },
+        onActivate = { team -> viewModel.pets.activateTeam(session.id, team) },
         showTip = Tip.TEAM in state.visibleTips,
         onDismissTip = { viewModel.dismissTip(Tip.TEAM) },
     )

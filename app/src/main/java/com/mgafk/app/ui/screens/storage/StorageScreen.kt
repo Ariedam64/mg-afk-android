@@ -76,22 +76,22 @@ fun StorageScreen(
         toolShackToolIds = toolShackToolIds,
         onPlantSeed = { species ->
             if (plantOnGrid) manualPlantTarget = ManualPlantTarget.Seed(species)
-            else viewModel.plantSeed(session.id, species)
+            else viewModel.garden.plantSeed(session.id, species)
         },
-        onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
+        onGrowEgg = { eggId -> viewModel.garden.growEgg(session.id, eggId) },
         onPlantGardenPlant = { itemId ->
             if (plantOnGrid) manualPlantTarget = ManualPlantTarget.Pot(itemId)
-            else viewModel.plantGardenPlant(session.id, itemId)
+            else viewModel.garden.plantGardenPlant(session.id, itemId)
         },
-        onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-        onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
-        onSellAllUnlockedPets = { itemIds -> viewModel.sellAllUnlockedPets(session.id, itemIds) },
-        onSellAllCrops = { viewModel.sellAllCrops(session.id) },
-        onSellCrop = { itemId -> viewModel.sellSingleCrop(session.id, itemId) },
-        onMovePetToHutch = { petId -> viewModel.movePetToHutch(session.id, petId) },
-        onMoveSeedToSilo = { species -> viewModel.moveSeedToSilo(session.id, species) },
-        onMoveDecorToShed = { decorId -> viewModel.moveDecorToShed(session.id, decorId) },
-        onMoveToolToShack = { toolId -> viewModel.moveToolToShack(session.id, toolId) },
+        onToggleLock = { itemId -> viewModel.storage.toggleLockItem(session.id, itemId) },
+        onSellPet = { itemId -> viewModel.storage.sellPet(session.id, itemId) },
+        onSellAllUnlockedPets = { itemIds -> viewModel.storage.sellAllUnlockedPets(session.id, itemIds) },
+        onSellAllCrops = { viewModel.storage.sellAllCrops(session.id) },
+        onSellCrop = { itemId -> viewModel.storage.sellSingleCrop(session.id, itemId) },
+        onMovePetToHutch = { petId -> viewModel.storage.movePetToHutch(session.id, petId) },
+        onMoveSeedToSilo = { species -> viewModel.storage.moveSeedToSilo(session.id, species) },
+        onMoveDecorToShed = { decorId -> viewModel.storage.moveDecorToShed(session.id, decorId) },
+        onMoveToolToShack = { toolId -> viewModel.storage.moveToolToShack(session.id, toolId) },
         playerCount = session.players,
     )
 
@@ -111,7 +111,7 @@ fun StorageScreen(
                 // here and the server is what refuses one.
                 decorSpriteByTile = emptyMap(),
                 onPlantTile = { tileId ->
-                    viewModel.plantSeed(session.id, target.species, tileId)
+                    viewModel.garden.plantSeed(session.id, target.species, tileId)
                 },
                 onDismiss = { manualPlantTarget = null },
             )
@@ -128,7 +128,7 @@ fun StorageScreen(
                 gardenEggs = session.gardenEggs,
                 decorSpriteByTile = emptyMap(),
                 onPlantTile = { tileId ->
-                    viewModel.plantGardenPlant(session.id, target.itemId, tileId)
+                    viewModel.garden.plantGardenPlant(session.id, target.itemId, tileId)
                 },
                 onDismiss = { manualPlantTarget = null },
             )
@@ -141,9 +141,9 @@ fun StorageScreen(
             inventoryItemCount = totalInventoryItems,
             magicDust = session.magicDust,
             capacitySlots = siloMax,
-            onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-            onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
-            onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
+            onToggleLock = { itemId -> viewModel.storage.toggleLockItem(session.id, itemId) },
+            onMoveToInventory = { species -> viewModel.storage.moveSeedFromSilo(session.id, species) },
+            onUpgrade = { viewModel.storage.upgradeSeedSilo(session.id) })
     }
     if (hasDecorShed) {
         DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
@@ -151,9 +151,9 @@ fun StorageScreen(
             inventoryItemCount = totalInventoryItems,
             magicDust = session.magicDust,
             capacitySlots = decorShedMax,
-            onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-            onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) },
-            onUpgrade = { viewModel.upgradeDecorShed(session.id) })
+            onToggleLock = { itemId -> viewModel.storage.toggleLockItem(session.id, itemId) },
+            onMoveToInventory = { decorId -> viewModel.storage.moveDecorFromShed(session.id, decorId) },
+            onUpgrade = { viewModel.storage.upgradeDecorShed(session.id) })
     }
     if (hasToolShack) {
         ToolShackCard(tools = session.toolShack, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
@@ -161,19 +161,19 @@ fun StorageScreen(
             inventoryItemCount = totalInventoryItems,
             magicDust = session.magicDust,
             capacitySlots = toolShackMax,
-            onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-            onMoveToInventory = { toolId -> viewModel.moveToolFromShack(session.id, toolId) },
-            onUpgrade = { viewModel.upgradeToolShack(session.id) })
+            onToggleLock = { itemId -> viewModel.storage.toggleLockItem(session.id, itemId) },
+            onMoveToInventory = { toolId -> viewModel.storage.moveToolFromShack(session.id, toolId) },
+            onUpgrade = { viewModel.storage.upgradeToolShack(session.id) })
     }
     if (hasPetHutch) {
         PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
             magicDust = session.magicDust,
             capacitySlots = hutchMax,
             inventoryItemCount = totalInventoryItems,
-            onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-            onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
-            onUpgrade = { viewModel.upgradePetHutch(session.id) },
-            onMoveToInventory = { petId -> viewModel.movePetFromHutch(session.id, petId) })
+            onToggleLock = { itemId -> viewModel.storage.toggleLockItem(session.id, itemId) },
+            onSellPet = { itemId -> viewModel.storage.sellPet(session.id, itemId) },
+            onUpgrade = { viewModel.storage.upgradePetHutch(session.id) },
+            onMoveToInventory = { petId -> viewModel.storage.movePetFromHutch(session.id, petId) })
     }
     if (hasFeedingTrough) {
         FeedingTroughCard(
@@ -183,10 +183,10 @@ fun StorageScreen(
             showTip = Tip.TROUGH in state.visibleTips,
             onDismissTip = { viewModel.dismissTip(Tip.TROUGH) },
             onAddItems = { items ->
-                viewModel.putItemsInFeedingTrough(session.id, items)
+                viewModel.pets.putItemsInFeedingTrough(session.id, items)
             },
             onRemoveItem = { itemId ->
-                viewModel.removeItemFromFeedingTrough(session.id, itemId)
+                viewModel.pets.removeItemFromFeedingTrough(session.id, itemId)
             },
         )
     }

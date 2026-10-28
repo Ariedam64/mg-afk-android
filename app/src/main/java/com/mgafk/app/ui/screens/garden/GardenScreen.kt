@@ -23,10 +23,10 @@ fun GardenScreen(
         plants = session.garden,
         apiReady = state.apiReady,
         gardenEggs = session.gardenEggs,
-        onHarvest = { slot, slotIndex -> viewModel.harvestCrop(session.id, slot, slotIndex) },
-        onWater = { slot -> viewModel.waterPlant(session.id, slot) },
-        onPot = { slot -> viewModel.potPlant(session.id, slot) },
-        onCleanse = { tileId, slotIdx -> viewModel.cropCleanse(session.id, tileId, slotIdx) },
+        onHarvest = { slot, slotIndex -> viewModel.garden.harvestCrop(session.id, slot, slotIndex) },
+        onWater = { slot -> viewModel.garden.waterPlant(session.id, slot) },
+        onPot = { slot -> viewModel.garden.potPlant(session.id, slot) },
+        onCleanse = { tileId, slotIdx -> viewModel.garden.cropCleanse(session.id, tileId, slotIdx) },
         wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
         planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
         cropCleansers = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0,
@@ -34,11 +34,11 @@ fun GardenScreen(
     EggsCard(
         eggs = session.gardenEggs,
         apiReady = state.apiReady,
-        onHatch = { slot -> viewModel.hatchEgg(session.id, slot) },
+        onHatch = { slot -> viewModel.garden.hatchEgg(session.id, slot) },
         lastHatchedPet = session.lastHatchedPet,
         lastHatchedEggId = session.lastHatchedEggId,
         instantHatch = state.settings.instantHatch,
-        onDismissHatchedPet = { viewModel.clearHatchedPet(session.id) },
+        onDismissHatchedPet = { viewModel.garden.clearHatchedPet(session.id) },
     )
     CrystalsCard(
         crystals = session.crystals,
@@ -48,9 +48,9 @@ fun GardenScreen(
         occupiedTiles = session.occupiedTiles,
         apiReady = state.apiReady,
         onPlant = { type, ref ->
-            viewModel.placeCrystal(session.id, type, ref.tileType, ref.index)
+            viewModel.garden.placeCrystal(session.id, type, ref.tileType, ref.index)
         },
-        onFuse = { crystal -> viewModel.fuseCrystal(session.id, crystal) },
-        onPickup = { crystal -> viewModel.pickupCrystal(session.id, crystal) },
+        onFuse = { crystal -> viewModel.garden.fuseCrystal(session.id, crystal) },
+        onPickup = { crystal -> viewModel.garden.pickupCrystal(session.id, crystal) },
     )
 }
