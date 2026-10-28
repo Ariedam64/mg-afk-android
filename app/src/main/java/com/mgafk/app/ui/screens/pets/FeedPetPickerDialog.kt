@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,13 +41,6 @@ import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
@@ -75,14 +67,14 @@ internal fun FeedPetPickerDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
             Text(
                 "Feed ${pet.name.ifBlank { pet.species }}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             if (diet.isNotEmpty()) {
@@ -92,7 +84,7 @@ internal fun FeedPetPickerDialog(
                 Text(
                     "Diet: ${dietNames.joinToString(", ")}",
                     fontSize = 10.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -100,7 +92,7 @@ internal fun FeedPetPickerDialog(
             Text(
                 "${selected.size} selected",
                 fontSize = 11.sp,
-                color = if (selected.isNotEmpty()) StatusConnected else TextMuted,
+                color = if (selected.isNotEmpty()) AppTheme.colors.good else AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
             )
 
@@ -120,7 +112,7 @@ internal fun FeedPetPickerDialog(
                 Text(
                     "No compatible produce in inventory.",
                     fontSize = 12.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
             } else {
@@ -153,16 +145,16 @@ internal fun FeedPetPickerDialog(
             ) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
                 Button(
                     onClick = { onConfirm(selected.toList()) },
                     enabled = selected.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.accent),
                 ) {
-                    Text("Feed ${selected.size}", fontSize = 12.sp, color = OnAccent)
+                    Text("Feed ${selected.size}", fontSize = 12.sp, color = AppTheme.colors.onAccent)
                 }
             }
         }
@@ -193,8 +185,8 @@ private fun HungerPotionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-            .background(Accent.copy(alpha = 0.08f))
+            .border(1.5.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.accent.copy(alpha = 0.08f))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -202,10 +194,10 @@ private fun HungerPotionRow(
     ) {
         SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
+            Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
+            Text(stockText, fontSize = 10.sp, color = AppTheme.colors.textMuted, lineHeight = 13.sp)
         }
-        Text("Use", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Accent)
+        Text("Use", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent)
     }
 }
 
@@ -219,7 +211,7 @@ private fun FeedProduceTile(
     val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
     val color = rarityColor(entry?.rarity)
-    val borderColor = if (isSelected) StatusConnected else color.copy(alpha = 0.5f)
+    val borderColor = if (isSelected) AppTheme.colors.good else color.copy(alpha = 0.5f)
     val borderWidth = if (isSelected) 2.5.dp else 1.5.dp
     val price = remember(item.species, item.size, item.mutations, apiReady) {
         PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations)
@@ -230,14 +222,14 @@ private fun FeedProduceTile(
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
             .border(borderWidth, borderColor, AppTheme.shapes.smallShape)
-            .background(if (isSelected) StatusConnected.copy(0.1f) else SurfaceDark)
+            .background(if (isSelected) AppTheme.colors.good.copy(0.1f) else AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (price != null) {
             Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
@@ -249,7 +241,7 @@ private fun FeedProduceTile(
             }
         }
         if (isSelected) {
-            Text("\u2713", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusConnected, lineHeight = 12.sp)
+            Text("\u2713", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.good, lineHeight = 12.sp)
         }
     }
 }

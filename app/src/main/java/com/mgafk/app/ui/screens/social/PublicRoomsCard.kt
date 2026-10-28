@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.social
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,10 +44,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.mgafk.app.data.repository.AriesApi
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
 
 @Composable
 fun PublicRoomsCard(
@@ -99,21 +93,21 @@ fun PublicRoomsCard(
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),
                         strokeWidth = 1.5.dp,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                     )
                 } else {
                     Text(
                         "${sortedRooms.size} rooms",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Accent.copy(alpha = 0.7f),
+                        color = AppTheme.colors.accent.copy(alpha = 0.7f),
                     )
                 }
                 Text(
                     "Refresh",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (loading) Accent.copy(alpha = 0.4f) else Accent,
+                    color = if (loading) AppTheme.colors.accent.copy(alpha = 0.4f) else AppTheme.colors.accent,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .clickable { if (!loading) onRefresh() }
@@ -123,7 +117,7 @@ fun PublicRoomsCard(
         },
     ) {
         if (rooms.isEmpty() && !loading) {
-            Text("No public rooms available.", fontSize = 12.sp, color = TextMuted)
+            Text("No public rooms available.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             // Content with blur overlay when loading
             Box(
@@ -146,7 +140,7 @@ fun PublicRoomsCard(
                                     .fillMaxWidth()
                                     .height(56.dp)
                                     .clip(AppTheme.shapes.smallShape)
-                                    .background(SurfaceDark),
+                                    .background(AppTheme.colors.surfaceHigh),
                             )
                         }
                     } else {
@@ -174,7 +168,7 @@ fun PublicRoomsCard(
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
                             strokeWidth = 2.5.dp,
-                            color = Accent,
+                            color = AppTheme.colors.accent,
                         )
                     }
                 }
@@ -192,18 +186,18 @@ private fun RoomCard(
     onJoin: () -> Unit,
 ) {
     val countColor = when {
-        room.playersCount >= 5 -> StatusConnecting
-        room.playersCount >= 3 -> Accent
-        else -> Accent.copy(alpha = 0.7f)
+        room.playersCount >= 5 -> AppTheme.colors.warn
+        room.playersCount >= 3 -> AppTheme.colors.accent
+        else -> AppTheme.colors.accent.copy(alpha = 0.7f)
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .then(
-                if (isCurrent) Modifier.border(1.5.dp, StatusConnected.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                if (isCurrent) Modifier.border(1.5.dp, AppTheme.colors.good.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                 else Modifier
             )
             .padding(12.dp),
@@ -223,7 +217,7 @@ private fun RoomCard(
                             .size(32.dp)
                             .clip(CircleShape)
                             .aspectRatio(1f)
-                            .border(2.dp, SurfaceDark, CircleShape),
+                            .border(2.dp, AppTheme.colors.surfaceHigh, CircleShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
@@ -232,15 +226,15 @@ private fun RoomCard(
                             .size(32.dp)
                             .clip(CircleShape)
                             .aspectRatio(1f)
-                            .background(Accent.copy(alpha = 0.2f))
-                            .border(2.dp, SurfaceDark, CircleShape),
+                            .background(AppTheme.colors.accent.copy(alpha = 0.2f))
+                            .border(2.dp, AppTheme.colors.surfaceHigh, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             player.name.take(1).uppercase(),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Accent,
+                            color = AppTheme.colors.accent,
                         )
                     }
                 }
@@ -274,7 +268,7 @@ private fun RoomCard(
                             .clip(CircleShape)
                             .background(
                                 if (i < room.playersCount) countColor.copy(alpha = 0.8f)
-                                else TextMuted.copy(alpha = 0.2f)
+                                else AppTheme.colors.textMuted.copy(alpha = 0.2f)
                             ),
                     )
                 }
@@ -286,28 +280,28 @@ private fun RoomCard(
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
-                color = Accent,
+                color = AppTheme.colors.accent,
             )
         } else if (!isCurrent) {
             Button(
                 onClick = onJoin,
                 modifier = Modifier.height(36.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Accent,
+                    containerColor = AppTheme.colors.accent,
                 ),
                 shape = AppTheme.shapes.smallShape,
                 contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
-                Text("Join", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = OnAccent)
+                Text("Join", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onAccent)
             }
         } else {
             Box(
                 modifier = Modifier
                     .clip(AppTheme.shapes.smallShape)
-                    .background(StatusConnected.copy(alpha = 0.15f))
+                    .background(AppTheme.colors.good.copy(alpha = 0.15f))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
-                Text("Connected", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StatusConnected)
+                Text("Connected", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.good)
             }
         }
     }

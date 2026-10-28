@@ -42,13 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.Appearance
 import com.mgafk.app.data.repository.SessionRepository
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.BgDark
 import com.mgafk.app.ui.theme.MgAfkTheme
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
+import com.mgafk.app.ui.theme.AppTheme
 
 class AlarmActivity : ComponentActivity() {
 
@@ -126,7 +121,7 @@ private fun AlarmScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgDark)
+            .background(AppTheme.colors.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -137,7 +132,7 @@ private fun AlarmScreen(
             text = title,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = StatusError.copy(alpha = pulseAlpha),
+            color = AppTheme.colors.bad.copy(alpha = pulseAlpha),
             textAlign = TextAlign.Center,
         )
 
@@ -146,7 +141,7 @@ private fun AlarmScreen(
         Text(
             text = "${itemNames.size} item${if (itemNames.size > 1) "s" else ""} detected",
             fontSize = 14.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -166,7 +161,7 @@ private fun AlarmScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCard)
+                        .background(AppTheme.colors.surface)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -182,7 +177,7 @@ private fun AlarmScreen(
                         text = name,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary,
+                        color = AppTheme.colors.textPrimary,
                     )
                 }
             }
@@ -198,7 +193,7 @@ private fun AlarmScreen(
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = StatusError,
+                containerColor = AppTheme.colors.bad,
                 contentColor = Color.White,
             ),
         ) {

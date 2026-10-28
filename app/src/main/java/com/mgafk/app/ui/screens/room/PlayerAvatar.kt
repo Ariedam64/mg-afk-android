@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mgafk.app.data.model.PlayerSnapshot
-import com.mgafk.app.ui.theme.SurfaceBorder
+import com.mgafk.app.ui.theme.AppTheme
 
 /**
  * Composites the 4 cosmetic layers (Bottom, Mid, Top, Expression) into a circular avatar.
@@ -44,7 +44,7 @@ fun PlayerAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(SurfaceBorder),
+            .background(AppTheme.colors.surfaceHigh),
         contentAlignment = Alignment.Center,
     ) {
         layers.forEach { url ->

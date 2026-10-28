@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,12 +34,6 @@ import androidx.compose.ui.window.Dialog
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityColor
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -63,16 +56,16 @@ internal fun PetPickerDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
-            Text("Select a pet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("Select a pet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("${candidates.size} pets available", fontSize = 11.sp, color = TextMuted)
+            Text("${candidates.size} pets available", fontSize = 11.sp, color = AppTheme.colors.textMuted)
             Spacer(modifier = Modifier.height(12.dp))
 
             if (candidates.isEmpty()) {
-                Text("No pets available.", fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(vertical = 16.dp))
+                Text("No pets available.", fontSize = 12.sp, color = AppTheme.colors.textMuted, modifier = Modifier.padding(vertical = 16.dp))
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(TILE_MIN_WIDTH),
@@ -93,9 +86,9 @@ internal fun PetPickerDialog(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
             }
         }
@@ -122,7 +115,7 @@ private fun PickerPetTile(
             .height(72.dp)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
     ) {
         if (candidate.mutations.isNotEmpty()) {
@@ -135,7 +128,7 @@ private fun PickerPetTile(
         }
         if (ms > 0) {
             val strText = if (isMax) "$cs" else "$cs/$ms"
-            val strColor = if (isMax) StatusConnecting else Accent
+            val strColor = if (isMax) AppTheme.colors.warn else AppTheme.colors.accent
             Text(
                 strText, fontSize = 7.sp, fontWeight = FontWeight.Bold,
                 color = strColor, lineHeight = 9.sp,
@@ -148,7 +141,7 @@ private fun PickerPetTile(
         ) {
             SpriteImage(category = "pets", name = candidate.species, size = 28.dp, contentDescription = candidate.species, mutations = candidate.mutations)
             Text(
-                displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+                displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
             )
             if (candidate.abilities.isNotEmpty()) {

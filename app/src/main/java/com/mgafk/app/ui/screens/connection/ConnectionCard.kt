@@ -24,11 +24,6 @@ import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.StatusChip
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
 
 @Composable
 fun ConnectionCard(
@@ -42,10 +37,10 @@ fun ConnectionCard(
     modifier: Modifier = Modifier,
 ) {
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = SurfaceBorder,
-        focusedBorderColor = Accent,
-        cursorColor = Accent,
-        unfocusedLabelColor = TextMuted,
+        unfocusedBorderColor = AppTheme.colors.surfaceHigh,
+        focusedBorderColor = AppTheme.colors.accent,
+        cursorColor = AppTheme.colors.accent,
+        unfocusedLabelColor = AppTheme.colors.textMuted,
     )
 
     AppCard(
@@ -106,7 +101,7 @@ fun ConnectionCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = session.error,
-                color = StatusError,
+                color = AppTheme.colors.bad,
                 fontSize = 11.sp,
             )
         }
@@ -122,7 +117,7 @@ fun ConnectionCard(
             enabled = !session.busy && session.cookie.isNotBlank(),
             shape = AppTheme.shapes.smallShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (session.connected) StatusError else StatusConnected,
+                containerColor = if (session.connected) AppTheme.colors.bad else AppTheme.colors.good,
             ),
         ) {
             Text(

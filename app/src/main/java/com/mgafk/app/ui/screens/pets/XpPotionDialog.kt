@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,13 +27,6 @@ import com.mgafk.app.data.model.XP_POTION_XP
 import java.util.Locale
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 /**
  * Confirmation before spending an XP Potion. Unlike the Hunger Potion this is not a one-tap
@@ -67,19 +59,19 @@ internal fun XpPotionDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
             Text(
                 "Strengthen ${pet.name.ifBlank { pet.species }}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
             Text(
                 "One $name grants ${formatXp(XP_POTION_XP)} XP.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
             )
 
@@ -87,23 +79,23 @@ internal fun XpPotionDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(AppTheme.shapes.smallShape)
-                    .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.08f))
+                    .border(1.5.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.08f))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
+                    Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
+                    Text(stockText, fontSize = 10.sp, color = AppTheme.colors.textMuted, lineHeight = 13.sp)
                 }
                 if (maxStrength > 0) {
                     Text(
                         "STR $strength -> $projectedStrength",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (projectedStrength > strength) StatusConnected else TextMuted,
+                        color = if (projectedStrength > strength) AppTheme.colors.good else AppTheme.colors.textMuted,
                     )
                 }
             }
@@ -114,7 +106,7 @@ internal fun XpPotionDialog(
                 Text(
                     "This potion adds XP but not enough for the next STR point.",
                     fontSize = 10.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     lineHeight = 13.sp,
                     modifier = Modifier.padding(top = 8.dp),
                 )
@@ -126,15 +118,15 @@ internal fun XpPotionDialog(
             ) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
                 Button(
                     onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.accent),
                 ) {
-                    Text("Use", fontSize = 12.sp, color = OnAccent)
+                    Text("Use", fontSize = 12.sp, color = AppTheme.colors.onAccent)
                 }
             }
         }

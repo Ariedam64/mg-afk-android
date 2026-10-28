@@ -21,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mgafk.app.ui.theme.Accent
 
 /** A dismissable hint shown once at the top of a screen. */
 @Composable
@@ -32,8 +31,8 @@ fun SectionTip(visible: Boolean, text: String, onDismiss: () -> Unit) {
                 .fillMaxWidth()
                 .padding(bottom = 8.dp)
                 .clip(AppTheme.shapes.smallShape)
-                .background(Accent.copy(alpha = 0.1f))
-                .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                .background(AppTheme.colors.accent.copy(alpha = 0.1f))
+                .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                 .clickable { onDismiss() }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
@@ -41,11 +40,11 @@ fun SectionTip(visible: Boolean, text: String, onDismiss: () -> Unit) {
                 Text(
                     text,
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     lineHeight = 15.sp,
                     modifier = Modifier.weight(1f),
                 )
-                Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
+                Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent,
                     modifier = Modifier.clickable { onDismiss() })
             }
         }

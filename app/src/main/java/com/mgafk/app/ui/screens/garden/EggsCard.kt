@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.garden
 
-import com.mgafk.app.ui.theme.OnStatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -62,13 +60,6 @@ import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -109,14 +100,14 @@ fun EggsCard(
                 text = "${eggs.size} eggs",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = Accent.copy(alpha = 0.7f),
+                color = AppTheme.colors.accent.copy(alpha = 0.7f),
             )
         },
         collapsible = true,
         persistKey = "garden.eggs",
     ) {
         if (eggs.isEmpty()) {
-            Text("No eggs in the garden.", fontSize = 12.sp, color = TextMuted)
+            Text("No eggs in the garden.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val columns = ((maxWidth + TILE_SPACING) / (TILE_MIN_WIDTH + TILE_SPACING))
@@ -198,7 +189,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
             .aspectRatio(0.85f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
@@ -209,7 +200,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
             text = displayName,
             fontSize = 8.sp,
             fontWeight = FontWeight.Medium,
-            color = TextPrimary,
+            color = AppTheme.colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -233,7 +224,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
                         .fillMaxWidth(fraction)
                         .height(4.dp)
                         .background(
-                            if (isHatched) StatusConnected.copy(alpha = 0.8f)
+                            if (isHatched) AppTheme.colors.good.copy(alpha = 0.8f)
                             else color.copy(alpha = 0.8f)
                         ),
                 )
@@ -242,7 +233,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
             Text(
                 text = "${(fraction * 100).toInt()}%",
                 fontSize = 7.sp,
-                color = TextSecondary,
+                color = AppTheme.colors.textSecondary,
                 fontWeight = FontWeight.Medium,
                 lineHeight = 8.sp,
             )
@@ -254,7 +245,7 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
             text = timeText,
             fontSize = 8.sp,
             fontWeight = FontWeight.Bold,
-            color = if (isHatched) StatusConnected else Accent.copy(alpha = 0.8f),
+            color = if (isHatched) AppTheme.colors.good else AppTheme.colors.accent.copy(alpha = 0.8f),
             lineHeight = 10.sp,
         )
     }
@@ -284,7 +275,7 @@ private fun EggDetailDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -296,7 +287,7 @@ private fun EggDetailDialog(
                 displayName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             if (entry?.rarity != null) {
@@ -320,12 +311,12 @@ private fun EggDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Progress", fontSize = 12.sp, color = TextSecondary)
+                    Text("Progress", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     Text(
                         if (isMature) "Ready!" else "${(fraction * 100).toInt()}%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isMature) StatusConnected else TextPrimary,
+                        color = if (isMature) AppTheme.colors.good else AppTheme.colors.textPrimary,
                     )
                 }
 
@@ -342,7 +333,7 @@ private fun EggDetailDialog(
                             .fillMaxWidth(fraction)
                             .height(6.dp)
                             .background(
-                                if (isMature) StatusConnected.copy(alpha = 0.8f)
+                                if (isMature) AppTheme.colors.good.copy(alpha = 0.8f)
                                 else color.copy(alpha = 0.8f)
                             ),
                     )
@@ -356,8 +347,8 @@ private fun EggDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Time left", fontSize = 12.sp, color = TextSecondary)
-                            Text(remaining, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Text("Time left", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                            Text(remaining, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                         }
                     }
                 }
@@ -367,8 +358,8 @@ private fun EggDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Tile", fontSize = 12.sp, color = TextSecondary)
-                    Text("#${egg.tileId}", fontSize = 12.sp, color = TextPrimary)
+                    Text("Tile", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                    Text("#${egg.tileId}", fontSize = 12.sp, color = AppTheme.colors.textPrimary)
                 }
             }
 
@@ -491,7 +482,7 @@ private fun HatchedPetDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
             contentAlignment = Alignment.Center,
         ) {
             // White flash overlay
@@ -555,7 +546,7 @@ private fun HatchedPetDialog(
                         "Egg Hatched!",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = StatusConnected,
+                        color = AppTheme.colors.good,
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -564,7 +555,7 @@ private fun HatchedPetDialog(
                         name,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = AppTheme.colors.textPrimary,
                     )
 
                     if (petEntry?.rarity != null) {
@@ -588,12 +579,12 @@ private fun HatchedPetDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("STR", fontSize = 12.sp, color = TextSecondary)
+                            Text("STR", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Text(
                                 "$cs/$ms",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (cs >= ms) StatusConnecting else Accent,
+                                color = if (cs >= ms) AppTheme.colors.warn else AppTheme.colors.accent,
                             )
                         }
 
@@ -604,7 +595,7 @@ private fun HatchedPetDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                                Text("Mutations", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     sortMutations(pet.mutations).forEach { mutation ->
                                         SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
@@ -615,7 +606,7 @@ private fun HatchedPetDialog(
 
                         // Abilities chips
                         if (pet.abilities.isNotEmpty()) {
-                            Text("Abilities", fontSize = 12.sp, color = TextSecondary)
+                            Text("Abilities", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             @OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
@@ -647,14 +638,14 @@ private fun HatchedPetDialog(
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.good),
                         shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             "Nice!",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = OnStatusConnected,
+                            color = AppTheme.colors.onGood,
                         )
                     }
                 }

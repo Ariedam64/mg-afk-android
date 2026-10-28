@@ -40,11 +40,6 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 // ── Ability Alerts ──
 
@@ -80,7 +75,7 @@ internal fun AbilityAlertsCard(
                 Text(
                     text = "$totalActive active",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -90,7 +85,7 @@ internal fun AbilityAlertsCard(
         Text(
             "Get notified when one of your pets procs an ability.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -99,7 +94,7 @@ internal fun AbilityAlertsCard(
             Text(
                 if (MgApi.isReady) "No abilities." else "Loading...",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
             return@AppCard
         }
@@ -114,18 +109,18 @@ internal fun AbilityAlertsCard(
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = SurfaceDark,
-                unfocusedContainerColor = SurfaceDark,
+                focusedContainerColor = AppTheme.colors.surfaceHigh,
+                unfocusedContainerColor = AppTheme.colors.surfaceHigh,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = Accent,
+                cursorColor = AppTheme.colors.accent,
             ),
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         if (filtered.isEmpty()) {
-            Text("No matching abilities.", fontSize = 11.sp, color = TextMuted)
+            Text("No matching abilities.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         } else {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -158,8 +153,8 @@ private fun AbilityAlertChip(
     Row(
         modifier = Modifier
             .clip(shape)
-            .then(if (enabled) Modifier.border(1.5.dp, Accent, shape) else Modifier)
-            .background(if (enabled) Accent.copy(alpha = 0.12f) else SurfaceDark)
+            .then(if (enabled) Modifier.border(1.5.dp, AppTheme.colors.accent, shape) else Modifier)
+            .background(if (enabled) AppTheme.colors.accent.copy(alpha = 0.12f) else AppTheme.colors.surfaceHigh)
             .clickable { onClick() }
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -175,14 +170,14 @@ private fun AbilityAlertChip(
             text = name,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            color = if (enabled) TextPrimary else TextSecondary,
+            color = if (enabled) AppTheme.colors.textPrimary else AppTheme.colors.textSecondary,
         )
         if (enabled) {
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Active",
-                tint = Accent,
+                tint = AppTheme.colors.accent,
                 modifier = Modifier.size(12.dp),
             )
         }
@@ -193,11 +188,11 @@ private fun AbilityAlertChip(
 @Composable
 @ReadOnlyComposable
 private fun abilityDotColor(raw: String?): Color {
-    if (raw == null) return TextMuted
-    val hex = Regex("#[0-9A-Fa-f]{6}").find(raw)?.value ?: return TextMuted
+    if (raw == null) return AppTheme.colors.textMuted
+    val hex = Regex("#[0-9A-Fa-f]{6}").find(raw)?.value ?: return AppTheme.colors.textMuted
     return try {
         Color(android.graphics.Color.parseColor(hex))
     } catch (_: Exception) {
-        TextMuted
+        AppTheme.colors.textMuted
     }
 }

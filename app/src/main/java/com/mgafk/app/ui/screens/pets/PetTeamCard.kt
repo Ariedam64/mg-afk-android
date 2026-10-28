@@ -54,14 +54,6 @@ import com.mgafk.app.data.model.PetTeamEmblem
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import kotlin.math.roundToInt
 
 /** Unified pet candidate for the team editor picker. */
@@ -127,7 +119,7 @@ fun PetTeamCard(
         collapsible = true,
         persistKey = "pets.teams",
         trailing = {
-            Text("${teams.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+            Text("${teams.size}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
         },
     ) {
         // First-time tip
@@ -137,8 +129,8 @@ fun PetTeamCard(
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.1f))
+                    .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
@@ -146,7 +138,7 @@ fun PetTeamCard(
                     Text(
                         "Create pet teams and tap one to swap your active pets instantly.",
                         fontSize = 11.sp,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         lineHeight = 15.sp,
                         modifier = Modifier.weight(1f),
                     )
@@ -154,7 +146,7 @@ fun PetTeamCard(
                         "OK",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         modifier = Modifier.clickable { onDismissTip() },
                     )
                 }
@@ -242,7 +234,7 @@ fun PetTeamCard(
                     Text(
                         "Team limit reached (${PetTeam.MAX_TEAMS} of ${PetTeam.MAX_TEAMS})",
                         fontSize = 10.sp,
-                        color = TextMuted,
+                        color = AppTheme.colors.textMuted,
                     )
                 }
             }
@@ -279,14 +271,14 @@ private fun AddTeamTile(onClick: () -> Unit) {
             .fillMaxWidth()
             .height(56.dp)
             .clip(AppTheme.shapes.smallShape)
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
+            .border(1.5.dp, AppTheme.colors.accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Accent)
-        Text("New team", fontSize = 9.sp, color = TextMuted, lineHeight = 11.sp)
+        Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent)
+        Text("New team", fontSize = 9.sp, color = AppTheme.colors.textMuted, lineHeight = 11.sp)
     }
 }
 
@@ -305,7 +297,7 @@ private fun TeamRow(
     dragModifier: Modifier = Modifier,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    val borderColor = if (isActive) StatusConnected.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.10f)
+    val borderColor = if (isActive) AppTheme.colors.good.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.10f)
     // Pair each filled species with the pet id at the same slot index so we can look
     // up the pet's current mutations for composed sprite rendering.
     val filledSlots = remember(team.members) {
@@ -317,7 +309,7 @@ private fun TeamRow(
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
             .border(1.dp, borderColor, AppTheme.shapes.smallShape)
-            .background(if (isActive) StatusConnected.copy(alpha = 0.06f) else SurfaceBorder.copy(alpha = 0.08f))
+            .background(if (isActive) AppTheme.colors.good.copy(alpha = 0.06f) else AppTheme.colors.surfaceHigh.copy(alpha = 0.08f))
             .clickable { onActivate() }
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -327,7 +319,7 @@ private fun TeamRow(
         Icon(
             Icons.Outlined.DragIndicator,
             contentDescription = "Reorder",
-            tint = TextMuted,
+            tint = AppTheme.colors.textMuted,
             modifier = dragModifier.size(20.dp),
         )
 
@@ -353,7 +345,7 @@ private fun TeamRow(
             team.name.ifBlank { "Unnamed" },
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
+            color = AppTheme.colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
@@ -364,11 +356,11 @@ private fun TeamRow(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(Accent.copy(alpha = 0.10f))
+                .background(AppTheme.colors.accent.copy(alpha = 0.10f))
                 .clickable { onEdit() },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Edit, "Edit", tint = Accent, modifier = Modifier.size(15.dp))
+            Icon(Icons.Outlined.Edit, "Edit", tint = AppTheme.colors.accent, modifier = Modifier.size(15.dp))
         }
 
         // Delete button (right)
@@ -376,28 +368,28 @@ private fun TeamRow(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(StatusError.copy(alpha = 0.08f))
+                .background(AppTheme.colors.bad.copy(alpha = 0.08f))
                 .clickable { showDeleteConfirm = true },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.DeleteOutline, "Delete", tint = StatusError.copy(alpha = 0.7f), modifier = Modifier.size(15.dp))
+            Icon(Icons.Outlined.DeleteOutline, "Delete", tint = AppTheme.colors.bad.copy(alpha = 0.7f), modifier = Modifier.size(15.dp))
         }
     }
 
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            containerColor = SurfaceDark,
-            title = { Text("Delete team?", color = TextPrimary) },
-            text = { Text("Remove \"${team.name.ifBlank { "Unnamed" }}\" from your teams?", color = TextSecondary, fontSize = 13.sp) },
+            containerColor = AppTheme.colors.surfaceHigh,
+            title = { Text("Delete team?", color = AppTheme.colors.textPrimary) },
+            text = { Text("Remove \"${team.name.ifBlank { "Unnamed" }}\" from your teams?", color = AppTheme.colors.textSecondary, fontSize = 13.sp) },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text("Delete", color = StatusError)
+                    Text("Delete", color = AppTheme.colors.bad)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = AppTheme.colors.textSecondary)
                 }
             },
         )
@@ -418,7 +410,7 @@ private fun TeamEmblemBadge(emblem: PetTeamEmblem) {
         modifier = Modifier
             .size(size)
             .clip(RoundedCornerShape(5.dp))
-            .background(SurfaceBorder.copy(alpha = 0.25f)),
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.25f)),
         contentAlignment = Alignment.Center,
     ) {
         when (emblem) {
@@ -426,7 +418,7 @@ private fun TeamEmblemBadge(emblem: PetTeamEmblem) {
                 emblem.label,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextSecondary,
+                color = AppTheme.colors.textSecondary,
             )
             is PetTeamEmblem.Pet -> SpriteImage(
                 category = "pets",
@@ -444,7 +436,7 @@ private fun TeamEmblemBadge(emblem: PetTeamEmblem) {
                 emblem.icon.take(1).uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
             PetTeamEmblem.Unknown -> Unit
         }

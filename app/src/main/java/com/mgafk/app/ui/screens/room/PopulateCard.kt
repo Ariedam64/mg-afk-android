@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.room
 
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,13 +32,6 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.BotSnapshot
 import com.mgafk.app.data.model.BotStatus
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 private const val ROOM_MAX = 6
 
@@ -67,7 +59,7 @@ fun PopulateCard(
                 Text(
                     text = "$activeBots bot${if (activeBots > 1) "s" else ""}",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -81,7 +73,7 @@ fun PopulateCard(
                 "Only the host can populate the room."
             },
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -92,10 +84,10 @@ fun PopulateCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(if (canPopulate) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
+                .background(if (canPopulate) AppTheme.colors.accent.copy(alpha = 0.12f) else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                 .border(
                     1.dp,
-                    if (canPopulate) Accent.copy(alpha = 0.5f) else SurfaceBorder.copy(alpha = 0.4f),
+                    if (canPopulate) AppTheme.colors.accent.copy(alpha = 0.5f) else AppTheme.colors.surfaceHigh.copy(alpha = 0.4f),
                     AppTheme.shapes.smallShape,
                 )
                 .alpha(controlsAlpha)
@@ -111,7 +103,7 @@ fun PopulateCard(
                 },
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (canPopulate) Accent else TextMuted,
+                color = if (canPopulate) AppTheme.colors.accent else AppTheme.colors.textMuted,
             )
         }
 
@@ -130,8 +122,8 @@ fun PopulateCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(AppTheme.shapes.smallShape)
-                    .background(StatusError.copy(alpha = 0.1f))
-                    .border(1.dp, StatusError.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.bad.copy(alpha = 0.1f))
+                    .border(1.dp, AppTheme.colors.bad.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     .clickable { onDisconnectAll() }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
@@ -140,7 +132,7 @@ fun PopulateCard(
                     "Disconnect All",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = StatusError,
+                    color = AppTheme.colors.bad,
                 )
             }
         }
@@ -150,9 +142,9 @@ fun PopulateCard(
 @Composable
 private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
     val statusColor = when (bot.status) {
-        BotStatus.CONNECTED -> StatusConnected
-        BotStatus.CONNECTING, BotStatus.RECONNECTING -> Accent
-        BotStatus.DISCONNECTED -> StatusError
+        BotStatus.CONNECTED -> AppTheme.colors.good
+        BotStatus.CONNECTING, BotStatus.RECONNECTING -> AppTheme.colors.accent
+        BotStatus.DISCONNECTED -> AppTheme.colors.bad
     }
     val statusLabel = when (bot.status) {
         BotStatus.CONNECTING -> "Connecting…"
@@ -165,7 +157,7 @@ private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.2f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -177,8 +169,8 @@ private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(bot.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-            Text(statusLabel, fontSize = 10.sp, color = TextMuted)
+            Text(bot.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
+            Text(statusLabel, fontSize = 10.sp, color = AppTheme.colors.textMuted)
         }
         Box(
             modifier = Modifier
@@ -191,7 +183,7 @@ private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
             Icon(
                 imageVector = Icons.Outlined.Close,
                 contentDescription = "Disconnect ${bot.name}",
-                tint = TextSecondary,
+                tint = AppTheme.colors.textSecondary,
                 modifier = Modifier.size(16.dp),
             )
         }

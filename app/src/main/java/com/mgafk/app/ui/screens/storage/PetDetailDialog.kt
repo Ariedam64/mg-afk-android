@@ -1,9 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.OnStatusError
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,12 +36,6 @@ import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
@@ -87,11 +77,11 @@ internal fun PetDetailDialog(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
                 if (sellPrice != null) {
                     Row(
@@ -110,7 +100,7 @@ internal fun PetDetailDialog(
                 if (isLocked) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("This pet is locked and will be unlocked before selling.",
-                        fontSize = 10.sp, color = TextSecondary, textAlign = TextAlign.Center)
+                        fontSize = 10.sp, color = AppTheme.colors.textSecondary, textAlign = TextAlign.Center)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
@@ -120,10 +110,10 @@ internal fun PetDetailDialog(
                     Button(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                         shape = AppTheme.shapes.smallShape,
                     ) {
-                        Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                     }
                     Button(
                         onClick = {
@@ -131,10 +121,10 @@ internal fun PetDetailDialog(
                             onSell()
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                         shape = AppTheme.shapes.smallShape,
                     ) {
-                        Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
+                        Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad)
                     }
                 }
             }
@@ -146,7 +136,7 @@ internal fun PetDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -156,7 +146,7 @@ internal fun PetDetailDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
                 if (entry?.rarity != null) {
                     Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
@@ -170,12 +160,12 @@ internal fun PetDetailDialog(
                 ) {
                     if (ms > 0) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("STR", fontSize = 12.sp, color = TextSecondary)
+                            Text("STR", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             val isMax = cs >= ms
                             Text(
                                 if (isMax) "$cs" else "$cs/$ms",
                                 fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                color = if (isMax) StatusConnecting else Accent,
+                                color = if (isMax) AppTheme.colors.warn else AppTheme.colors.accent,
                             )
                         }
                     }
@@ -187,7 +177,7 @@ internal fun PetDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Value", fontSize = 12.sp, color = TextSecondary)
+                            Text("Value", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -209,7 +199,7 @@ internal fun PetDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                            Text("Dust", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -230,7 +220,7 @@ internal fun PetDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                            Text("Mutations", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 sortMutations(pet.mutations).forEach { mutation ->
                                     SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
@@ -244,7 +234,7 @@ internal fun PetDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("Abilities", fontSize = 12.sp, color = TextSecondary)
+                            Text("Abilities", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -280,15 +270,15 @@ internal fun PetDetailDialog(
                         enabled = canMoveToHutch,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Accent,
-                            disabledContainerColor = SurfaceDark,
+                            containerColor = AppTheme.colors.accent,
+                            disabledContainerColor = AppTheme.colors.surfaceHigh,
                         ),
                         shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToHutch) "Move to Pet Hutch" else "Pet Hutch full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToHutch) OnAccent else TextMuted,
+                            color = if (canMoveToHutch) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                         )
                     }
 
@@ -299,10 +289,10 @@ internal fun PetDetailDialog(
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
+                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad)
                 }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,

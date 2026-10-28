@@ -20,10 +20,8 @@ import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.data.repository.CoreShops
+import com.mgafk.app.ui.theme.AppTheme
 
 // ── Shop Alerts ──
 
@@ -50,7 +48,7 @@ internal fun ShopAlertsCard(
                 Text(
                     text = "$totalActive active",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -67,7 +65,7 @@ internal fun ShopAlertsCard(
             Text(
                 "Tap items to get notified when they appear in shop.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         }
 
@@ -114,18 +112,18 @@ internal fun ShopAlertsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                 if (activeCount > 0) {
-                    Text("$activeCount", fontSize = 11.sp, color = Accent)
+                    Text("$activeCount", fontSize = 11.sp, color = AppTheme.colors.accent)
                 }
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
             if (items.isEmpty() && !MgApi.isReady) {
-                Text("Loading...", fontSize = 11.sp, color = TextMuted)
+                Text("Loading...", fontSize = 11.sp, color = AppTheme.colors.textMuted)
             } else if (items.isEmpty()) {
-                Text("No items.", fontSize = 11.sp, color = TextMuted)
+                Text("No items.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
             } else {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),

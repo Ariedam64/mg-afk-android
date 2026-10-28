@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,16 +42,9 @@ import com.mgafk.app.data.model.InventoryCropsItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -82,22 +74,22 @@ fun FeedingTroughCard(
     var showPicker by remember { mutableStateOf(false) }
 
     AppCard(title = "Feeding Trough", collapsible = true, persistKey = "storage.feedingTrough", trailing = {
-        Text("${crops.size}/$FEEDING_TROUGH_MAX", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${crops.size}/$FEEDING_TROUGH_MAX", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         // First-time tip
         AnimatedVisibility(visible = showTip, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.1f))
+                    .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Tap a crop to remove it from the feeding trough.",
-                        fontSize = 11.sp, color = Accent, lineHeight = 15.sp, modifier = Modifier.weight(1f))
-                    Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
+                        fontSize = 11.sp, color = AppTheme.colors.accent, lineHeight = 15.sp, modifier = Modifier.weight(1f))
+                    Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent,
                         modifier = Modifier.clickable { onDismissTip() })
                 }
             }
@@ -105,7 +97,7 @@ fun FeedingTroughCard(
 
         val totalTiles = sorted.size + if (slotsLeft > 0 && availableProduce.isNotEmpty()) 1 else 0
         if (totalTiles == 0) {
-            Text("Empty", fontSize = 12.sp, color = TextMuted)
+            Text("Empty", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             GridOf(totalTiles) { i ->
                 if (i < sorted.size) {
@@ -138,14 +130,14 @@ private fun AddTile(onClick: () -> Unit) {
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(AppTheme.shapes.smallShape)
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
+            .border(1.5.dp, AppTheme.colors.accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("+", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Accent)
-        Text("Add", fontSize = 8.sp, color = TextMuted, lineHeight = 10.sp)
+        Text("+", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent)
+        Text("Add", fontSize = 8.sp, color = AppTheme.colors.textMuted, lineHeight = 10.sp)
     }
 }
 
@@ -164,24 +156,24 @@ private fun FeedingTroughPickerDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
             Text(
                 "Add to Feeding Trough",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
             Text(
                 "${selected.size}/$maxSelectable selected",
                 fontSize = 11.sp,
-                color = if (selected.size == maxSelectable) StatusConnected else TextMuted,
+                color = if (selected.size == maxSelectable) AppTheme.colors.good else AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
             )
 
             if (sorted.isEmpty()) {
-                Text("No produce in inventory.", fontSize = 12.sp, color = TextMuted)
+                Text("No produce in inventory.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(TILE_MIN_WIDTH),
@@ -217,9 +209,9 @@ private fun FeedingTroughPickerDialog(
             ) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
                 Button(
                     onClick = {
@@ -227,9 +219,9 @@ private fun FeedingTroughPickerDialog(
                         onConfirm(items)
                     },
                     enabled = selected.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.accent),
                 ) {
-                    Text("Add ${selected.size}", fontSize = 12.sp, color = OnAccent)
+                    Text("Add ${selected.size}", fontSize = 12.sp, color = AppTheme.colors.onAccent)
                 }
             }
         }
@@ -246,7 +238,7 @@ private fun PickerProduceTile(
     val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
     val name = entry?.name?.removeSuffix(" Seed") ?: item.species
     val color = rarityColor(entry?.rarity)
-    val borderColor = if (isSelected) StatusConnected else color.copy(alpha = 0.5f)
+    val borderColor = if (isSelected) AppTheme.colors.good else color.copy(alpha = 0.5f)
     val borderWidth = if (isSelected) 2.5.dp else 1.5.dp
     val price = remember(item.species, item.size, item.mutations, apiReady) {
         PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations)
@@ -258,14 +250,14 @@ private fun PickerProduceTile(
             .aspectRatio(if (item.mutations.isNotEmpty() || price != null) 0.8f else 1f)
             .clip(AppTheme.shapes.smallShape)
             .border(borderWidth, borderColor, AppTheme.shapes.smallShape)
-            .background(if (isSelected) StatusConnected.copy(0.1f) else SurfaceDark)
+            .background(if (isSelected) AppTheme.colors.good.copy(0.1f) else AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (price != null) {
             Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
@@ -277,7 +269,7 @@ private fun PickerProduceTile(
             }
         }
         if (isSelected) {
-            Text("✓", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusConnected, lineHeight = 12.sp)
+            Text("✓", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.good, lineHeight = 12.sp)
         }
     }
 }
@@ -292,14 +284,14 @@ private fun CropTile(item: InventoryCropsItem, apiReady: Boolean, onClick: () ->
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         if (item.mutations.isNotEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {

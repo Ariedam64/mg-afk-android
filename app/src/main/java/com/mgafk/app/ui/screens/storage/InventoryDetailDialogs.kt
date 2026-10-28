@@ -1,9 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.OnStatusError
-import com.mgafk.app.ui.theme.OnStatusConnected
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,13 +33,6 @@ import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
@@ -73,7 +62,7 @@ internal fun SeedDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -89,7 +78,7 @@ internal fun SeedDetailDialog(
                 name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             // Rarity
@@ -114,12 +103,12 @@ internal fun SeedDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Quantity", fontSize = 12.sp, color = TextSecondary)
+                    Text("Quantity", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     Text(
                         PriceCalculator.formatFull(seed.quantity.toLong()),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = AppTheme.colors.textPrimary,
                     )
                 }
 
@@ -128,12 +117,12 @@ internal fun SeedDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Free tiles", fontSize = 12.sp, color = TextSecondary)
+                    Text("Free tiles", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     Text(
                         "$freePlantTiles",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (canPlant) StatusConnected else StatusError,
+                        color = if (canPlant) AppTheme.colors.good else AppTheme.colors.bad,
                     )
                 }
             }
@@ -146,8 +135,8 @@ internal fun SeedDetailDialog(
                 enabled = canPlant,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StatusConnected,
-                    disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
+                    containerColor = AppTheme.colors.good,
+                    disabledContainerColor = AppTheme.colors.good.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
                 shape = AppTheme.shapes.smallShape,
@@ -156,7 +145,7 @@ internal fun SeedDetailDialog(
                     if (canPlant) "Plant Seed" else "No free tiles",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (canPlant) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
+                    color = if (canPlant) AppTheme.colors.onGood else AppTheme.colors.onGood.copy(alpha = 0.4f),
                 )
             }
 
@@ -169,15 +158,15 @@ internal fun SeedDetailDialog(
                     enabled = canMoveToSilo,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Accent,
-                        disabledContainerColor = SurfaceDark,
+                        containerColor = AppTheme.colors.accent,
+                        disabledContainerColor = AppTheme.colors.surfaceHigh,
                     ),
                     shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToSilo) "Move to Seed Silo" else "Seed Silo full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToSilo) OnAccent else TextMuted,
+                        color = if (canMoveToSilo) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                     )
                 }
             }
@@ -210,7 +199,7 @@ internal fun ItemDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -220,7 +209,7 @@ internal fun ItemDetailDialog(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
             if (entry?.rarity != null) {
                 Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
@@ -237,8 +226,8 @@ internal fun ItemDetailDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                        Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text("Quantity", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                        Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                     }
                 }
             }
@@ -283,11 +272,11 @@ internal fun ProduceDetailDialog(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
                 if (price != null) {
                     Row(
@@ -306,15 +295,15 @@ internal fun ProduceDetailDialog(
                     Button(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                         shape = AppTheme.shapes.smallShape,
-                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
+                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary) }
                     Button(
                         onClick = { showConfirm = false; onSell() },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                         shape = AppTheme.shapes.smallShape,
-                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
+                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad) }
                 }
             }
         }
@@ -325,7 +314,7 @@ internal fun ProduceDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -335,7 +324,7 @@ internal fun ProduceDetailDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
                 if (entry?.rarity != null) {
                     Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
@@ -349,8 +338,8 @@ internal fun ProduceDetailDialog(
                 ) {
                     // Size
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Size", fontSize = 12.sp, color = TextSecondary)
-                        Text("${pct.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text("Size", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                        Text("${pct.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                     }
                     Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(color.copy(0.15f))) {
                         Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(color.copy(0.8f)))
@@ -363,7 +352,7 @@ internal fun ProduceDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Sell price", fontSize = 12.sp, color = TextSecondary)
+                            Text("Sell price", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -381,7 +370,7 @@ internal fun ProduceDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                            Text("Mutations", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 sortMutations(item.mutations).forEach { mutation ->
                                     SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
@@ -397,10 +386,10 @@ internal fun ProduceDetailDialog(
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
+                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad)
                 }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,

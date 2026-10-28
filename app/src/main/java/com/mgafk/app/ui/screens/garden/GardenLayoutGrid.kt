@@ -26,10 +26,6 @@ import com.mgafk.app.ui.components.GRID_COLS
 import com.mgafk.app.ui.components.GRID_ROWS
 import com.mgafk.app.ui.components.VIEWPORT_HEIGHT
 import com.mgafk.app.ui.components.ZoomableGardenGrid
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
 
 /** Opacity applied to a plant that fails the active filters: dimmed rather than hidden, so the
  * garden keeps its shape and the matches still stand out. */
@@ -60,7 +56,7 @@ internal fun GardenLayoutGrid(
             .fillMaxWidth()
             .height(VIEWPORT_HEIGHT)
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark),
+            .background(AppTheme.colors.surfaceHigh),
     ) {
         for (row in 0 until GRID_ROWS) {
             Row(horizontalArrangement = Arrangement.spacedBy(CELL_SPACING)) {
@@ -97,14 +93,14 @@ private fun GardenGridCell(
         null -> null
     }
     val bgColor = when {
-        entry != null -> Accent.copy(alpha = if (dimmed) 0.08f else 0.22f)
-        occupantSprite != null -> StatusConnecting.copy(alpha = 0.25f)
-        else -> SurfaceDark
+        entry != null -> AppTheme.colors.accent.copy(alpha = if (dimmed) 0.08f else 0.22f)
+        occupantSprite != null -> AppTheme.colors.warn.copy(alpha = 0.25f)
+        else -> AppTheme.colors.surfaceHigh
     }
     val borderColor = when {
-        entry != null -> Accent.copy(alpha = if (dimmed) 0.25f else 0.7f)
-        occupantSprite != null -> StatusConnecting.copy(alpha = 0.5f)
-        else -> SurfaceBorder
+        entry != null -> AppTheme.colors.accent.copy(alpha = if (dimmed) 0.25f else 0.7f)
+        occupantSprite != null -> AppTheme.colors.warn.copy(alpha = 0.5f)
+        else -> AppTheme.colors.surfaceHigh
     }
 
     Box(

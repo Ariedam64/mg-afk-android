@@ -29,10 +29,6 @@ import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 
 // ── Weather Alerts ──
 
@@ -61,7 +57,7 @@ internal fun WeatherAlertsCard(
                 Text(
                     text = "$activeCount active",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -78,7 +74,7 @@ internal fun WeatherAlertsCard(
             Text(
                 "Get notified on weather changes.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         }
 
@@ -96,7 +92,7 @@ internal fun WeatherAlertsCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(AppTheme.shapes.smallShape)
-                        .background(SurfaceBorder.copy(alpha = 0.2f))
+                        .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -104,7 +100,7 @@ internal fun WeatherAlertsCard(
                         SpriteImage(url = spriteUrl, size = 20.dp, contentDescription = displayName)
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(displayName, fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                    Text(displayName, fontSize = 13.sp, color = AppTheme.colors.textPrimary, modifier = Modifier.weight(1f))
                     if (currentMode == AlertMode.CUSTOM && enabled) {
                         ItemModeToggle(currentMode = itemMode) { onItemModeChange(key, it) }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -113,7 +109,7 @@ internal fun WeatherAlertsCard(
                         Switch(
                             checked = enabled,
                             onCheckedChange = { onToggle(key, it) },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                            colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
                         )
                     }
                 }

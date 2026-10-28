@@ -27,10 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 
 // ── Pet Alerts ──
 
@@ -60,7 +56,7 @@ internal fun PetAlertsCard(
                 Text(
                     text = "1 active",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -80,7 +76,7 @@ internal fun PetAlertsCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -88,7 +84,7 @@ internal fun PetAlertsCard(
                 "Hunger < $threshold%",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
                 modifier = Modifier.weight(1f),
             )
             if (currentMode == AlertMode.CUSTOM && enabled) {
@@ -99,7 +95,7 @@ internal fun PetAlertsCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = { onToggle(HUNGER_KEY, it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                    colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
                 )
             }
         }
@@ -119,7 +115,7 @@ internal fun PetAlertsCard(
         Text(
             "Get notified when any pet drops below $threshold% hunger.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
     }
 }
@@ -150,7 +146,7 @@ internal fun FeedingTroughAlertsCard(
                 Text(
                     text = "1 active",
                     fontSize = 11.sp,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 6.dp),
                 )
@@ -170,7 +166,7 @@ internal fun FeedingTroughAlertsCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -178,7 +174,7 @@ internal fun FeedingTroughAlertsCard(
                 "Trough low (≤ 1 item)",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
                 modifier = Modifier.weight(1f),
             )
             if (currentMode == AlertMode.CUSTOM && enabled) {
@@ -189,7 +185,7 @@ internal fun FeedingTroughAlertsCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = { onToggle(TROUGH_KEY, it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                    colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
                 )
             }
         }
@@ -199,7 +195,7 @@ internal fun FeedingTroughAlertsCard(
         Text(
             "Get notified when the feeding trough has 1 or fewer items.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
     }
 }
@@ -219,16 +215,16 @@ private fun ThresholdPicker(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("$label:", fontSize = 11.sp, color = TextMuted)
+        Text("$label:", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         values.forEach { value ->
             val isSelected = value == selected
             Box(
                 modifier = Modifier
                     .clip(AppTheme.shapes.smallShape)
-                    .background(if (isSelected) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
+                    .background(if (isSelected) AppTheme.colors.accent.copy(alpha = 0.12f) else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                     .then(
-                        if (isSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                        if (isSelected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable { onSelect(value) }
                     .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -237,7 +233,7 @@ private fun ThresholdPicker(
                     text = format(value),
                     fontSize = 11.sp,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) Accent else TextMuted,
+                    color = if (isSelected) AppTheme.colors.accent else AppTheme.colors.textMuted,
                 )
             }
         }

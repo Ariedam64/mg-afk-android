@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.bugreport
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,14 +39,6 @@ import com.mgafk.app.data.repository.BugReportComment
 import com.mgafk.app.data.repository.MyBugReport
 import com.mgafk.app.data.repository.StoredBugReport
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 // ── My reports ──
 
@@ -64,7 +55,7 @@ internal fun MyReportsCard(
                 if (state.mineLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         strokeWidth = 2.dp,
                     )
                 } else {
@@ -72,7 +63,7 @@ internal fun MyReportsCard(
                         "Refresh",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .clickable { onRefresh() }
@@ -86,7 +77,7 @@ internal fun MyReportsCard(
             Text(
                 "Reports you send from this device show up here, with their status and the developer's answers.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 lineHeight = 15.sp,
             )
         } else {
@@ -102,13 +93,13 @@ private fun MyReportsList(
 ) {
     val error = state.mineError
     if (error != null) {
-        Text(error, fontSize = 11.sp, color = StatusError, lineHeight = 15.sp)
+        Text(error, fontSize = 11.sp, color = AppTheme.colors.bad, lineHeight = 15.sp)
         Spacer(modifier = Modifier.height(8.dp))
     }
 
     if (state.mineLoaded) {
         if (state.myReports.isEmpty()) {
-            Text("None of your reports was found on the server.", fontSize = 11.sp, color = TextMuted)
+            Text("None of your reports was found on the server.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         }
         state.myReports.forEachIndexed { index, report ->
             if (index > 0) ReportDivider()
@@ -133,19 +124,19 @@ private fun ReportDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(vertical = 8.dp),
         thickness = 1.dp,
-        color = SurfaceBorder,
+        color = AppTheme.colors.surfaceHigh,
     )
 }
 
 @Composable
 private fun StoredReportRow(report: StoredBugReport) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(report.ref.ifBlank { "BR-${report.id}" }, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+        Text(report.ref.ifBlank { "BR-${report.id}" }, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.accent)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             report.title,
             fontSize = 13.sp,
-            color = TextPrimary,
+            color = AppTheme.colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -174,11 +165,11 @@ private fun ReportItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(report.ref, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+                    Text(report.ref, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.accent)
                     val date = shortDate(report.createdAt)
                     if (date.isNotEmpty()) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(date, fontSize = 10.sp, color = TextMuted)
+                        Text(date, fontSize = 10.sp, color = AppTheme.colors.textMuted)
                     }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
@@ -186,7 +177,7 @@ private fun ReportItem(
                     report.title,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
+                    color = AppTheme.colors.textPrimary,
                     maxLines = if (expanded) 4 else 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -198,7 +189,7 @@ private fun ReportItem(
         val fixedIn = report.fixedInVersion
         if (!fixedIn.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Fixed in version $fixedIn", fontSize = 11.sp, color = StatusConnected)
+            Text("Fixed in version $fixedIn", fontSize = 11.sp, color = AppTheme.colors.good)
         }
 
         val publicReply = report.publicReply
@@ -208,13 +199,13 @@ private fun ReportItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.08f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.08f))
+                    .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .padding(10.dp),
             ) {
-                Text("Developer reply", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+                Text("Developer reply", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.accent)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(publicReply, fontSize = 12.sp, color = TextPrimary, lineHeight = 16.sp)
+                Text(publicReply, fontSize = 12.sp, color = AppTheme.colors.textPrimary, lineHeight = 16.sp)
             }
         }
 
@@ -223,7 +214,7 @@ private fun ReportItem(
             Text(
                 "The developer needs more information: answer with a comment below.",
                 fontSize = 11.sp,
-                color = StatusConnecting,
+                color = AppTheme.colors.warn,
                 lineHeight = 15.sp,
             )
         }
@@ -239,7 +230,7 @@ private fun ReportItem(
                         else -> "$count comments"
                     },
                     fontSize = 11.sp,
-                    color = TextSecondary,
+                    color = AppTheme.colors.textSecondary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .clickable { expanded = true }
@@ -261,7 +252,7 @@ private fun ReportItem(
                     onSend = { onComment(reply) { reply = "" } },
                 )
             } else {
-                Text("This report is closed to new comments.", fontSize = 11.sp, color = TextMuted)
+                Text("This report is closed to new comments.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
             }
         }
     }
@@ -278,7 +269,7 @@ private fun CommentInput(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text("Add a comment or answer a question", fontSize = 12.sp, color = TextMuted) },
+        placeholder = { Text("Add a comment or answer a question", fontSize = 12.sp, color = AppTheme.colors.textMuted) },
         enabled = !sending,
         minLines = 2,
         textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
@@ -290,7 +281,7 @@ private fun CommentInput(
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.weight(1f)) {
             if (error != null) {
-                Text(error, fontSize = 11.sp, color = StatusError, lineHeight = 15.sp)
+                Text(error, fontSize = 11.sp, color = AppTheme.colors.bad, lineHeight = 15.sp)
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
@@ -298,15 +289,15 @@ private fun CommentInput(
             onClick = onSend,
             enabled = !sending && value.isNotBlank(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Accent,
-                disabledContainerColor = Accent.copy(alpha = 0.25f),
+                containerColor = AppTheme.colors.accent,
+                disabledContainerColor = AppTheme.colors.accent.copy(alpha = 0.25f),
             ),
             shape = AppTheme.shapes.smallShape,
         ) {
             if (sending) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = OnAccent, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = AppTheme.colors.onAccent, strokeWidth = 2.dp)
             } else {
-                Text("Send", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = OnAccent)
+                Text("Send", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.onAccent)
             }
         }
     }
@@ -319,7 +310,7 @@ private fun CommentBubble(comment: BugReportComment) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(if (fromPlayer) SurfaceBorder.copy(alpha = 0.25f) else Accent.copy(alpha = 0.08f))
+            .background(if (fromPlayer) AppTheme.colors.surfaceHigh.copy(alpha = 0.25f) else AppTheme.colors.accent.copy(alpha = 0.08f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -327,16 +318,16 @@ private fun CommentBubble(comment: BugReportComment) {
                 if (fromPlayer) "You" else "Developer",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (fromPlayer) TextSecondary else Accent,
+                color = if (fromPlayer) AppTheme.colors.textSecondary else AppTheme.colors.accent,
             )
             val date = shortDate(comment.createdAt)
             if (date.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(date, fontSize = 10.sp, color = TextMuted)
+                Text(date, fontSize = 10.sp, color = AppTheme.colors.textMuted)
             }
         }
         Spacer(modifier = Modifier.height(2.dp))
-        Text(comment.message, fontSize = 12.sp, color = TextPrimary, lineHeight = 16.sp)
+        Text(comment.message, fontSize = 12.sp, color = AppTheme.colors.textPrimary, lineHeight = 16.sp)
     }
 }
 
@@ -358,10 +349,10 @@ private fun StatusBadge(status: String, label: String) {
 @Composable
 @ReadOnlyComposable
 private fun statusColor(status: String): Color = when (status) {
-    "fixed" -> StatusConnected
-    "needs_info" -> StatusConnecting
-    "new", "triaged", "confirmed", "in_progress" -> Accent
-    else -> TextMuted
+    "fixed" -> AppTheme.colors.good
+    "needs_info" -> AppTheme.colors.warn
+    "new", "triaged", "confirmed", "in_progress" -> AppTheme.colors.accent
+    else -> AppTheme.colors.textMuted
 }
 
 /** "2026-10-23" out of an ISO 8601 timestamp. */

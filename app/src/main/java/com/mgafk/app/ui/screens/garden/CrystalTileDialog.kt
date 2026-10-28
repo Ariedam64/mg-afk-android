@@ -23,9 +23,6 @@ import com.mgafk.app.data.model.GardenTileRef
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.GardenSurfacePicker
 import com.mgafk.app.ui.components.GardenTileState
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 
 /**
  * Where to plant a shard: the whole garden, boardwalk included, since a crystal goes on either
@@ -58,19 +55,19 @@ fun CrystalTileDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
             Text(
                 "Plant ${entry?.name ?: type.toolId}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
             Text(
                 "Pick an empty tile. The boardwalk works too.",
                 fontSize = 10.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
             )
 

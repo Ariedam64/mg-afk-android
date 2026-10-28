@@ -40,11 +40,6 @@ import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,12 +78,12 @@ fun AbilityLogsCard(
         trailing = {
             if (logs.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("${filteredLogs.size}/${logs.size}", fontSize = 11.sp, color = TextMuted)
+                    Text("${filteredLogs.size}/${logs.size}", fontSize = 11.sp, color = AppTheme.colors.textMuted)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Clear",
                         fontSize = 11.sp,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .clickable { onClear() }
@@ -99,7 +94,7 @@ fun AbilityLogsCard(
         },
     ) {
         if (logs.isEmpty()) {
-            Text("No abilities logged yet.", fontSize = 12.sp, color = TextMuted)
+            Text("No abilities logged yet.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             TextField(
                 value = query,
@@ -111,18 +106,18 @@ fun AbilityLogsCard(
                     .fillMaxWidth()
                     .clip(AppTheme.shapes.smallShape),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceDark,
-                    unfocusedContainerColor = SurfaceDark,
+                    focusedContainerColor = AppTheme.colors.surfaceHigh,
+                    unfocusedContainerColor = AppTheme.colors.surfaceHigh,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = Accent,
+                    cursorColor = AppTheme.colors.accent,
                 ),
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             if (filteredLogs.isEmpty()) {
-                Text("No matching logs.", fontSize = 12.sp, color = TextMuted)
+                Text("No matching logs.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
             } else {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp),
@@ -149,7 +144,7 @@ private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Bool
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.3f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -188,7 +183,7 @@ private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Bool
                 Text(
                     text = dateFormat.format(Date(log.timestamp)),
                     fontSize = 10.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                 )
             }
 

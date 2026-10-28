@@ -20,18 +20,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.SessionStatus
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.StatusIdle
 
 @Composable
 fun StatusChip(status: SessionStatus, modifier: Modifier = Modifier) {
     val (targetColor, label) = when (status) {
-        SessionStatus.CONNECTED -> StatusConnected to "Connected"
-        SessionStatus.CONNECTING -> StatusConnecting to "Connecting"
-        SessionStatus.ERROR -> StatusError to "Error"
-        SessionStatus.IDLE -> StatusIdle to "Offline"
+        SessionStatus.CONNECTED -> AppTheme.colors.good to "Connected"
+        SessionStatus.CONNECTING -> AppTheme.colors.warn to "Connecting"
+        SessionStatus.ERROR -> AppTheme.colors.bad to "Error"
+        SessionStatus.IDLE -> AppTheme.colors.idle to "Offline"
     }
     val color by animateColorAsState(
         targetValue = targetColor,

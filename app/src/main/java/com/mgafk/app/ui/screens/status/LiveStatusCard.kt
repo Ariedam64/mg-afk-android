@@ -20,9 +20,8 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.websocket.Constants
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
+import com.mgafk.app.ui.theme.AppTheme
 
 @Composable
 fun LiveStatusCard(session: Session, modifier: Modifier = Modifier) {
@@ -70,7 +69,7 @@ private fun StatusRow(label: String, value: String, mono: Boolean = false) {
         Text(
             text = value,
             fontSize = 12.sp,
-            color = if (mono) Accent else TextPrimary,
+            color = if (mono) AppTheme.colors.accent else AppTheme.colors.textPrimary,
             fontFamily = if (mono) FontFamily.Monospace else FontFamily.Default,
         )
     }

@@ -54,11 +54,6 @@ import com.mgafk.app.data.model.isSilentAt
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 // ── Alarm ──
 
@@ -114,14 +109,14 @@ internal fun AlarmCard(
 
     AppCard(title = "Alarm", collapsible = true, persistKey = "settings_alarm") {
         // ── Sound subsection ──
-        Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Text("Sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             "Sound played when an alert fires in Alarm mode.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -130,7 +125,7 @@ internal fun AlarmCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                 .clickable {
                     val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                         putExtra(
@@ -158,9 +153,9 @@ internal fun AlarmCard(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Tap to change", fontSize = 12.sp, color = TextMuted)
+            Text("Tap to change", fontSize = 12.sp, color = AppTheme.colors.textMuted)
             Spacer(modifier = Modifier.weight(1f))
-            Text(currentName, fontSize = 12.sp, color = TextSecondary)
+            Text(currentName, fontSize = 12.sp, color = AppTheme.colors.textSecondary)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -170,12 +165,12 @@ internal fun AlarmCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Volume", fontSize = 12.sp, color = TextPrimary)
+            Text("Volume", fontSize = 12.sp, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "${(settings.alarmVolume * 100).toInt()}%",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         }
 
@@ -184,9 +179,9 @@ internal fun AlarmCard(
             onValueChange = { onUpdate(settings.copy(alarmVolume = it.coerceIn(0f, 1f))) },
             valueRange = 0f..1f,
             colors = SliderDefaults.colors(
-                thumbColor = Accent,
-                activeTrackColor = Accent,
-                inactiveTrackColor = SurfaceBorder.copy(alpha = 0.5f),
+                thumbColor = AppTheme.colors.accent,
+                activeTrackColor = AppTheme.colors.accent,
+                inactiveTrackColor = AppTheme.colors.surfaceHigh.copy(alpha = 0.5f),
             ),
         )
 
@@ -194,13 +189,13 @@ internal fun AlarmCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(Accent.copy(alpha = 0.12f))
-                .border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                .background(AppTheme.colors.accent.copy(alpha = 0.12f))
+                .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
                 .clickable { onPreviewAlarm() }
                 .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text("Test sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+            Text("Test sound", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.accent)
         }
 
         // Stop preview when this composable leaves composition (e.g., user navigates away).
@@ -211,7 +206,7 @@ internal fun AlarmCard(
         Spacer(modifier = Modifier.height(20.dp))
 
         // ── Schedule subsection ──
-        Text("Schedule", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Text("Schedule", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -219,7 +214,7 @@ internal fun AlarmCard(
             "Mute alarms during these hours. Notifications still arrive silently. " +
                 "Add a window per routine - work nights and weekend lie-ins need different hours.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
             lineHeight = 15.sp,
         )
 
@@ -229,7 +224,7 @@ internal fun AlarmCard(
             Text(
                 "No mute window yet. Alarms always ring.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         }
 
@@ -253,8 +248,8 @@ internal fun AlarmCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(Accent.copy(alpha = 0.12f))
-                .border(1.dp, Accent.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                .background(AppTheme.colors.accent.copy(alpha = 0.12f))
+                .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                 .clickable {
                     val next = AlarmSchedule(
                         label = "Schedule ${schedules.size + 1}",
@@ -266,7 +261,7 @@ internal fun AlarmCard(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("+ Add window", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Accent)
+            Text("+ Add window", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.accent)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -274,7 +269,7 @@ internal fun AlarmCard(
         Text(
             text = if (silencedNow) "Silenced now: yes" else "Silenced now: no",
             fontSize = 11.sp,
-            color = if (silencedNow) Accent else TextMuted,
+            color = if (silencedNow) AppTheme.colors.accent else AppTheme.colors.textMuted,
         )
     }
 }
@@ -296,7 +291,7 @@ private fun AlarmScheduleBlock(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+            .border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(12.dp),
     ) {
         Row(
@@ -307,27 +302,27 @@ private fun AlarmScheduleBlock(
             OutlinedTextField(
                 value = schedule.label,
                 onValueChange = { onChange(schedule.copy(label = it)) },
-                placeholder = { Text(fallbackLabel, fontSize = 12.sp, color = TextMuted) },
+                placeholder = { Text(fallbackLabel, fontSize = 12.sp, color = AppTheme.colors.textMuted) },
                 singleLine = true,
                 textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Accent,
-                    unfocusedBorderColor = SurfaceBorder,
-                    cursorColor = Accent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
+                    focusedBorderColor = AppTheme.colors.accent,
+                    unfocusedBorderColor = AppTheme.colors.surfaceHigh,
+                    cursorColor = AppTheme.colors.accent,
+                    focusedTextColor = AppTheme.colors.textPrimary,
+                    unfocusedTextColor = AppTheme.colors.textPrimary,
                 ),
                 modifier = Modifier.weight(1f),
             )
             Switch(
                 checked = schedule.enabled,
                 onCheckedChange = { onChange(schedule.copy(enabled = it)) },
-                colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
             )
             Icon(
                 imageVector = Icons.Outlined.Delete,
                 contentDescription = "Delete window",
-                tint = TextMuted,
+                tint = AppTheme.colors.textMuted,
                 modifier = Modifier
                     .size(32.dp)
                     .clip(AppTheme.shapes.smallShape)
@@ -366,7 +361,7 @@ private fun AlarmScheduleBlock(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("Active days", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        Text("Active days", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -382,13 +377,13 @@ private fun AlarmScheduleBlock(
                         .heightIn(min = 32.dp)
                         .clip(AppTheme.shapes.smallShape)
                         .background(
-                            if (isSelected) Accent.copy(alpha = 0.12f * controlsAlpha)
-                            else SurfaceBorder.copy(alpha = 0.2f * controlsAlpha)
+                            if (isSelected) AppTheme.colors.accent.copy(alpha = 0.12f * controlsAlpha)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f * controlsAlpha)
                         )
                         .border(
                             1.dp,
-                            if (isSelected) Accent.copy(alpha = 0.5f * controlsAlpha)
-                            else SurfaceBorder.copy(alpha = 0.4f * controlsAlpha),
+                            if (isSelected) AppTheme.colors.accent.copy(alpha = 0.5f * controlsAlpha)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.4f * controlsAlpha),
                             AppTheme.shapes.smallShape,
                         )
                         .clickable(enabled = schedule.enabled) {
@@ -403,8 +398,8 @@ private fun AlarmScheduleBlock(
                         text = DAY_LABELS[index],
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) Accent.copy(alpha = controlsAlpha)
-                                else TextSecondary.copy(alpha = controlsAlpha),
+                        color = if (isSelected) AppTheme.colors.accent.copy(alpha = controlsAlpha)
+                                else AppTheme.colors.textSecondary.copy(alpha = controlsAlpha),
                     )
                 }
             }
@@ -412,7 +407,7 @@ private fun AlarmScheduleBlock(
 
         if (mutedNow) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Muting now", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent)
+            Text("Muting now", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent)
         }
     }
 }
@@ -435,7 +430,7 @@ private fun TimePickerBox(
     Row(
         modifier = modifier
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.2f * alpha))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f * alpha))
             .clickable(enabled = enabled) {
                 TimePickerDialog(
                     context,
@@ -446,16 +441,16 @@ private fun TimePickerBox(
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, fontSize = 12.sp, color = TextMuted.copy(alpha = alpha))
+        Text(label, fontSize = 12.sp, color = AppTheme.colors.textMuted.copy(alpha = alpha))
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             timeText,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary.copy(alpha = alpha),
+            color = AppTheme.colors.textPrimary.copy(alpha = alpha),
         )
         if (suffix != null) {
-            Text(suffix, fontSize = 10.sp, color = TextMuted.copy(alpha = alpha))
+            Text(suffix, fontSize = 10.sp, color = AppTheme.colors.textMuted.copy(alpha = alpha))
         }
     }
 }

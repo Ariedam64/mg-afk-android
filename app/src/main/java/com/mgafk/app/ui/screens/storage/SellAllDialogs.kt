@@ -1,8 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnStatusError
-import com.mgafk.app.ui.theme.OnStatusConnected
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -37,11 +34,6 @@ import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
@@ -77,13 +69,13 @@ internal fun SellAllPetsDialog(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Pets Sold!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = StatusConnected)
+                Text("Pets Sold!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.good)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("${pets.size} pets", fontSize = 12.sp, color = TextSecondary)
+                Text("${pets.size} pets", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -116,10 +108,10 @@ internal fun SellAllPetsDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.good),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusConnected)
+                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onGood)
                 }
             }
         }
@@ -130,7 +122,7 @@ internal fun SellAllPetsDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -138,10 +130,10 @@ internal fun SellAllPetsDialog(
                 "Sell All Unlocked Pets",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text("${pets.size} pets", fontSize = 12.sp, color = TextSecondary)
+            Text("${pets.size} pets", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -165,7 +157,7 @@ internal fun SellAllPetsDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -186,7 +178,7 @@ internal fun SellAllPetsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                    Text("Dust", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -211,10 +203,10 @@ internal fun SellAllPetsDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 }
                 Button(
                     onClick = {
@@ -222,10 +214,10 @@ internal fun SellAllPetsDialog(
                         confirmed = true
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
+                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad)
                 }
             }
         }
@@ -260,13 +252,13 @@ internal fun SellAllCropsDialog(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Crops Sold!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = StatusConnected)
+                Text("Crops Sold!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.good)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("${produce.size} crops", fontSize = 12.sp, color = TextSecondary)
+                Text("${produce.size} crops", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -284,10 +276,10 @@ internal fun SellAllCropsDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.good),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusConnected)
+                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onGood)
                 }
             }
         }
@@ -298,23 +290,23 @@ internal fun SellAllCropsDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Sell All Crops", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("Sell All Crops", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("${produce.size} crops", fontSize = 12.sp, color = TextSecondary)
+                Text("${produce.size} crops", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 if (friendsBonus > 1.0) {
                     Text(
                         "x%.1f friends".format(friendsBonus),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = StatusConnected,
+                        color = AppTheme.colors.good,
                     )
                 }
             }
@@ -336,7 +328,7 @@ internal fun SellAllCropsDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(AppTheme.shapes.smallShape)
-                            .background(SurfaceDark)
+                            .background(AppTheme.colors.surfaceHigh)
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -347,7 +339,7 @@ internal fun SellAllCropsDialog(
                             modifier = Modifier.weight(1f),
                         ) {
                             SpriteImage(category = "plants", name = item.species, size = 22.dp, contentDescription = name, mutations = item.mutations)
-                            Text(name, fontSize = 10.sp, color = TextPrimary, maxLines = 1,
+                            Text(name, fontSize = 10.sp, color = AppTheme.colors.textPrimary, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis)
                             if (item.mutations.isNotEmpty()) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -383,7 +375,7 @@ internal fun SellAllCropsDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -407,10 +399,10 @@ internal fun SellAllCropsDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 }
                 Button(
                     onClick = {
@@ -418,10 +410,10 @@ internal fun SellAllCropsDialog(
                         confirmed = true
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                     shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
+                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad)
                 }
             }
         }

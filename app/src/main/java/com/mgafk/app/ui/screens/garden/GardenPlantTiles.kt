@@ -32,10 +32,6 @@ import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -53,7 +49,7 @@ internal fun GardenPlantTile(rp: ResolvedPlant) {
             .aspectRatio(0.85f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rp.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
@@ -70,7 +66,7 @@ internal fun GardenPlantTile(rp: ResolvedPlant) {
             text = rp.displayName,
             fontSize = 8.sp,
             fontWeight = FontWeight.Medium,
-            color = TextPrimary,
+            color = AppTheme.colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -114,7 +110,7 @@ internal fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
             .aspectRatio(if (entry.totalValue > 0) 0.85f else 1f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -125,7 +121,7 @@ internal fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
             entry.displayName,
             fontSize = 8.sp,
             fontWeight = FontWeight.Medium,
-            color = TextPrimary,
+            color = AppTheme.colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -135,7 +131,7 @@ internal fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
             "${entry.crops.size} slots",
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = Accent,
+            color = AppTheme.colors.accent,
             lineHeight = 11.sp,
         )
         if (entry.totalValue > 0) {
@@ -179,7 +175,7 @@ internal fun SizeBar(percent: Double, color: Color, showLabel: Boolean = true) {
             Text(
                 text = "${percent.toInt()}%",
                 fontSize = 7.sp,
-                color = TextSecondary,
+                color = AppTheme.colors.textSecondary,
                 fontWeight = FontWeight.Medium,
                 lineHeight = 8.sp,
             )

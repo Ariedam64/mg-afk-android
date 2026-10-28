@@ -42,11 +42,6 @@ import com.mgafk.app.data.model.AppSettings
 import com.mgafk.app.data.model.WakeLockMode
 import kotlinx.coroutines.delay
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 // ── Background & Battery ──
 
@@ -90,12 +85,12 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(SurfaceBorder.copy(alpha = 0.2f))
+                .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                Text("Wi-Fi Lock", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                Text("Wi-Fi Lock", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoButton(
                     title = "Wi-Fi Lock",
@@ -109,7 +104,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
             Switch(
                 checked = settings.wifiLockEnabled,
                 onCheckedChange = { onUpdate(settings.copy(wifiLockEnabled = it)) },
-                colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
             )
         }
 
@@ -117,7 +112,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
 
         // ── CPU Wake Lock mode ──
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("CPU Wake Lock", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+            Text("CPU Wake Lock", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.width(4.dp))
             InfoButton(
                 title = "CPU Wake Lock",
@@ -149,12 +144,12 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                         .fillMaxHeight()
                         .clip(AppTheme.shapes.smallShape)
                         .background(
-                            if (selected) Accent.copy(alpha = 0.12f)
-                            else SurfaceBorder.copy(alpha = 0.2f)
+                            if (selected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                            if (selected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(wakeLockMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -164,7 +159,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                         text = label,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) Accent else TextSecondary,
+                        color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                     )
                 }
             }
@@ -177,7 +172,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
             WakeLockMode.SMART -> "CPU lock activates automatically after the phone is locked."
             WakeLockMode.ALWAYS -> "CPU stays awake at all times. Uses more battery."
         }
-        Text(hint, fontSize = 10.sp, color = TextMuted)
+        Text(hint, fontSize = 10.sp, color = AppTheme.colors.textMuted)
 
         // Smart delay picker
         if (settings.wakeLockMode == WakeLockMode.SMART) {
@@ -188,19 +183,19 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("Activate after", fontSize = 12.sp, color = TextPrimary)
+                Text("Activate after", fontSize = 12.sp, color = AppTheme.colors.textPrimary)
                 SMART_DELAY_OPTIONS.forEach { option ->
                     val selected = option.value == settings.wakeLockAutoDelayMin
                     Box(
                         modifier = Modifier
                             .clip(AppTheme.shapes.smallShape)
                             .background(
-                                if (selected) Accent.copy(alpha = 0.12f)
-                                else SurfaceBorder.copy(alpha = 0.2f)
+                                if (selected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                                else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                             )
                             .then(
-                                if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                                else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                                if (selected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                                else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                             )
                             .clickable { onUpdate(settings.copy(wakeLockAutoDelayMin = option.value)) }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -209,7 +204,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                             text = option.label,
                             fontSize = 11.sp,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (selected) Accent else TextSecondary,
+                            color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                         )
                     }
                 }
@@ -220,7 +215,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
 
         // ── Battery Optimization ──
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Battery Optimization", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+            Text("Battery Optimization", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.width(4.dp))
             InfoButton(
                 title = "Battery Optimization",
@@ -247,12 +242,12 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                     .fillMaxHeight()
                     .clip(AppTheme.shapes.smallShape)
                     .background(
-                        if (optimizedSelected) Accent.copy(alpha = 0.12f)
-                        else SurfaceBorder.copy(alpha = 0.2f)
+                        if (optimizedSelected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                        else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                     )
                     .then(
-                        if (optimizedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                        if (optimizedSelected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable {
                         val intent = Intent(
@@ -268,7 +263,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                     text = "Optimized",
                     fontSize = 13.sp,
                     fontWeight = if (optimizedSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (optimizedSelected) Accent else TextSecondary,
+                    color = if (optimizedSelected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                 )
             }
 
@@ -280,12 +275,12 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                     .fillMaxHeight()
                     .clip(AppTheme.shapes.smallShape)
                     .background(
-                        if (unrestrictedSelected) Accent.copy(alpha = 0.12f)
-                        else SurfaceBorder.copy(alpha = 0.2f)
+                        if (unrestrictedSelected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                        else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                     )
                     .then(
-                        if (unrestrictedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                        if (unrestrictedSelected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -303,7 +298,7 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
                     text = "Unrestricted",
                     fontSize = 13.sp,
                     fontWeight = if (unrestrictedSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (unrestrictedSelected) Accent else TextSecondary,
+                    color = if (unrestrictedSelected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                 )
             }
         }
@@ -314,6 +309,6 @@ internal fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Un
         } else {
             "App runs freely in the background."
         }
-        Text(batteryHint, fontSize = 10.sp, color = TextMuted)
+        Text(batteryHint, fontSize = 10.sp, color = AppTheme.colors.textMuted)
     }
 }

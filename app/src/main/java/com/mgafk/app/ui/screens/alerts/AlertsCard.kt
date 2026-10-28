@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.alerts
 
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,12 +39,6 @@ import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AlertSection
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 
 internal val WEATHER_ITEMS = listOf(
@@ -83,11 +75,11 @@ fun AlertsCards(
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     strokeWidth = 2.dp,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Loading game data…", fontSize = 13.sp, color = TextMuted)
+                Text("Loading game data…", fontSize = 13.sp, color = AppTheme.colors.textMuted)
             }
         }
     } else {
@@ -149,7 +141,7 @@ internal fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode)
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Mode:", fontSize = 11.sp, color = TextMuted)
+        Text("Mode:", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         AlertMode.entries.forEach { mode ->
             val selected = mode == currentMode
             val label = when (mode) {
@@ -158,17 +150,17 @@ internal fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode)
                 AlertMode.CUSTOM -> "Custom"
             }
             val color = when (mode) {
-                AlertMode.ALARM -> StatusError
-                AlertMode.CUSTOM -> StatusConnecting
-                AlertMode.NOTIFICATION -> Accent
+                AlertMode.ALARM -> AppTheme.colors.bad
+                AlertMode.CUSTOM -> AppTheme.colors.warn
+                AlertMode.NOTIFICATION -> AppTheme.colors.accent
             }
             Box(
                 modifier = Modifier
                     .clip(AppTheme.shapes.smallShape)
-                    .background(if (selected) color.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
+                    .background(if (selected) color.copy(alpha = 0.12f) else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
                     .then(
                         if (selected) Modifier.border(1.dp, color.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable { onModeChange(mode) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -177,7 +169,7 @@ internal fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode)
                     text = label,
                     fontSize = 11.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (selected) color else TextMuted,
+                    color = if (selected) color else AppTheme.colors.textMuted,
                 )
             }
         }
@@ -189,7 +181,7 @@ internal fun CustomModeHint() {
     Text(
         "Long press an item to switch between notification and alarm.",
         fontSize = 10.sp,
-        color = StatusConnecting,
+        color = AppTheme.colors.warn,
         fontWeight = FontWeight.Medium,
     )
 }
@@ -198,7 +190,7 @@ internal fun CustomModeHint() {
 @Composable
 internal fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit) {
     val isAlarm = currentMode == AlertMode.ALARM
-    val color = if (isAlarm) StatusError else Accent
+    val color = if (isAlarm) AppTheme.colors.bad else AppTheme.colors.accent
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
@@ -232,7 +224,7 @@ internal fun AlertItemTile(
     onClick: () -> Unit,
     onLongPress: () -> Unit,
 ) {
-    val bgColor = if (enabled) Accent.copy(alpha = 0.1f) else SurfaceDark
+    val bgColor = if (enabled) AppTheme.colors.accent.copy(alpha = 0.1f) else AppTheme.colors.surfaceHigh
 
     Box(modifier = Modifier.size(76.dp)) {
         Column(
@@ -240,7 +232,7 @@ internal fun AlertItemTile(
                 .fillMaxSize()
                 .clip(AppTheme.shapes.smallShape)
                 .then(
-                    if (enabled) Modifier.border(1.5.dp, Accent, AppTheme.shapes.smallShape)
+                    if (enabled) Modifier.border(1.5.dp, AppTheme.colors.accent, AppTheme.shapes.smallShape)
                     else Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
                 )
                 .background(bgColor)
@@ -257,7 +249,7 @@ internal fun AlertItemTile(
                 text = name,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (enabled) TextPrimary else TextSecondary,
+                color = if (enabled) AppTheme.colors.textPrimary else AppTheme.colors.textSecondary,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -272,13 +264,13 @@ internal fun AlertItemTile(
                     .offset(x = 4.dp, y = (-4).dp)
                     .size(18.dp)
                     .clip(CircleShape)
-                    .background(Accent),
+                    .background(AppTheme.colors.accent),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Active",
-                    tint = SurfaceDark,
+                    tint = AppTheme.colors.surfaceHigh,
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -286,7 +278,7 @@ internal fun AlertItemTile(
 
         if (showModeIndicator) {
             val isAlarm = itemMode == AlertMode.ALARM
-            val color = if (isAlarm) StatusError else Accent
+            val color = if (isAlarm) AppTheme.colors.bad else AppTheme.colors.accent
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -299,7 +291,7 @@ internal fun AlertItemTile(
                 Icon(
                     imageVector = if (isAlarm) Icons.Default.NotificationsActive else Icons.Default.Notifications,
                     contentDescription = if (isAlarm) "Alarm mode" else "Notification mode",
-                    tint = SurfaceDark,
+                    tint = AppTheme.colors.surfaceHigh,
                     modifier = Modifier.size(11.dp),
                 )
             }

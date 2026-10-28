@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,16 +37,10 @@ import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.data.repository.RaritySort
 import com.mgafk.app.ui.components.GridOf
@@ -86,7 +78,7 @@ fun SeedSiloCard(
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextSiloUpgrade(capacityLevel) }
 
     AppCard(title = "Seed Silo", collapsible = true, persistKey = "storage.seedSilo", trailing = {
-        Text("${seeds.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${seeds.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         StorageUpgradePanel(
             entityLabel = "Seed Silo",
@@ -99,7 +91,7 @@ fun SeedSiloCard(
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
-            Text("Empty", fontSize = 12.sp, color = TextMuted)
+            Text("Empty", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
             Spacer(modifier = Modifier.height(8.dp))
@@ -170,7 +162,7 @@ fun DecorShedCard(
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextDecorShedUpgrade(capacityLevel) }
 
     AppCard(title = "Decor Shed", collapsible = true, persistKey = "storage.decorShed", trailing = {
-        Text("${decors.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${decors.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         StorageUpgradePanel(
             entityLabel = "Decor Shed",
@@ -183,7 +175,7 @@ fun DecorShedCard(
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
-            Text("Empty", fontSize = 12.sp, color = TextMuted)
+            Text("Empty", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
             Spacer(modifier = Modifier.height(8.dp))
@@ -254,7 +246,7 @@ fun ToolShackCard(
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextToolShackUpgrade(capacityLevel) }
 
     AppCard(title = "Tool Shack", collapsible = true, persistKey = "storage.toolShack", trailing = {
-        Text("${tools.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${tools.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         StorageUpgradePanel(
             entityLabel = "Tool Shack",
@@ -267,7 +259,7 @@ fun ToolShackCard(
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
-            Text("Empty", fontSize = 12.sp, color = TextMuted)
+            Text("Empty", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
             Spacer(modifier = Modifier.height(8.dp))
@@ -330,14 +322,14 @@ internal fun StorageUpgradePanel(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Text("Level $capacityLevel / $maxLevel",
-                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textSecondary)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
                 Text(PriceCalculator.formatPrice(dustLong),
@@ -346,18 +338,18 @@ internal fun StorageUpgradePanel(
         }
 
         if (nextUpgrade == null) {
-            Text("$entityLabel maxed out, capacity $currentCapacity", fontSize = 11.sp, color = TextMuted,
+            Text("$entityLabel maxed out, capacity $currentCapacity", fontSize = 11.sp, color = AppTheme.colors.textMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         } else {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("Next: $currentCapacity → ${nextUpgrade.capacityAfter}",
-                    fontSize = 11.sp, color = TextSecondary)
+                    fontSize = 11.sp, color = AppTheme.colors.textSecondary)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     SpriteImage(url = MgApi.magicDustUrl, size = 12.dp, contentDescription = "cost")
                     Text(PriceCalculator.formatPrice(nextUpgrade.dustCost),
                         fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = if (canAfford) Color(0xFFC084FC) else StatusError)
+                        color = if (canAfford) Color(0xFFC084FC) else AppTheme.colors.bad)
                 }
             }
             Button(
@@ -366,7 +358,7 @@ internal fun StorageUpgradePanel(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF7C3AED),
-                    disabledContainerColor = SurfaceCard,
+                    disabledContainerColor = AppTheme.colors.surface,
                 ),
                 shape = AppTheme.shapes.smallShape,
             ) {
@@ -374,7 +366,7 @@ internal fun StorageUpgradePanel(
                     if (canAfford) "Upgrade to level ${nextUpgrade.targetLevel}"
                     else "Need ${PriceCalculator.formatPrice(nextUpgrade.dustCost - dustLong)} more dust",
                     fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    color = if (canAfford) Color.White else TextMuted,
+                    color = if (canAfford) Color.White else AppTheme.colors.textMuted,
                 )
             }
         }
@@ -385,19 +377,19 @@ internal fun StorageUpgradePanel(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Upgrade $entityLabel?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Upgrade $entityLabel?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("Level $capacityLevel → ${nextUpgrade.targetLevel}",
-                    fontSize = 12.sp, color = TextSecondary)
+                    fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 Text("Capacity $currentCapacity → ${nextUpgrade.capacityAfter}",
-                    fontSize = 12.sp, color = TextSecondary)
+                    fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Cost", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cost", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
                     Text(PriceCalculator.formatFull(nextUpgrade.dustCost), fontSize = 14.sp,
                         fontWeight = FontWeight.Bold, color = Color(0xFFC084FC))
@@ -407,9 +399,9 @@ internal fun StorageUpgradePanel(
                     Button(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                         shape = AppTheme.shapes.smallShape,
-                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
+                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary) }
                     Button(
                         onClick = { showConfirm = false; onUpgrade() },
                         modifier = Modifier.weight(1f),
@@ -443,7 +435,7 @@ private fun StorageItemDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -451,7 +443,7 @@ private fun StorageItemDetailDialog(
             ) {
                 SpriteImage(url = entry?.sprite, size = 56.dp, contentDescription = name)
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 if (entry?.rarity != null) {
                     Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
                 }
@@ -460,8 +452,8 @@ private fun StorageItemDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                    Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text("Quantity", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                    Text(PriceCalculator.formatFull(quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
@@ -469,15 +461,15 @@ private fun StorageItemDetailDialog(
                     enabled = canMoveToInventory,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Accent,
-                        disabledContainerColor = SurfaceDark,
+                        containerColor = AppTheme.colors.accent,
+                        disabledContainerColor = AppTheme.colors.surfaceHigh,
                     ),
                     shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToInventory) "Move to Inventory" else "Inventory full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToInventory) OnAccent else TextMuted,
+                        color = if (canMoveToInventory) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                     )
                 }
             }
@@ -499,13 +491,13 @@ private fun QtyTile(itemId: String, quantity: Int, apiReady: Boolean) {
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark).padding(4.dp),
+            .background(AppTheme.colors.surfaceHigh).padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Text(formatQuantity(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
+        Text(formatQuantity(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent, lineHeight = 11.sp)
     }
 }

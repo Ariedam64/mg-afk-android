@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.bugreport
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.AppTheme
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -42,9 +41,6 @@ import com.mgafk.app.data.repository.BugReportDraft
 import com.mgafk.app.data.repository.BugReportPayload
 import com.mgafk.app.data.repository.BugReportSnapshot
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.TextMuted
 
 internal val THUMB_SIZE = 72.dp
 
@@ -115,7 +111,7 @@ private fun ReportFormCard(
         Text(
             "Something broken, confusing or missing? Tell us here. The answer shows up under My reports.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
             lineHeight = 15.sp,
         )
 
@@ -167,7 +163,7 @@ private fun ReportFormCard(
             text = if (detailsOpen) "Hide steps and results" else "+ Steps, expected and actual result (optional)",
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = Accent,
+            color = AppTheme.colors.accent,
             modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
                 .clickable { showDetails = !detailsOpen }
@@ -279,7 +275,7 @@ private fun ReportFormCard(
                 "and the app's recent logs (crash log, connection and service logs). " +
                 "Login tokens are never sent.",
             fontSize = 10.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
             lineHeight = 13.sp,
         )
 
@@ -287,7 +283,7 @@ private fun ReportFormCard(
         val error = state.error
         if (error != null) {
             Spacer(modifier = Modifier.height(10.dp))
-            Text(error, fontSize = 12.sp, color = StatusError, lineHeight = 16.sp)
+            Text(error, fontSize = 12.sp, color = AppTheme.colors.bad, lineHeight = 16.sp)
         }
         val pendingRef = state.pendingRef
         if (pendingRef != null && !state.sending) {
@@ -296,7 +292,7 @@ private fun ReportFormCard(
                 text = "Start a new report instead (leaves $pendingRef as it is)",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = Accent,
+                color = AppTheme.colors.accent,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
                     .clickable { onDiscardPending() }
@@ -317,8 +313,8 @@ private fun ReportFormCard(
                 .fillMaxWidth()
                 .height(44.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Accent,
-                disabledContainerColor = Accent.copy(alpha = 0.25f),
+                containerColor = AppTheme.colors.accent,
+                disabledContainerColor = AppTheme.colors.accent.copy(alpha = 0.25f),
                 disabledContentColor = Color.White.copy(alpha = 0.5f),
             ),
             shape = AppTheme.shapes.smallShape,
@@ -326,7 +322,7 @@ private fun ReportFormCard(
             if (state.sending) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    color = OnAccent,
+                    color = AppTheme.colors.onAccent,
                     strokeWidth = 2.dp,
                 )
                 Spacer(modifier = Modifier.width(10.dp))

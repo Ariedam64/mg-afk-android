@@ -43,9 +43,6 @@ import androidx.compose.ui.input.pointer.positionChanged
 import kotlin.math.abs
 import kotlin.math.hypot
 import androidx.compose.ui.unit.dp
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextPrimary
 
 /**
  * Shared dirt-grid layout/zoom machinery for every view that draws the garden as a map: the
@@ -170,7 +167,7 @@ private fun GridControls(
     Row(
         modifier = modifier
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceCard.copy(alpha = 0.85f))
+            .background(AppTheme.colors.surface.copy(alpha = 0.85f))
             .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
@@ -185,11 +182,11 @@ private fun ControlButton(icon: ImageVector, description: String, onClick: () ->
         modifier = Modifier
             .size(26.dp)
             .clip(CircleShape)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = description, tint = TextPrimary, modifier = Modifier.size(15.dp))
+        Icon(icon, contentDescription = description, tint = AppTheme.colors.textPrimary, modifier = Modifier.size(15.dp))
     }
 }
 

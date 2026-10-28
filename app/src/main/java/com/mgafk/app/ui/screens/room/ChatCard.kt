@@ -40,11 +40,6 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.ChatMessage
 import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -77,7 +72,7 @@ fun ChatCard(
         persistKey = "room.chat",
     ) {
         if (messages.isEmpty()) {
-            Text("No messages yet.", fontSize = 12.sp, color = TextMuted)
+            Text("No messages yet.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             LazyColumn(
                 state = listState,
@@ -106,11 +101,11 @@ fun ChatCard(
                     .weight(1f)
                     .clip(AppTheme.shapes.smallShape),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceDark,
-                    unfocusedContainerColor = SurfaceDark,
+                    focusedContainerColor = AppTheme.colors.surfaceHigh,
+                    unfocusedContainerColor = AppTheme.colors.surfaceHigh,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = Accent,
+                    cursorColor = AppTheme.colors.accent,
                 ),
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -126,7 +121,7 @@ fun ChatCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send",
-                    tint = if (input.isNotBlank()) Accent else TextMuted,
+                    tint = if (input.isNotBlank()) AppTheme.colors.accent else AppTheme.colors.textMuted,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -147,7 +142,7 @@ private fun MessageRow(
             .fillMaxWidth()
             .padding(vertical = 2.dp)
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.3f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -166,18 +161,18 @@ private fun MessageRow(
                 text = msg.playerName.ifBlank { msg.playerId },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Accent,
+                color = AppTheme.colors.accent,
             )
             Text(
                 text = msg.message,
                 fontSize = 12.sp,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
         }
         Text(
             text = dateFormat.format(Date(msg.timestamp)),
             fontSize = 10.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
             modifier = Modifier.padding(start = 8.dp, top = 2.dp),
         )
     }

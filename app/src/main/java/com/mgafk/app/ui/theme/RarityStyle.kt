@@ -73,7 +73,7 @@ fun rarityColorOrNull(rarity: String?): Color? = when (rarity?.lowercase()) {
 /** The game's color for a rarity tier, muted text color for an unknown tier. */
 @Composable
 @ReadOnlyComposable
-fun rarityColor(rarity: String?): Color = rarityColorOrNull(rarity) ?: TextMuted
+fun rarityColor(rarity: String?): Color = rarityColorOrNull(rarity) ?: AppTheme.colors.textMuted
 
 /**
  * Brush that mirrors Gemini's rarity badge background:

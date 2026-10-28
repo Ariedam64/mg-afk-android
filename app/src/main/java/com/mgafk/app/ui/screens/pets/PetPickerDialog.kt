@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,12 +35,6 @@ import androidx.compose.ui.window.Dialog
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityColor
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -60,19 +53,19 @@ internal fun PetPickerDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("${candidates.size} pets available", fontSize = 11.sp, color = TextMuted)
+            Text("${candidates.size} pets available", fontSize = 11.sp, color = AppTheme.colors.textMuted)
             Spacer(modifier = Modifier.height(12.dp))
 
             if (candidates.isEmpty()) {
                 Text(
                     "No pets available in inventory or hutch.",
                     fontSize = 12.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
             } else {
@@ -99,9 +92,9 @@ internal fun PetPickerDialog(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
             }
         }
@@ -132,7 +125,7 @@ private fun PetCandidateTile(
             .height(72.dp)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
     ) {
         // Mutation icon top-left
@@ -147,7 +140,7 @@ private fun PetCandidateTile(
         // STR top-right
         if (maxStr > 0) {
             val strText = if (isMaxStr) "$str" else "$str/$maxStr"
-            val strColor = if (isMaxStr) StatusConnecting else Accent
+            val strColor = if (isMaxStr) AppTheme.colors.warn else AppTheme.colors.accent
             Text(
                 strText, fontSize = 7.sp, fontWeight = FontWeight.Bold,
                 color = strColor, lineHeight = 9.sp,
@@ -161,7 +154,7 @@ private fun PetCandidateTile(
         ) {
             SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
-                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
             )
             if (pet.abilities.isNotEmpty()) {

@@ -40,13 +40,6 @@ import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.WsLog
 import com.mgafk.app.service.AfkService
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextSecondary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -82,7 +75,7 @@ private fun CrashLogDebugCard() {
                 Text(
                     text = "present",
                     fontSize = 11.sp,
-                    color = StatusError,
+                    color = AppTheme.colors.bad,
                     modifier = Modifier.padding(end = 6.dp),
                 )
             }
@@ -93,7 +86,7 @@ private fun CrashLogDebugCard() {
                 "so night-time background crashes are not lost. Copy and send this if " +
                 "the app keeps stopping.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -102,10 +95,10 @@ private fun CrashLogDebugCard() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            DebugActionChip("Refresh", Accent) { content = CrashLog.read(context) }
+            DebugActionChip("Refresh", AppTheme.colors.accent) { content = CrashLog.read(context) }
             if (content.isNotBlank()) {
-                DebugActionChip("Copy", Accent) { clipboard.setText(AnnotatedString(content)) }
-                DebugActionChip("Clear", StatusError) {
+                DebugActionChip("Copy", AppTheme.colors.accent) { clipboard.setText(AnnotatedString(content)) }
+                DebugActionChip("Clear", AppTheme.colors.bad) {
                     CrashLog.clear(context)
                     content = ""
                 }
@@ -115,20 +108,20 @@ private fun CrashLogDebugCard() {
         Spacer(modifier = Modifier.height(10.dp))
 
         if (content.isBlank()) {
-            Text("No crashes recorded yet.", fontSize = 11.sp, color = TextMuted)
+            Text("No crashes recorded yet.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(6.dp))
-                    .background(SurfaceBorder.copy(alpha = 0.15f))
+                    .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.15f))
                     .padding(8.dp),
             ) {
                 Text(
                     text = content,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = TextSecondary,
+                    color = AppTheme.colors.textSecondary,
                     lineHeight = 14.sp,
                 )
             }
@@ -159,7 +152,7 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
         Text(
             "Simulate alerts without waiting for game events.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -172,8 +165,8 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.10f))
-                    .border(1.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.10f))
+                    .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                     .clickable { onTestAlert(AlertMode.NOTIFICATION) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
@@ -182,7 +175,7 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
                     "Test Notification",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                 )
             }
 
@@ -190,8 +183,8 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(StatusError.copy(alpha = 0.10f))
-                    .border(1.dp, StatusError.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.bad.copy(alpha = 0.10f))
+                    .border(1.dp, AppTheme.colors.bad.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                     .clickable { onTestAlert(AlertMode.ALARM) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
@@ -200,7 +193,7 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
                     "Test Alarm",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = StatusError,
+                    color = AppTheme.colors.bad,
                 )
             }
         }
@@ -214,18 +207,18 @@ private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 @Composable
 @ReadOnlyComposable
 private fun levelColor(level: String): Color = when (level) {
-    "error" -> StatusError
-    "warn" -> StatusConnecting
-    else -> Accent
+    "error" -> AppTheme.colors.bad
+    "warn" -> AppTheme.colors.warn
+    else -> AppTheme.colors.accent
 }
 
 @Composable
 @ReadOnlyComposable
 private fun levelDotColor(level: String): Color = when (level) {
-    "error" -> StatusError
-    "warn" -> StatusConnecting
-    "info" -> StatusConnected
-    else -> TextMuted
+    "error" -> AppTheme.colors.bad
+    "warn" -> AppTheme.colors.warn
+    "info" -> AppTheme.colors.good
+    else -> AppTheme.colors.textMuted
 }
 
 @Composable
@@ -239,7 +232,7 @@ private fun WebSocketDebugCard(wsLogs: List<WsLog>, onClear: () -> Unit) {
                 Text(
                     text = "${wsLogs.size} entries",
                     fontSize = 11.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     modifier = Modifier.padding(end = 6.dp),
                 )
             }
@@ -249,7 +242,7 @@ private fun WebSocketDebugCard(wsLogs: List<WsLog>, onClear: () -> Unit) {
             Text(
                 "No WebSocket events yet. Connect a session to see logs.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         } else {
             // Clear button
@@ -260,11 +253,11 @@ private fun WebSocketDebugCard(wsLogs: List<WsLog>, onClear: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .clip(AppTheme.shapes.smallShape)
-                        .background(SurfaceBorder.copy(alpha = 0.3f))
+                        .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.3f))
                         .clickable(onClick = onClear)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
-                    Text("Clear", fontSize = 11.sp, color = TextMuted)
+                    Text("Clear", fontSize = 11.sp, color = AppTheme.colors.textMuted)
                 }
             }
 
@@ -290,7 +283,7 @@ private fun WsLogEntry(log: WsLog) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(SurfaceBorder.copy(alpha = 0.15f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.15f))
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -321,7 +314,7 @@ private fun WsLogEntry(log: WsLog) {
                     text = formattedTime,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                 )
             }
 
@@ -330,7 +323,7 @@ private fun WsLogEntry(log: WsLog) {
                     text = log.detail,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = TextSecondary,
+                    color = AppTheme.colors.textSecondary,
                     lineHeight = 14.sp,
                 )
             }
@@ -351,7 +344,7 @@ private fun ServiceDebugCard(logs: List<AfkService.ServiceLog>, onClear: () -> U
                 Text(
                     text = "${logs.size} entries",
                     fontSize = 11.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                     modifier = Modifier.padding(end = 6.dp),
                 )
             }
@@ -361,7 +354,7 @@ private fun ServiceDebugCard(logs: List<AfkService.ServiceLog>, onClear: () -> U
             Text(
                 "No service events yet. Connect a session to start the service.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
         } else {
             Row(
@@ -371,11 +364,11 @@ private fun ServiceDebugCard(logs: List<AfkService.ServiceLog>, onClear: () -> U
                 Box(
                     modifier = Modifier
                         .clip(AppTheme.shapes.smallShape)
-                        .background(SurfaceBorder.copy(alpha = 0.3f))
+                        .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.3f))
                         .clickable(onClick = onClear)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
-                    Text("Clear", fontSize = 11.sp, color = TextMuted)
+                    Text("Clear", fontSize = 11.sp, color = AppTheme.colors.textMuted)
                 }
             }
 
@@ -400,7 +393,7 @@ private fun ServiceLogEntry(log: AfkService.ServiceLog) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(SurfaceBorder.copy(alpha = 0.15f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.15f))
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -430,7 +423,7 @@ private fun ServiceLogEntry(log: AfkService.ServiceLog) {
                     text = formattedTime,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                 )
             }
 
@@ -439,7 +432,7 @@ private fun ServiceLogEntry(log: AfkService.ServiceLog) {
                     text = log.detail,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = TextSecondary,
+                    color = AppTheme.colors.textSecondary,
                     lineHeight = 14.sp,
                 )
             }

@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.garden
 
-import com.mgafk.app.ui.theme.OnStatusConnected
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,12 +34,6 @@ import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import androidx.compose.ui.window.Dialog
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -72,7 +65,7 @@ internal fun MultiSlotPlantDetailDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -85,7 +78,7 @@ internal fun MultiSlotPlantDetailDialog(
                 plant.displayName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             if (plant.rarity != null) {
@@ -105,13 +98,13 @@ internal fun MultiSlotPlantDetailDialog(
                 Text(
                     "Tile #${plant.tileId}",
                     fontSize = 11.sp,
-                    color = TextSecondary,
+                    color = AppTheme.colors.textSecondary,
                 )
                 Text(
                     "${plant.crops.size} slots",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                 )
                 if (plant.totalValue > 0) {
                     Text(
@@ -140,7 +133,7 @@ internal fun MultiSlotPlantDetailDialog(
                 plant.crops.forEachIndexed { index, crop ->
                     if (index > 0) {
                         HorizontalDivider(
-                            color = SurfaceBorder.copy(alpha = 0.4f),
+                            color = AppTheme.colors.surfaceHigh.copy(alpha = 0.4f),
                             thickness = 0.5.dp,
                             modifier = Modifier.padding(vertical = 8.dp),
                         )
@@ -229,7 +222,7 @@ private fun CropSlotRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(slotLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text(slotLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -237,7 +230,7 @@ private fun CropSlotRow(
                 if (!isMature) {
                     val remaining = formatTimeRemaining(crop.snapshot.endTime, System.currentTimeMillis())
                     if (remaining.isNotEmpty()) {
-                        Text(remaining, fontSize = 9.sp, color = TextSecondary)
+                        Text(remaining, fontSize = 9.sp, color = AppTheme.colors.textSecondary)
                     }
                 }
                 if (crop.snapshot.mutations.isNotEmpty() || crop.snapshot.preserved) {
@@ -259,7 +252,7 @@ private fun CropSlotRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("${sizePercent.toInt()}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
+            Text("${sizePercent.toInt()}", fontSize = 10.sp, color = AppTheme.colors.textSecondary, modifier = Modifier.width(28.dp))
             Box(modifier = Modifier.weight(1f)) {
                 SizeBar(percent = sizePercent, color = color, showLabel = false)
             }
@@ -302,8 +295,8 @@ private fun CropSlotRow(
                 enabled = isMature,
                 modifier = Modifier.weight(1f).height(32.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StatusConnected,
-                    disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
+                    containerColor = AppTheme.colors.good,
+                    disabledContainerColor = AppTheme.colors.good.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
                 shape = AppTheme.shapes.smallShape,
@@ -313,7 +306,7 @@ private fun CropSlotRow(
                     if (isMature) "Harvest" else "Growing…",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isMature) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
+                    color = if (isMature) AppTheme.colors.onGood else AppTheme.colors.onGood.copy(alpha = 0.4f),
                 )
             }
             Button(

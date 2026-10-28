@@ -34,11 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 // ── Shared components ──
 
@@ -56,7 +51,7 @@ internal fun InfoButton(title: String, message: String) {
         Icon(
             imageVector = Icons.Outlined.Info,
             contentDescription = "Info",
-            tint = TextMuted,
+            tint = AppTheme.colors.textMuted,
             modifier = Modifier.size(16.dp),
         )
     }
@@ -68,7 +63,7 @@ internal fun InfoButton(title: String, message: String) {
             text = { Text(message, fontSize = 13.sp, lineHeight = 18.sp) },
             confirmButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("OK", color = Accent)
+                    Text("OK", color = AppTheme.colors.accent)
                 }
             },
         )
@@ -86,7 +81,7 @@ internal fun ToggleRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.2f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.2f))
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -95,12 +90,12 @@ internal fun ToggleRow(
                 title,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
             Text(
                 description,
                 fontSize = 10.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 lineHeight = 14.sp,
             )
         }
@@ -108,7 +103,7 @@ internal fun ToggleRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+            colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.accent),
         )
     }
 }
@@ -122,8 +117,8 @@ internal fun SettingRow(
     onSelect: (Long) -> Unit,
 ) {
     Column {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-        Text(description, fontSize = 10.sp, color = TextMuted, lineHeight = 14.sp)
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
+        Text(description, fontSize = 10.sp, color = AppTheme.colors.textMuted, lineHeight = 14.sp)
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -137,12 +132,12 @@ internal fun SettingRow(
                     modifier = Modifier
                         .clip(AppTheme.shapes.smallShape)
                         .background(
-                            if (selected) Accent.copy(alpha = 0.12f)
-                            else SurfaceBorder.copy(alpha = 0.2f)
+                            if (selected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                            if (selected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onSelect(option.ms) }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -151,7 +146,7 @@ internal fun SettingRow(
                         text = option.label,
                         fontSize = 11.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) Accent else TextSecondary,
+                        color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                     )
                 }
             }

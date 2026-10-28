@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.shops
 
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -54,10 +53,6 @@ import com.mgafk.app.data.repository.buyState
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.delay
 import com.mgafk.app.data.repository.CoreShops
@@ -80,7 +75,7 @@ fun ShopsCards(
 ) {
     if (shops.isEmpty()) {
         AppCard(title = "Shops") {
-            Text("No shop data yet.", fontSize = 12.sp, color = TextMuted)
+            Text("No shop data yet.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         }
         return
     }
@@ -95,8 +90,8 @@ fun ShopsCards(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(Accent.copy(alpha = 0.1f))
-                .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                .background(AppTheme.colors.accent.copy(alpha = 0.1f))
+                .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                 .clickable { onDismissTip() }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
@@ -113,7 +108,7 @@ fun ShopsCards(
                     Text(
                         text = tipText,
                         fontSize = 11.sp,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         lineHeight = 15.sp,
                     )
                 }
@@ -121,7 +116,7 @@ fun ShopsCards(
                     text = "OK",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                     modifier = Modifier.clickable { onDismissTip() },
                 )
             }
@@ -138,15 +133,15 @@ fun ShopsCards(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(AppTheme.shapes.smallShape)
-                .background(StatusError.copy(alpha = 0.15f))
-                .border(1.dp, StatusError.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+                .background(AppTheme.colors.bad.copy(alpha = 0.15f))
+                .border(1.dp, AppTheme.colors.bad.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Text(
                 text = purchaseError,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = StatusError,
+                color = AppTheme.colors.bad,
             )
         }
     }
@@ -202,7 +197,7 @@ private fun ShopCategoryCard(
         persistKey = "shops.${shop?.type ?: label}",
     ) {
         if (items.isEmpty()) {
-            Text("Empty", fontSize = 11.sp, color = TextMuted)
+            Text("Empty", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         } else {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -264,9 +259,9 @@ private fun ShopItemTile(
                 .clip(AppTheme.shapes.smallShape)
                 .then(
                     if (inShop) Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = borderAlpha)
-                    else Modifier.border(1.5.dp, TextMuted.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+                    else Modifier.border(1.5.dp, AppTheme.colors.textMuted.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                 )
-                .background(SurfaceDark)
+                .background(AppTheme.colors.surfaceHigh)
                 // Use combinedClickable instead of pointerInput(Unit). The latter
                 // captures the onBuy/onBuyAll lambdas at first composition and
                 // never refreshes, so when the shop restocks and the item order
@@ -295,7 +290,7 @@ private fun ShopItemTile(
                 text = displayName,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (dimmed) TextMuted else TextPrimary,
+                color = if (dimmed) AppTheme.colors.textMuted else AppTheme.colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -312,14 +307,14 @@ private fun ShopItemTile(
                     .offset(x = 4.dp, y = (-4).dp)
                     .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
                     .clip(CircleShape)
-                    .background(Accent),
+                    .background(AppTheme.colors.accent),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "$stock",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SurfaceDark,
+                    color = AppTheme.colors.surfaceHigh,
                     textAlign = TextAlign.Center,
                     lineHeight = 9.sp,
                 )
@@ -345,7 +340,7 @@ private fun ShopItemTile(
                     text = label,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = AppTheme.colors.textPrimary,
                     lineHeight = 10.sp,
                 )
             }
@@ -363,7 +358,7 @@ private fun RestockTimer(shop: ShopSnapshot?) {
     }
     val remaining = shop?.secondsUntilRestock(nowMs) ?: 0
 
-    val color = if (remaining <= 60) Accent else Accent.copy(alpha = 0.6f)
+    val color = if (remaining <= 60) AppTheme.colors.accent else AppTheme.colors.accent.copy(alpha = 0.6f)
 
     Text(
         text = "%02d:%02d".format(remaining / 60, remaining % 60),

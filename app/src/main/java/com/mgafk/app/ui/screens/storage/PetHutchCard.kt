@@ -1,9 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.OnStatusError
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,17 +36,11 @@ import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.SurfaceCard
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import com.mgafk.app.data.repository.PetTileStrength
@@ -90,7 +80,7 @@ fun PetHutchCard(
     val nextUpgrade = remember(capacityLevel, apiReady) { PriceCalculator.getNextHutchUpgrade(capacityLevel) }
 
     AppCard(title = "Pet Hutch", collapsible = true, persistKey = "storage.petHutch", trailing = {
-        Text("${pets.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("${pets.size}/$maxItems", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         StorageUpgradePanel(
             entityLabel = "Pet Hutch",
@@ -103,7 +93,7 @@ fun PetHutchCard(
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (sorted.isEmpty()) {
-            Text("Empty", fontSize = 12.sp, color = TextMuted)
+            Text("Empty", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             RarityFilterRow(rarities = availableRarities, selected = selectedRarity, onSelect = { selectedRarity = it })
             Spacer(modifier = Modifier.height(8.dp))
@@ -179,11 +169,11 @@ private fun StoragePetDetailDialog(
             Column(
                 modifier = Modifier
                     .clip(AppTheme.shapes.mediumShape)
-                    .background(SurfaceCard)
+                    .background(AppTheme.colors.surface)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Sell $name?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
                 if (sellPrice != null) {
                     Row(
@@ -197,22 +187,22 @@ private fun StoragePetDetailDialog(
                 if (isLocked) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("This pet is locked and will be unlocked before selling.",
-                        fontSize = 10.sp, color = TextSecondary, textAlign = TextAlign.Center)
+                        fontSize = 10.sp, color = AppTheme.colors.textSecondary, textAlign = TextAlign.Center)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                         shape = AppTheme.shapes.smallShape,
-                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
+                    ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary) }
                     Button(
                         onClick = { showConfirm = false; onSell() },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                         shape = AppTheme.shapes.smallShape,
-                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
+                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad) }
                 }
             }
         }
@@ -223,7 +213,7 @@ private fun StoragePetDetailDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -231,7 +221,7 @@ private fun StoragePetDetailDialog(
             ) {
                 SpriteImage(category = "pets", name = pet.petSpecies, size = 56.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 if (entry?.rarity != null) {
                     Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
                 }
@@ -242,16 +232,16 @@ private fun StoragePetDetailDialog(
                 ) {
                     if (ms > 0) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("STR", fontSize = 12.sp, color = TextSecondary)
+                            Text("STR", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             val isMax = cs >= ms
                             Text(if (isMax) "$cs" else "$cs/$ms", fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                color = if (isMax) StatusConnecting else Accent)
+                                color = if (isMax) AppTheme.colors.warn else AppTheme.colors.accent)
                         }
                     }
                     if (sellPrice != null) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text("Value", fontSize = 12.sp, color = TextSecondary)
+                            Text("Value", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                 SpriteImage(url = MgApi.coinBagUrl, size = 14.dp, contentDescription = "coins")
                                 Text(PriceCalculator.formatFull(sellPrice), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
@@ -261,7 +251,7 @@ private fun StoragePetDetailDialog(
                     if (dustValue != null) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text("Dust", fontSize = 12.sp, color = TextSecondary)
+                            Text("Dust", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                 SpriteImage(url = MgApi.magicDustUrl, size = 14.dp, contentDescription = "dust")
                                 Text(PriceCalculator.formatFull(dustValue), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC084FC))
@@ -271,7 +261,7 @@ private fun StoragePetDetailDialog(
                     if (pet.mutations.isNotEmpty()) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                            Text("Mutations", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 sortMutations(pet.mutations).forEach { mutation ->
                                     SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
@@ -284,7 +274,7 @@ private fun StoragePetDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("Abilities", fontSize = 12.sp, color = TextSecondary)
+                            Text("Abilities", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -316,24 +306,24 @@ private fun StoragePetDetailDialog(
                     enabled = canMoveToInventory,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Accent,
-                        disabledContainerColor = SurfaceDark,
+                        containerColor = AppTheme.colors.accent,
+                        disabledContainerColor = AppTheme.colors.surfaceHigh,
                     ),
                     shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToInventory) "Move to Inventory" else "Inventory full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToInventory) OnAccent else TextMuted,
+                        color = if (canMoveToInventory) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                     shape = AppTheme.shapes.smallShape,
-                ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
+                ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.onBad) }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))

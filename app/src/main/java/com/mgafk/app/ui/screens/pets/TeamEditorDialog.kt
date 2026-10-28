@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,14 +42,6 @@ import com.mgafk.app.data.model.PetTeam
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityColor
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -86,14 +76,14 @@ internal fun TeamEditorDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
         ) {
             Text(
                 if (isNew) "New Team" else "Edit Team",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -102,22 +92,22 @@ internal fun TeamEditorDialog(
                 value = teamName,
                 onValueChange = { teamName = it },
                 label = { Text("Team name") },
-                placeholder = { Text("My team", color = TextMuted) },
+                placeholder = { Text("My team", color = AppTheme.colors.textMuted) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Accent,
-                    unfocusedBorderColor = SurfaceBorder,
-                    focusedLabelColor = Accent,
-                    cursorColor = Accent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
+                    focusedBorderColor = AppTheme.colors.accent,
+                    unfocusedBorderColor = AppTheme.colors.surfaceHigh,
+                    focusedLabelColor = AppTheme.colors.accent,
+                    cursorColor = AppTheme.colors.accent,
+                    focusedTextColor = AppTheme.colors.textPrimary,
+                    unfocusedTextColor = AppTheme.colors.textPrimary,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Pets", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+            Text("Pets", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -149,9 +139,9 @@ internal fun TeamEditorDialog(
             ) {
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.surfaceHigh),
                 ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
+                    Text("Cancel", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 }
                 Button(
                     onClick = {
@@ -163,9 +153,9 @@ internal fun TeamEditorDialog(
                         onConfirm(name.take(PetTeam.MAX_NAME_CLUSTERS), chosen.map { it.id })
                     },
                     enabled = slots.any { it != null },
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.accent),
                 ) {
-                    Text(if (isNew) "Create" else "Save", fontSize = 12.sp, color = OnAccent)
+                    Text(if (isNew) "Create" else "Save", fontSize = 12.sp, color = AppTheme.colors.onAccent)
                 }
             }
         }
@@ -198,14 +188,14 @@ private fun EmptySlotTile(onClick: () -> Unit) {
             .fillMaxWidth()
             .aspectRatio(0.75f)
             .clip(AppTheme.shapes.smallShape)
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
+            .border(1.5.dp, AppTheme.colors.accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Accent)
-        Text("Add pet", fontSize = 8.sp, color = TextMuted, lineHeight = 10.sp)
+        Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent)
+        Text("Add pet", fontSize = 8.sp, color = AppTheme.colors.textMuted, lineHeight = 10.sp)
     }
 }
 
@@ -231,7 +221,7 @@ private fun FilledSlotTile(
             .aspectRatio(0.75f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark),
+            .background(AppTheme.colors.surfaceHigh),
     ) {
         // Remove button top-right
         Box(
@@ -240,11 +230,11 @@ private fun FilledSlotTile(
                 .padding(3.dp)
                 .size(18.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(StatusError.copy(alpha = 0.15f))
+                .background(AppTheme.colors.bad.copy(alpha = 0.15f))
                 .clickable { onRemove() },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Close, "Remove", tint = StatusError.copy(alpha = 0.8f), modifier = Modifier.size(12.dp))
+            Icon(Icons.Outlined.Close, "Remove", tint = AppTheme.colors.bad.copy(alpha = 0.8f), modifier = Modifier.size(12.dp))
         }
 
         // Mutations top-left
@@ -264,7 +254,7 @@ private fun FilledSlotTile(
         ) {
             SpriteImage(category = "pets", name = pet.species, size = 28.dp, contentDescription = pet.species, mutations = pet.mutations)
             Text(
-                displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+                displayName, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
             )
             if (ms > 0) {
@@ -273,7 +263,7 @@ private fun FilledSlotTile(
                     isMax -> "STR $cs"
                     else -> "STR $cs/$ms"
                 }
-                val strColor = if (isMax || strengthBonus > 0) StatusConnecting else Accent
+                val strColor = if (isMax || strengthBonus > 0) AppTheme.colors.warn else AppTheme.colors.accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {

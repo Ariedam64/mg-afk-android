@@ -25,11 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PetTileStrength
-import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.AppTheme
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.rarityBorder
 
 /** Compact pet card for the inventory and Pet Hutch grids, same style as the pet selector. */
@@ -48,7 +44,7 @@ internal fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             .height(72.dp)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark),
+            .background(AppTheme.colors.surfaceHigh),
     ) {
         // Mutation icons top-left
         if (pet.mutations.isNotEmpty()) {
@@ -69,12 +65,12 @@ internal fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
         ) {
             SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
-                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
             )
             if (ms > 0) {
                 val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) StatusConnecting else Accent
+                val strColor = if (isMax) AppTheme.colors.warn else AppTheme.colors.accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {

@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -46,13 +45,6 @@ import com.mgafk.app.ui.components.abilityBrush
 import com.mgafk.app.data.websocket.Constants
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
@@ -143,8 +135,8 @@ fun ActivePetsCard(
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
+                    .background(AppTheme.colors.accent.copy(alpha = 0.1f))
+                    .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
@@ -156,7 +148,7 @@ fun ActivePetsCard(
                         Text(
                             text = "Tap a pet to feed, swap or remove it.",
                             fontSize = 11.sp,
-                            color = Accent,
+                            color = AppTheme.colors.accent,
                             lineHeight = 15.sp,
                         )
                     }
@@ -164,7 +156,7 @@ fun ActivePetsCard(
                         text = "OK",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Accent,
+                        color = AppTheme.colors.accent,
                         modifier = Modifier.clickable { onDismissTip() },
                     )
                 }
@@ -225,9 +217,9 @@ private fun ActivePetRow(
     val maxHunger = Constants.maxHungerFor(pet.species) ?: 1000
     val hungerPercent = ((pet.hunger.toFloat() / maxHunger) * 100).coerceIn(0f, 100f)
     val hungerColor = when {
-        hungerPercent < 5f -> StatusError
-        hungerPercent < 25f -> StatusConnecting
-        else -> StatusConnected
+        hungerPercent < 5f -> AppTheme.colors.bad
+        hungerPercent < 25f -> AppTheme.colors.warn
+        else -> AppTheme.colors.good
     }
 
     val strength = remember(pet.species, pet.xp, pet.targetScale, apiReady) {
@@ -250,7 +242,7 @@ private fun ActivePetRow(
             .clip(AppTheme.shapes.smallShape)
             .border(1.dp, Color.White.copy(alpha = if (isSelected) 0.25f else 0.12f), AppTheme.shapes.smallShape)
             .clickable { onSelect() }
-            .background(SurfaceBorder.copy(alpha = 0.10f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.10f))
             .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -270,7 +262,7 @@ private fun ActivePetRow(
                     pet.name.ifBlank { pet.species },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    color = AppTheme.colors.textPrimary,
                 )
                 if (pet.mutations.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(4.dp))
@@ -286,7 +278,7 @@ private fun ActivePetRow(
                         isMaxStrength -> "STR $strength"
                         else -> "STR $strength/$maxStrength"
                     }
-                    val strColor = if (isMaxStrength || strengthBonus > 0) StatusConnecting else Accent
+                    val strColor = if (isMaxStrength || strengthBonus > 0) AppTheme.colors.warn else AppTheme.colors.accent
                     Text(
                         strText,
                         fontSize = 11.sp,
@@ -302,7 +294,7 @@ private fun ActivePetRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Hunger", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextMuted)
+                Text("Hunger", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textMuted)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -371,7 +363,7 @@ private fun ActivePetRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(btnWidth),
             ) {
-                val btnColor = TextSecondary
+                val btnColor = AppTheme.colors.textSecondary
                 val btnMod = Modifier
                     .width(btnWidth)
                     .clip(chipShape)
@@ -401,7 +393,7 @@ private fun ActivePetRow(
                         text = "XP",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isMaxStrength) TextMuted.copy(alpha = 0.5f) else btnColor,
+                        color = if (isMaxStrength) AppTheme.colors.textMuted.copy(alpha = 0.5f) else btnColor,
                         textAlign = TextAlign.Center,
                         modifier = if (isMaxStrength) btnMod
                         else btnMod.then(Modifier.clickable { showXpPotionDialog = true }),
@@ -411,12 +403,12 @@ private fun ActivePetRow(
                     text = "Remove",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = StatusError.copy(alpha = 0.7f),
+                    color = AppTheme.colors.bad.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .width(btnWidth)
                         .clip(chipShape)
-                        .background(StatusError.copy(alpha = 0.06f))
+                        .background(AppTheme.colors.bad.copy(alpha = 0.06f))
                         .clickable { onUnequipPet(pet.id) }
                         .padding(vertical = 6.dp),
                 )
@@ -489,7 +481,7 @@ private fun EmptyPetSlot(
             .height(56.dp)
             .clip(AppTheme.shapes.smallShape)
             .border(1.dp, Color.White.copy(alpha = 0.08f), AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.06f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.06f))
             .clickable { showPicker = true },
         contentAlignment = Alignment.Center,
     ) {
@@ -497,7 +489,7 @@ private fun EmptyPetSlot(
             "+",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
     }
 

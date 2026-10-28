@@ -1,7 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnStatusConnected
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -40,12 +38,6 @@ import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
@@ -76,7 +68,7 @@ internal fun PlantUnpotDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -87,7 +79,7 @@ internal fun PlantUnpotDialog(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
             if (entry?.rarity != null) {
                 Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
@@ -102,7 +94,7 @@ internal fun PlantUnpotDialog(
                     "${plant.growSlots} slots",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Accent,
+                    color = AppTheme.colors.accent,
                 )
                 if (plant.totalPrice > 0) {
                     Text(
@@ -129,7 +121,7 @@ internal fun PlantUnpotDialog(
                     plant.slots.forEachIndexed { index, slot ->
                         if (index > 0) {
                             HorizontalDivider(
-                                color = SurfaceBorder.copy(alpha = 0.4f),
+                                color = AppTheme.colors.surfaceHigh.copy(alpha = 0.4f),
                                 thickness = 0.5.dp,
                                 modifier = Modifier.padding(vertical = 6.dp),
                             )
@@ -146,12 +138,12 @@ internal fun PlantUnpotDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Free tiles", fontSize = 12.sp, color = TextSecondary)
+                Text("Free tiles", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                 Text(
                     "$freePlantTiles",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (canPlant) StatusConnected else StatusError,
+                    color = if (canPlant) AppTheme.colors.good else AppTheme.colors.bad,
                 )
             }
 
@@ -162,8 +154,8 @@ internal fun PlantUnpotDialog(
                 enabled = canPlant,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = StatusConnected,
-                    disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
+                    containerColor = AppTheme.colors.good,
+                    disabledContainerColor = AppTheme.colors.good.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
                 shape = AppTheme.shapes.smallShape,
@@ -172,7 +164,7 @@ internal fun PlantUnpotDialog(
                     if (canPlant) "Plant in Garden" else "No free tiles",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (canPlant) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
+                    color = if (canPlant) AppTheme.colors.onGood else AppTheme.colors.onGood.copy(alpha = 0.4f),
                 )
             }
 
@@ -219,7 +211,7 @@ private fun PlantSlotRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Slot ${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text("Slot ${index + 1}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                 if (slot.mutations.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         sortMutations(slot.mutations).forEach { mutation ->
@@ -235,7 +227,7 @@ private fun PlantSlotRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("${sizePercent.toInt()}", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.width(28.dp))
+                Text("${sizePercent.toInt()}", fontSize = 10.sp, color = AppTheme.colors.textSecondary, modifier = Modifier.width(28.dp))
                 Box(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier.fillMaxWidth().height(4.dp)
@@ -281,7 +273,7 @@ internal fun EggGrowDialog(
         Box(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard),
+                .background(AppTheme.colors.surface),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -291,7 +283,7 @@ internal fun EggGrowDialog(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
             if (entry?.rarity != null) {
                 Text(entry.rarity, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = color)
@@ -307,20 +299,20 @@ internal fun EggGrowDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Quantity", fontSize = 12.sp, color = TextSecondary)
-                    Text(PriceCalculator.formatFull(egg.quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text("Quantity", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                    Text(PriceCalculator.formatFull(egg.quantity.toLong()), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Free tiles", fontSize = 12.sp, color = TextSecondary)
+                    Text("Free tiles", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                     Text(
                         "$freePlantTiles",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (canGrow) StatusConnected else StatusError,
+                        color = if (canGrow) AppTheme.colors.good else AppTheme.colors.bad,
                     )
                 }
             }

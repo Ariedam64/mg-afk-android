@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,10 +37,6 @@ import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -65,16 +60,16 @@ internal fun QuantityTile(itemId: String, quantity: Int, apiReady: Boolean) {
             .aspectRatio(1f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         SpriteImage(url = sprite, size = 28.dp, contentDescription = name)
         Spacer(modifier = Modifier.height(2.dp))
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Text(fmtQty(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
+        Text(fmtQty(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent, lineHeight = 11.sp)
     }
 }
 
@@ -96,20 +91,20 @@ internal fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCo
             .fillMaxWidth().aspectRatio(0.85f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(color.copy(0.15f))) {
                 Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(color.copy(0.8f)))
             }
             Spacer(Modifier.width(3.dp))
-            Text("${pct.toInt()}", fontSize = 7.sp, color = TextSecondary, fontWeight = FontWeight.Medium, lineHeight = 8.sp)
+            Text("${pct.toInt()}", fontSize = 7.sp, color = AppTheme.colors.textSecondary, fontWeight = FontWeight.Medium, lineHeight = 8.sp)
         }
         if (price != null) {
             Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
@@ -140,16 +135,16 @@ internal fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
             .aspectRatio(if (item.totalPrice > 0) 0.85f else 1f)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
+            .background(AppTheme.colors.surfaceHigh)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         PlantCompositeSprite(species = item.species, slots = slots, size = 40.dp, contentDescription = name)
         Spacer(modifier = Modifier.height(2.dp))
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Text("${item.growSlots} slots", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
+        Text("${item.growSlots} slots", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.accent, lineHeight = 11.sp)
         if (item.totalPrice > 0) {
             Text(PriceCalculator.formatPrice(item.totalPrice), fontSize = 8.sp, fontWeight = FontWeight.Bold,
                 color = Color(0xFFFFD700), lineHeight = 10.sp)
@@ -191,7 +186,7 @@ internal fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: L
             .height(82.dp)
             .clip(AppTheme.shapes.smallShape)
             .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark),
+            .background(AppTheme.colors.surfaceHigh),
     ) {
         // Mutation icons top-left
         if (pet.mutations.isNotEmpty()) {
@@ -211,12 +206,12 @@ internal fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: L
         ) {
             SpriteImage(category = "pets", name = pet.petSpecies, size = 24.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
             Text(
-                name, fontSize = 7.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
+                name, fontSize = 7.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 9.sp,
             )
             if (ms > 0) {
                 val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) StatusConnecting else Accent
+                val strColor = if (isMax) AppTheme.colors.warn else AppTheme.colors.accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {

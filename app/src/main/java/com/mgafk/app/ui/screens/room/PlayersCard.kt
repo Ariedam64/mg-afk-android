@@ -22,12 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.PlayerSnapshot
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusIdle
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 import kotlin.math.abs
 
 @Composable
@@ -44,11 +38,11 @@ fun PlayersCard(
         collapsible = true,
         persistKey = "room.players",
         trailing = {
-            Text("${players.size}", fontSize = 11.sp, color = TextMuted)
+            Text("${players.size}", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         },
     ) {
         if (players.isEmpty()) {
-            Text("No players.", fontSize = 12.sp, color = TextMuted)
+            Text("No players.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             players.forEach { player ->
                 PlayerRow(player, gameVersion, gameHost, isHost = player.id == hostPlayerId)
@@ -69,7 +63,7 @@ private fun PlayerRow(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceBorder.copy(alpha = 0.3f))
+            .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -90,21 +84,21 @@ private fun PlayerRow(
                     text = player.name.ifBlank { player.id },
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
+                    color = AppTheme.colors.textPrimary,
                 )
                 if (isHost) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Accent.copy(alpha = 0.18f))
+                            .background(AppTheme.colors.accent.copy(alpha = 0.18f))
                             .padding(horizontal = 5.dp, vertical = 1.dp),
                     ) {
                         Text(
                             text = "HOST",
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Accent,
+                            color = AppTheme.colors.accent,
                             lineHeight = 10.sp,
                         )
                     }
@@ -115,13 +109,13 @@ private fun PlayerRow(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(if (player.isConnected) StatusConnected else StatusIdle),
+                        .background(if (player.isConnected) AppTheme.colors.good else AppTheme.colors.idle),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = if (player.isConnected) "Online" else "Offline",
                     fontSize = 10.sp,
-                    color = TextMuted,
+                    color = AppTheme.colors.textMuted,
                 )
             }
         }
@@ -131,7 +125,7 @@ private fun PlayerRow(
             text = formatCoins(player.coins),
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Accent,
+            color = AppTheme.colors.accent,
         )
     }
 }

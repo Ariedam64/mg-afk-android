@@ -27,11 +27,6 @@ import com.mgafk.app.data.model.AppSettings
 import com.mgafk.app.data.model.PlantPlacementMode
 import com.mgafk.app.data.model.PurchaseMode
 import com.mgafk.app.ui.components.AppCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 
 @Composable
 fun SettingsCards(
@@ -61,7 +56,7 @@ fun SettingsCards(
 @Composable
 private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
     AppCard(title = "Shops", collapsible = true, persistKey = "settings_shops") {
-        Text("Purchase mode", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        Text("Purchase mode", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -82,12 +77,12 @@ private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> 
                         .fillMaxHeight()
                         .clip(AppTheme.shapes.smallShape)
                         .background(
-                            if (selected) Accent.copy(alpha = 0.12f)
-                            else SurfaceBorder.copy(alpha = 0.2f)
+                            if (selected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                            if (selected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(purchaseMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -97,7 +92,7 @@ private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> 
                         text = label,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) Accent else TextSecondary,
+                        color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                     )
                 }
             }
@@ -110,14 +105,14 @@ private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> 
             PurchaseMode.BULK -> "Tap buys all remaining stock at once."
             PurchaseMode.HYBRID -> "Tap buys x1, hold buys all remaining stock."
         }
-        Text(hint, fontSize = 10.sp, color = TextMuted)
+        Text(hint, fontSize = 10.sp, color = AppTheme.colors.textMuted)
     }
 }
 
 @Composable
 private fun GardenSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> Unit) {
     AppCard(title = "Garden", collapsible = true, persistKey = "settings_garden") {
-        Text("Manual planting", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        Text("Manual planting", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.textPrimary)
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -137,12 +132,12 @@ private fun GardenSettingsCard(settings: AppSettings, onUpdate: (AppSettings) ->
                         .fillMaxHeight()
                         .clip(AppTheme.shapes.smallShape)
                         .background(
-                            if (selected) Accent.copy(alpha = 0.12f)
-                            else SurfaceBorder.copy(alpha = 0.2f)
+                            if (selected) AppTheme.colors.accent.copy(alpha = 0.12f)
+                            else AppTheme.colors.surfaceHigh.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+                            if (selected) Modifier.border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(plantPlacementMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -152,7 +147,7 @@ private fun GardenSettingsCard(settings: AppSettings, onUpdate: (AppSettings) ->
                         text = label,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) Accent else TextSecondary,
+                        color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                     )
                 }
             }
@@ -164,7 +159,7 @@ private fun GardenSettingsCard(settings: AppSettings, onUpdate: (AppSettings) ->
             PlantPlacementMode.FREE_TILE -> "Planting drops the seed on the first empty tile."
             PlantPlacementMode.GRID -> "Planting opens the garden grid so you pick the tile."
         }
-        Text(hint, fontSize = 10.sp, color = TextMuted)
+        Text(hint, fontSize = 10.sp, color = AppTheme.colors.textMuted)
     }
 }
 
@@ -185,7 +180,7 @@ private fun StoragesCard(
             Text(
                 "Place a Seed Silo, Decor Shed or Tool Shack in your garden to enable auto-stock features.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 lineHeight = 15.sp,
             )
             return@AppCard
@@ -255,7 +250,7 @@ private fun ReconnectionCard(settings: AppSettings, onUpdate: (AppSettings) -> U
         Text(
             "The app automatically retries when the connection is lost.",
             fontSize = 11.sp,
-            color = TextMuted,
+            color = AppTheme.colors.textMuted,
         )
 
         Spacer(modifier = Modifier.height(12.dp))

@@ -1,8 +1,5 @@
 package com.mgafk.app.ui.screens.storage
 
-import com.mgafk.app.ui.theme.OnAccent
-import com.mgafk.app.ui.theme.OnStatusError
-import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,11 +38,6 @@ import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.RarityFilterRow
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.data.repository.RaritySort
 import com.mgafk.app.ui.components.GridOf
 import com.mgafk.app.ui.components.LockOverlay
@@ -116,10 +108,10 @@ fun InventoryCard(
     var selectedRarity by remember { mutableStateOf<String?>(null) }
 
     AppCard(title = "Inventory", collapsible = true, persistKey = "storage.inventory", trailing = {
-        Text("$totalItems types", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Accent.copy(0.7f))
+        Text("$totalItems types", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = AppTheme.colors.accent.copy(0.7f))
     }) {
         if (totalItems == 0) {
-            Text("No inventory data yet.", fontSize = 12.sp, color = TextMuted)
+            Text("No inventory data yet.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             val sortedSeeds = remember(inventory.seeds, apiReady) { inventory.seeds.sortedBy { RaritySort.item(it.species) } }
             val sortedTools = remember(inventory.tools, apiReady) { inventory.tools.sortedBy { RaritySort.item(it.toolId) } }
@@ -233,14 +225,14 @@ fun InventoryCard(
                             Button(
                                 onClick = { showSellAllCrops = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                                 shape = AppTheme.shapes.smallShape,
                             ) {
                                 Text(
                                     "Sell All Crops (${unlockedProduce.size})",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = OnStatusError,
+                                    color = AppTheme.colors.onBad,
                                 )
                             }
                         }
@@ -269,14 +261,14 @@ fun InventoryCard(
                             Button(
                                 onClick = { showSellAllPets = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppTheme.colors.bad),
                                 shape = AppTheme.shapes.smallShape,
                             ) {
                                 Text(
                                     "Sell All Unlocked (${unlockedPets.size})",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = OnStatusError,
+                                    color = AppTheme.colors.onBad,
                                 )
                             }
                         }
@@ -385,15 +377,15 @@ fun InventoryCard(
                         enabled = canMoveToShack,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Accent,
-                            disabledContainerColor = SurfaceDark,
+                            containerColor = AppTheme.colors.accent,
+                            disabledContainerColor = AppTheme.colors.surfaceHigh,
                         ),
                         shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToShack) "Move to Tool Shack" else "Tool Shack full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToShack) OnAccent else TextMuted,
+                            color = if (canMoveToShack) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                         )
                     }
                 }),
@@ -452,15 +444,15 @@ fun InventoryCard(
                         enabled = canMoveToShed,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Accent,
-                            disabledContainerColor = SurfaceDark,
+                            containerColor = AppTheme.colors.accent,
+                            disabledContainerColor = AppTheme.colors.surfaceHigh,
                         ),
                         shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToShed) "Move to Decor Shed" else "Decor Shed full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToShed) OnAccent else TextMuted,
+                            color = if (canMoveToShed) AppTheme.colors.onAccent else AppTheme.colors.textMuted,
                         )
                     }
                 }),
@@ -547,7 +539,7 @@ fun InventoryCard(
 private fun SubSection(label: String, count: Int, extraInfo: String? = null, content: @Composable () -> Unit) {
     var expanded by rememberSaveable(label) { mutableStateOf(true) }
 
-    HorizontalDivider(color = SurfaceBorder.copy(0.5f), thickness = 0.5.dp)
+    HorizontalDivider(color = AppTheme.colors.surfaceHigh.copy(0.5f), thickness = 0.5.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -555,16 +547,16 @@ private fun SubSection(label: String, count: Int, extraInfo: String? = null, con
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, modifier = Modifier.weight(1f))
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textSecondary, modifier = Modifier.weight(1f))
         if (extraInfo != null) {
             Text(extraInfo, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFFD700))
             Spacer(modifier = Modifier.width(6.dp))
         }
-        Text("$count", fontSize = 11.sp, color = TextMuted)
+        Text("$count", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         Spacer(modifier = Modifier.width(6.dp))
         Icon(
             Icons.Default.ExpandMore, contentDescription = null,
-            tint = TextMuted, modifier = Modifier.rotate(if (expanded) 0f else -90f),
+            tint = AppTheme.colors.textMuted, modifier = Modifier.rotate(if (expanded) 0f else -90f),
         )
     }
     if (expanded) {

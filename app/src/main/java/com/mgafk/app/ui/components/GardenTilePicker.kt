@@ -17,10 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.mgafk.app.data.model.GardenTileType
 import com.mgafk.app.data.repository.GardenGridLayout
 import com.mgafk.app.data.model.GardenTileRef
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
+import com.mgafk.app.ui.theme.AppTheme
 
 /** The planks the game draws its boardwalk with. */
 private val BOARDWALK_COLOR = Color(0xFF8B6F47)
@@ -127,18 +124,18 @@ private fun GardenTileCell(
 ) {
     val occupied = state is GardenTileState.Occupied
     val full = state is GardenTileState.Occupied && state.full
-    val emptyColor = if (boardwalk) BOARDWALK_COLOR.copy(alpha = 0.5f) else SurfaceDark
+    val emptyColor = if (boardwalk) BOARDWALK_COLOR.copy(alpha = 0.5f) else AppTheme.colors.surfaceHigh
     val backgroundColor = when {
-        occupied -> StatusConnecting.copy(alpha = if (selected) 0.7f else if (full) 0.45f else 0.3f)
-        selected -> StatusConnected.copy(alpha = 0.4f)
+        occupied -> AppTheme.colors.warn.copy(alpha = if (selected) 0.7f else if (full) 0.45f else 0.3f)
+        selected -> AppTheme.colors.good.copy(alpha = 0.4f)
         state is GardenTileState.Locked -> emptyColor.copy(alpha = 0.3f)
         else -> emptyColor
     }
     val borderColor = when {
-        selected -> StatusConnected
-        occupied -> StatusConnecting.copy(alpha = 0.7f)
-        state is GardenTileState.Locked -> SurfaceBorder.copy(alpha = 0.4f)
-        else -> SurfaceBorder
+        selected -> AppTheme.colors.good
+        occupied -> AppTheme.colors.warn.copy(alpha = 0.7f)
+        state is GardenTileState.Locked -> AppTheme.colors.surfaceHigh.copy(alpha = 0.4f)
+        else -> AppTheme.colors.surfaceHigh
     }
 
     Box(

@@ -31,10 +31,6 @@ import com.mgafk.app.ui.components.GardenTilePicker
 import com.mgafk.app.ui.components.GardenTileState
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.components.VIEWPORT_HEIGHT
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 
 /** What the player asked to plant by hand, while [ManualPlantTileDialog] is open. */
 sealed interface ManualPlantTarget {
@@ -115,16 +111,16 @@ fun ManualPlantTileDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             SpriteImage(url = spriteUrl, size = 40.dp, contentDescription = displayName)
             Spacer(modifier = Modifier.height(6.dp))
-            Text(displayName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(displayName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text("$remaining left", fontSize = 12.sp, color = TextMuted)
+            Text("$remaining left", fontSize = 12.sp, color = AppTheme.colors.textMuted)
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -132,7 +128,7 @@ fun ManualPlantTileDialog(
                 if (plantableTiles.isEmpty()) "No tile can take this right now."
                 else "Tap a tile to plant. Drag to move, pinch to zoom.",
                 fontSize = 11.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
             )
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -145,11 +141,11 @@ fun ManualPlantTileDialog(
                     .fillMaxWidth()
                     .height(VIEWPORT_HEIGHT)
                     .clip(AppTheme.shapes.smallShape)
-                    .background(SurfaceDark),
+                    .background(AppTheme.colors.surfaceHigh),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-            Text("Close", fontSize = 13.sp, color = TextMuted, modifier = Modifier.clickable { onDismiss() })
+            Text("Close", fontSize = 13.sp, color = AppTheme.colors.textMuted, modifier = Modifier.clickable { onDismiss() })
         }
     }
 }

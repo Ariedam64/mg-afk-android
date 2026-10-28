@@ -23,10 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.repository.MgApi
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityColor
 
 /**
@@ -57,8 +53,8 @@ fun RarityFilterRow(
 
 @Composable
 private fun AllFilterChip(selected: Boolean, onClick: () -> Unit) {
-    val borderColor = if (selected) Accent else SurfaceBorder
-    val bgColor = if (selected) Accent.copy(alpha = 0.15f) else SurfaceDark
+    val borderColor = if (selected) AppTheme.colors.accent else AppTheme.colors.surfaceHigh
+    val bgColor = if (selected) AppTheme.colors.accent.copy(alpha = 0.15f) else AppTheme.colors.surfaceHigh
     Box(
         modifier = Modifier
             .clip(AppTheme.shapes.largeShape)
@@ -72,7 +68,7 @@ private fun AllFilterChip(selected: Boolean, onClick: () -> Unit) {
             "All",
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (selected) Accent else TextSecondary,
+            color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
         )
     }
 }
@@ -80,8 +76,8 @@ private fun AllFilterChip(selected: Boolean, onClick: () -> Unit) {
 /** Compact circular chip showing only the rarity's badge icon (name would take too much space). */
 @Composable
 private fun RarityFilterChip(rarity: String, selected: Boolean, onClick: () -> Unit) {
-    val borderColor = if (selected) Accent else rarityColor(rarity).copy(alpha = 0.6f)
-    val bgColor = if (selected) Accent.copy(alpha = 0.15f) else SurfaceDark
+    val borderColor = if (selected) AppTheme.colors.accent else rarityColor(rarity).copy(alpha = 0.6f)
+    val bgColor = if (selected) AppTheme.colors.accent.copy(alpha = 0.15f) else AppTheme.colors.surfaceHigh
     Box(
         modifier = Modifier
             .size(34.dp)

@@ -45,11 +45,6 @@ import com.mgafk.app.ui.components.MultiSelectChip
 import com.mgafk.app.ui.components.RarityFilterRow
 import com.mgafk.app.ui.components.SearchFilterBar
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import com.mgafk.app.ui.components.TILE_MIN_WIDTH
@@ -260,7 +255,7 @@ fun GardenCard(
                         "$filteredCropCount/$totalCropCount" else "$totalCropCount plants",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Accent.copy(alpha = 0.7f),
+                    color = AppTheme.colors.accent.copy(alpha = 0.7f),
                 )
             }
         },
@@ -268,7 +263,7 @@ fun GardenCard(
         persistKey = "garden.plants",
     ) {
         if (plants.isEmpty()) {
-            Text("No plants in the garden.", fontSize = 12.sp, color = TextMuted)
+            Text("No plants in the garden.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
         } else {
             val activeFilterCount = listOfNotNull(
                 safeRarity?.let { 1 },
@@ -325,7 +320,7 @@ fun GardenCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("Sort:", fontSize = 10.sp, color = TextMuted, modifier = Modifier.align(Alignment.CenterVertically))
+                    Text("Sort:", fontSize = 10.sp, color = AppTheme.colors.textMuted, modifier = Modifier.align(Alignment.CenterVertically))
                     SortMode.entries.forEach { mode ->
                         if (mode == SortMode.NONE) return@forEach
                         val isSelected = sortMode == mode
@@ -333,16 +328,16 @@ fun GardenCard(
                             text = mode.label,
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) Accent else TextSecondary,
+                            color = if (isSelected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                             maxLines = 1,
                             modifier = Modifier
                                 .clip(AppTheme.shapes.smallShape)
                                 .border(
                                     1.dp,
-                                    if (isSelected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
+                                    if (isSelected) AppTheme.colors.accent.copy(alpha = 0.5f) else AppTheme.colors.surfaceHigh,
                                     AppTheme.shapes.smallShape,
                                 )
-                                .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
+                                .background(if (isSelected) AppTheme.colors.accent.copy(alpha = 0.18f) else AppTheme.colors.surface)
                                 .clickable { sortModeName = if (isSelected) SortMode.NONE.name else mode.name }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         )
@@ -355,22 +350,22 @@ fun GardenCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("Min size:", fontSize = 10.sp, color = TextMuted)
+                    Text("Min size:", fontSize = 10.sp, color = AppTheme.colors.textMuted)
                     Slider(
                         value = minSizePercent,
                         onValueChange = { minSizePercent = it },
                         valueRange = 0f..100f,
                         modifier = Modifier.weight(1f).height(24.dp),
                         colors = SliderDefaults.colors(
-                            thumbColor = Accent,
-                            activeTrackColor = Accent,
-                            inactiveTrackColor = SurfaceBorder,
+                            thumbColor = AppTheme.colors.accent,
+                            activeTrackColor = AppTheme.colors.accent,
+                            inactiveTrackColor = AppTheme.colors.surfaceHigh,
                         ),
                     )
                     Text(
                         text = "${minSizePercent.toInt()}%",
                         fontSize = 10.sp,
-                        color = if (minSizePercent > 0f) Accent else TextSecondary,
+                        color = if (minSizePercent > 0f) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                         fontWeight = if (minSizePercent > 0f) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 }
@@ -390,7 +385,7 @@ fun GardenCard(
                     Text(
                         "Drag to move, pinch to zoom.",
                         fontSize = 10.sp,
-                        color = TextMuted,
+                        color = AppTheme.colors.textMuted,
                         modifier = Modifier.padding(start = 2.dp),
                     )
                 }
@@ -422,7 +417,7 @@ fun GardenCard(
                     },
                 )
             } else if (sorted.isEmpty()) {
-                Text("No plants match filters.", fontSize = 12.sp, color = TextMuted)
+                Text("No plants match filters.", fontSize = 12.sp, color = AppTheme.colors.textMuted)
             } else {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val columns = ((maxWidth + TILE_SPACING) / (TILE_MIN_WIDTH + TILE_SPACING))
@@ -518,16 +513,16 @@ private fun ViewModeChip(label: String, selected: Boolean, onClick: () -> Unit) 
         text = label,
         fontSize = 10.sp,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        color = if (selected) Accent else TextSecondary,
+        color = if (selected) AppTheme.colors.accent else AppTheme.colors.textSecondary,
         maxLines = 1,
         modifier = Modifier
             .clip(AppTheme.shapes.smallShape)
             .border(
                 1.dp,
-                if (selected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
+                if (selected) AppTheme.colors.accent.copy(alpha = 0.5f) else AppTheme.colors.surfaceHigh,
                 AppTheme.shapes.smallShape,
             )
-            .background(if (selected) Accent.copy(alpha = 0.18f) else SurfaceCard)
+            .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.18f) else AppTheme.colors.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )

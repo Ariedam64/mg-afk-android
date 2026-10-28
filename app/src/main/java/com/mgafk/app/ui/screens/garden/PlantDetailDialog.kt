@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.garden
 
-import com.mgafk.app.ui.theme.OnStatusConnected
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,11 +27,6 @@ import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import androidx.compose.ui.window.Dialog
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
@@ -60,7 +54,7 @@ internal fun PlantDetailDialog(
         Column(
             modifier = Modifier
                 .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
+                .background(AppTheme.colors.surface)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -80,7 +74,7 @@ internal fun PlantDetailDialog(
                 plant.displayName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
             )
 
             // Rarity
@@ -105,8 +99,8 @@ internal fun PlantDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Size", fontSize = 12.sp, color = TextSecondary)
-                    Text("${sizePercent.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text("Size", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                    Text("${sizePercent.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textPrimary)
                 }
                 SizeBar(percent = sizePercent, color = color, showLabel = false)
 
@@ -116,7 +110,7 @@ internal fun PlantDetailDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Sell price", fontSize = 12.sp, color = TextSecondary)
+                        Text("Sell price", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                         Text(
                             PriceCalculator.formatFull(plant.sellPrice),
                             fontSize = 12.sp,
@@ -131,8 +125,8 @@ internal fun PlantDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Tile", fontSize = 12.sp, color = TextSecondary)
-                    Text("#${plant.snapshot.tileId}", fontSize = 12.sp, color = TextPrimary)
+                    Text("Tile", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
+                    Text("#${plant.snapshot.tileId}", fontSize = 12.sp, color = AppTheme.colors.textPrimary)
                 }
 
                 if (plant.snapshot.preserved) {
@@ -141,12 +135,12 @@ internal fun PlantDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Preserved", fontSize = 12.sp, color = TextSecondary)
+                        Text("Preserved", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("weather cannot change it", fontSize = 11.sp, color = TextMuted)
+                            Text("weather cannot change it", fontSize = 11.sp, color = AppTheme.colors.textMuted)
                             SpriteImage(url = MgApi.preservationSpriteUrl, size = 16.dp, contentDescription = "Preserved")
                         }
                     }
@@ -159,7 +153,7 @@ internal fun PlantDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Mutations", fontSize = 12.sp, color = TextSecondary)
+                        Text("Mutations", fontSize = 12.sp, color = AppTheme.colors.textSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             sortMutations(plant.snapshot.mutations).forEach { mutation ->
                                 SpriteImage(url = mutationSpriteUrl(mutation), size = 16.dp, contentDescription = mutation)
@@ -183,7 +177,7 @@ internal fun PlantDetailDialog(
                     Text(
                         remaining,
                         fontSize = 11.sp,
-                        color = TextSecondary,
+                        color = AppTheme.colors.textSecondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                     )
@@ -227,8 +221,8 @@ internal fun PlantDetailDialog(
                     enabled = isMature,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = StatusConnected,
-                        disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
+                        containerColor = AppTheme.colors.good,
+                        disabledContainerColor = AppTheme.colors.good.copy(alpha = 0.2f),
                         disabledContentColor = Color.White.copy(alpha = 0.4f),
                     ),
                     shape = AppTheme.shapes.smallShape,
@@ -237,7 +231,7 @@ internal fun PlantDetailDialog(
                         if (isMature) "Harvest" else "Growing…",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isMature) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
+                        color = if (isMature) AppTheme.colors.onGood else AppTheme.colors.onGood.copy(alpha = 0.4f),
                     )
                 }
             }

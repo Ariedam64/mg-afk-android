@@ -36,13 +36,6 @@ import com.mgafk.app.data.model.GardenTileRef
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 
 /**
@@ -91,7 +84,7 @@ fun CrystalsCard(
         }
 
         if (standing.isEmpty()) {
-            Text("No crystal planted.", fontSize = 11.sp, color = TextMuted)
+            Text("No crystal planted.", fontSize = 11.sp, color = AppTheme.colors.textMuted)
         } else {
             for ((crystal, seconds) in standing.sortedByDescending { it.second }) {
                 PlantedCrystalRow(
@@ -114,7 +107,7 @@ fun CrystalsCard(
             Text(
                 effectsSummary(effects.hungerRateMultiplier, effects.xpRateMultiplier, effects.strengthBonus),
                 fontSize = 10.sp,
-                color = StatusConnected,
+                color = AppTheme.colors.good,
                 lineHeight = 13.sp,
             )
         }
@@ -125,7 +118,7 @@ fun CrystalsCard(
         }
         if (owned.isNotEmpty()) {
             Spacer(modifier = Modifier.height(10.dp))
-            Text("Shards", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+            Text("Shards", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.textMuted)
             Spacer(modifier = Modifier.height(6.dp))
             for ((type, count) in owned) {
                 ShardRow(
@@ -175,8 +168,8 @@ private fun PlantedCrystalRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
+            .border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -187,7 +180,7 @@ private fun PlantedCrystalRow(
                 crystalName(entry?.name, crystal.type),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -195,14 +188,14 @@ private fun PlantedCrystalRow(
                 if (expired) "burnt out, ${crystal.tileType.name.lowercase()}"
                 else "${formatDuration(remainingSeconds)} left, ${crystal.tileType.name.lowercase()}",
                 fontSize = 10.sp,
-                color = if (expired) TextMuted else TextSecondary,
+                color = if (expired) AppTheme.colors.textMuted else AppTheme.colors.textSecondary,
                 lineHeight = 13.sp,
             )
         }
         if (canFuse && !atCeiling) {
-            RowAction(label = "Fuse", color = Accent, onClick = onFuse)
+            RowAction(label = "Fuse", color = AppTheme.colors.accent, onClick = onFuse)
         }
-        RowAction(label = "Take", color = TextSecondary, onClick = onPickup)
+        RowAction(label = "Take", color = AppTheme.colors.textSecondary, onClick = onPickup)
     }
 }
 
@@ -219,8 +212,8 @@ private fun ShardRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
+            .border(1.dp, AppTheme.colors.surfaceHigh.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -231,7 +224,7 @@ private fun ShardRow(
                 entry?.name ?: type.toolId,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = AppTheme.colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -239,12 +232,12 @@ private fun ShardRow(
                 if (atLimit) "x$count, garden already holds ${type.activeLimit}"
                 else "x$count, ${shardEffect(type)}",
                 fontSize = 10.sp,
-                color = TextMuted,
+                color = AppTheme.colors.textMuted,
                 lineHeight = 13.sp,
             )
         }
         if (!atLimit) {
-            RowAction(label = "Plant", color = Accent, onClick = onPlant)
+            RowAction(label = "Plant", color = AppTheme.colors.accent, onClick = onPlant)
         }
     }
 }

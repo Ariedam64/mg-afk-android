@@ -41,11 +41,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
 
 /**
  * Search bar + collapsible filter panel, shared by any grid/list screen that needs
@@ -91,8 +86,8 @@ fun SearchFilterBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(AppTheme.shapes.smallShape)
-                        .background(SurfaceDark.copy(alpha = 0.5f))
-                        .border(1.dp, SurfaceBorder, AppTheme.shapes.smallShape)
+                        .background(AppTheme.colors.surfaceHigh.copy(alpha = 0.5f))
+                        .border(1.dp, AppTheme.colors.surfaceHigh, AppTheme.shapes.smallShape)
                         .padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -102,7 +97,7 @@ fun SearchFilterBar(
                             text = "Clear all filters",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Accent,
+                            color = AppTheme.colors.accent,
                             modifier = Modifier.clickable { onClearFilters() },
                         )
                     }
@@ -123,28 +118,28 @@ private fun SearchField(
         modifier = modifier
             .height(40.dp)
             .clip(AppTheme.shapes.smallShape)
-            .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder, AppTheme.shapes.smallShape)
+            .background(AppTheme.colors.surfaceHigh)
+            .border(1.dp, AppTheme.colors.surfaceHigh, AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = Icons.Default.Search,
             contentDescription = null,
-            tint = TextMuted,
+            tint = AppTheme.colors.textMuted,
             modifier = Modifier.size(17.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
-                Text(text = placeholder, fontSize = 13.sp, color = TextMuted)
+                Text(text = placeholder, fontSize = 13.sp, color = AppTheme.colors.textMuted)
             }
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                textStyle = TextStyle(fontSize = 13.sp, color = TextPrimary),
-                cursorBrush = SolidColor(Accent),
+                textStyle = TextStyle(fontSize = 13.sp, color = AppTheme.colors.textPrimary),
+                cursorBrush = SolidColor(AppTheme.colors.accent),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -152,7 +147,7 @@ private fun SearchField(
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Clear search",
-                tint = TextMuted,
+                tint = AppTheme.colors.textMuted,
                 modifier = Modifier
                     .size(16.dp)
                     .clickable { onQueryChange("") },
@@ -182,8 +177,8 @@ private fun FilterToggleButton(
             modifier = Modifier
                 .height(40.dp)
                 .clip(shape)
-                .background(if (highlighted) Accent.copy(alpha = 0.12f) else SurfaceDark)
-                .border(1.dp, if (highlighted) Accent.copy(alpha = 0.4f) else SurfaceBorder, shape)
+                .background(if (highlighted) AppTheme.colors.accent.copy(alpha = 0.12f) else AppTheme.colors.surfaceHigh)
+                .border(1.dp, if (highlighted) AppTheme.colors.accent.copy(alpha = 0.4f) else AppTheme.colors.surfaceHigh, shape)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center,
@@ -192,7 +187,7 @@ private fun FilterToggleButton(
                 Icon(
                     imageVector = Icons.Default.Tune,
                     contentDescription = "Filters",
-                    tint = if (highlighted) Accent else TextMuted,
+                    tint = if (highlighted) AppTheme.colors.accent else AppTheme.colors.textMuted,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -200,13 +195,13 @@ private fun FilterToggleButton(
                     text = "Filters",
                     fontSize = 12.sp,
                     fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (highlighted) Accent else TextMuted,
+                    color = if (highlighted) AppTheme.colors.accent else AppTheme.colors.textMuted,
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = if (highlighted) Accent else TextMuted,
+                    tint = if (highlighted) AppTheme.colors.accent else AppTheme.colors.textMuted,
                     modifier = Modifier.size(16.dp).rotate(chevronRotation),
                 )
             }
@@ -219,7 +214,7 @@ private fun FilterToggleButton(
                     .offset(x = 6.dp, y = (-6).dp)
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(Accent),
+                    .background(AppTheme.colors.accent),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -247,8 +242,8 @@ fun MultiSelectChip(
         modifier = modifier
             .size(30.dp)
             .clip(shape)
-            .border(1.5.dp, if (selected) Accent else SurfaceBorder, shape)
-            .background(if (selected) Accent.copy(alpha = 0.18f) else SurfaceDark)
+            .border(1.5.dp, if (selected) AppTheme.colors.accent else AppTheme.colors.surfaceHigh, shape)
+            .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.18f) else AppTheme.colors.surfaceHigh)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
