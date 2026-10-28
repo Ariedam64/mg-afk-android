@@ -1,6 +1,5 @@
 package com.mgafk.app.ui.screens.pets
 
-import com.mgafk.app.ui.theme.OnAccent
 import com.mgafk.app.ui.theme.StatusConnecting
 import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
@@ -19,18 +18,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,45 +33,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.mgafk.app.data.model.InventoryPetItem
 import com.mgafk.app.data.model.InventoryProduceItem
 import com.mgafk.app.data.model.PetSnapshot
-import com.mgafk.app.data.model.REPLENISH_POTION_ID
-import com.mgafk.app.data.model.XP_POTION_ID
-import com.mgafk.app.data.model.XP_POTION_XP
-import java.util.Locale
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.ui.components.abilityBrush
-import com.mgafk.app.ui.components.abilityColor
-import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.data.websocket.Constants
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.SpriteImage
-import com.mgafk.app.ui.theme.rarityColor
 import com.mgafk.app.ui.theme.Accent
 import com.mgafk.app.ui.theme.StatusConnected
 import com.mgafk.app.ui.theme.StatusError
 import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
 import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
-import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 
-private val TILE_MIN = 58.dp
-private val GAP = 6.dp
+internal val TILE_MIN = 58.dp
+internal val GAP = 6.dp
 
 
 
@@ -88,7 +67,7 @@ private const val SEC_PER_HOUR = 3600
 private const val XP_STRENGTH_MAX = 30
 private const val BASE_STRENGTH_FLOOR = 30
 
-private fun calculatePetMaxStrength(species: String, targetScale: Double): Int {
+internal fun calculatePetMaxStrength(species: String, targetScale: Double): Int {
     val entry = MgApi.findPet(species) ?: return 0
     val maxScale = entry.maxScale?.let { if (it > 1.0) it else 1.0 } ?: 1.0
     val ratio = if (maxScale > 1.0) (targetScale - 1.0) / (maxScale - 1.0) else 0.0
@@ -96,7 +75,7 @@ private fun calculatePetMaxStrength(species: String, targetScale: Double): Int {
     return if (raw.isFinite()) raw.toInt().coerceAtLeast(0) else 0
 }
 
-private fun calculatePetStrength(species: String, xp: Double, targetScale: Double): Int {
+internal fun calculatePetStrength(species: String, xp: Double, targetScale: Double): Int {
     val entry = MgApi.findPet(species) ?: return 0
     val hoursToMature = entry.hoursToMature?.let { if (it > 0.0) it else 1.0 } ?: 1.0
 
@@ -533,450 +512,5 @@ private fun EmptyPetSlot(
             },
             onDismiss = { showPicker = false },
         )
-    }
-}
-
-// ── Pet picker dialog (used for both Swap and Equip) ──
-
-@Composable
-private fun PetPickerDialog(
-    title: String,
-    candidates: List<SwapCandidate>,
-    apiReady: Boolean,
-    onSelect: (SwapCandidate) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
-                .padding(16.dp),
-        ) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("${candidates.size} pets available", fontSize = 11.sp, color = TextMuted)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (candidates.isEmpty()) {
-                Text(
-                    "No pets available in inventory or hutch.",
-                    fontSize = 12.sp,
-                    color = TextMuted,
-                    modifier = Modifier.padding(vertical = 16.dp),
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(TILE_MIN),
-                    horizontalArrangement = Arrangement.spacedBy(GAP),
-                    verticalArrangement = Arrangement.spacedBy(GAP),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 100.dp)
-                        .height(320.dp),
-                ) {
-                    items(candidates, key = { it.pet.id }) { candidate ->
-                        PetCandidateTile(
-                            candidate = candidate,
-                            apiReady = apiReady,
-                            onClick = { onSelect(candidate) },
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PetCandidateTile(
-    candidate: SwapCandidate,
-    apiReady: Boolean,
-    onClick: () -> Unit,
-) {
-    val pet = candidate.pet
-    val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
-    val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val rarity = entry?.rarity
-    val str = remember(pet.petSpecies, pet.xp, pet.targetScale, apiReady) {
-        calculatePetStrength(pet.petSpecies, pet.xp, pet.targetScale)
-    }
-    val maxStr = remember(pet.petSpecies, pet.targetScale, apiReady) {
-        calculatePetMaxStrength(pet.petSpecies, pet.targetScale)
-    }
-    val isMaxStr = str >= maxStr && maxStr > 0
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clip(AppTheme.shapes.smallShape)
-            .rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark)
-            .clickable(onClick = onClick),
-    ) {
-        // Mutation icon top-left
-        if (pet.mutations.isNotEmpty()) {
-            Row(
-                modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                sortMutations(pet.mutations).take(2).forEach { SpriteImage(url = mutationSpriteUrl(it), size = 12.dp, contentDescription = it) }
-            }
-        }
-        // STR top-right
-        if (maxStr > 0) {
-            val strText = if (isMaxStr) "$str" else "$str/$maxStr"
-            val strColor = if (isMaxStr) StatusConnecting else Accent
-            Text(
-                strText, fontSize = 7.sp, fontWeight = FontWeight.Bold,
-                color = strColor, lineHeight = 9.sp,
-                modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
-            )
-        }
-        // Center content
-        Column(
-            modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
-            Text(
-                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
-            )
-            if (pet.abilities.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    pet.abilities.forEach { abilityId ->
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(abilityColor(abilityId)),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeedPetPickerDialog(
-    pet: PetSnapshot,
-    produce: List<InventoryProduceItem>,
-    apiReady: Boolean,
-    potionsInInventory: Int,
-    potionsInShack: Int,
-    onConfirm: (List<String>) -> Unit,
-    onUsePotion: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val petEntry = remember(pet.species, apiReady) { MgApi.findPet(pet.species) }
-    val diet = remember(petEntry) { petEntry?.diet ?: emptyList() }
-    val compatible = remember(produce, diet, apiReady) {
-        if (diet.isEmpty()) emptyList()
-        else produce.filter { it.species in diet }
-    }
-    var selected by remember { mutableStateOf(setOf<String>()) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
-                .padding(16.dp),
-        ) {
-            Text(
-                "Feed ${pet.name.ifBlank { pet.species }}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-            )
-
-            if (diet.isNotEmpty()) {
-                val dietNames = remember(diet, apiReady) {
-                    diet.mapNotNull { MgApi.findItem(it)?.name?.removeSuffix(" Seed") }
-                }
-                Text(
-                    "Diet: ${dietNames.joinToString(", ")}",
-                    fontSize = 10.sp,
-                    color = TextMuted,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-
-            Text(
-                "${selected.size} selected",
-                fontSize = 11.sp,
-                color = if (selected.isNotEmpty()) StatusConnected else TextMuted,
-                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
-            )
-
-            // A potion restores hunger in full on its own, so it is an immediate action
-            // rather than another entry in the multi-select grid below.
-            if (potionsInInventory + potionsInShack > 0) {
-                HungerPotionRow(
-                    inInventory = potionsInInventory,
-                    inShack = potionsInShack,
-                    apiReady = apiReady,
-                    onClick = onUsePotion,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            if (compatible.isEmpty()) {
-                Text(
-                    "No compatible produce in inventory.",
-                    fontSize = 12.sp,
-                    color = TextMuted,
-                    modifier = Modifier.padding(vertical = 16.dp),
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(TILE_MIN),
-                    horizontalArrangement = Arrangement.spacedBy(GAP),
-                    verticalArrangement = Arrangement.spacedBy(GAP),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 100.dp)
-                        .height(320.dp),
-                ) {
-                    items(compatible, key = { it.id }) { item ->
-                        val isSelected = item.id in selected
-                        FeedProduceTile(
-                            item = item,
-                            apiReady = apiReady,
-                            isSelected = isSelected,
-                            onClick = {
-                                selected = if (isSelected) selected - item.id else selected + item.id
-                            },
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
-                }
-                Button(
-                    onClick = { onConfirm(selected.toList()) },
-                    enabled = selected.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                ) {
-                    Text("Feed ${selected.size}", fontSize = 12.sp, color = OnAccent)
-                }
-            }
-        }
-    }
-}
-
-/**
- * Confirmation before spending an XP Potion. Unlike the Hunger Potion this is not a one-tap
- * action: an XP Potion is a Legendary item and the gain is invisible until it lands, so the
- * dialog shows what the pet's strength becomes before anything is consumed.
- */
-@Composable
-private fun XpPotionDialog(
-    pet: PetSnapshot,
-    strength: Int,
-    maxStrength: Int,
-    apiReady: Boolean,
-    inInventory: Int,
-    inShack: Int,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val entry = remember(apiReady) { MgApi.findItem(XP_POTION_ID) }
-    val name = entry?.name ?: "XP Potion"
-    val projectedStrength = remember(pet.species, pet.xp, pet.targetScale, apiReady) {
-        calculatePetStrength(pet.species, pet.xp + XP_POTION_XP, pet.targetScale)
-    }
-    val stockText = when {
-        inInventory > 0 && inShack > 0 -> "x$inInventory in inventory, x$inShack in Tool Shack"
-        inInventory > 0 -> "x$inInventory in inventory"
-        else -> "x$inShack in Tool Shack, retrieved on use"
-    }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(AppTheme.shapes.mediumShape)
-                .background(SurfaceCard)
-                .padding(16.dp),
-        ) {
-            Text(
-                "Strengthen ${pet.name.ifBlank { pet.species }}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-            )
-            Text(
-                "One $name grants ${formatXp(XP_POTION_XP)} XP.",
-                fontSize = 11.sp,
-                color = TextMuted,
-                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(AppTheme.shapes.smallShape)
-                    .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-                    .background(Accent.copy(alpha = 0.08f))
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
-                }
-                if (maxStrength > 0) {
-                    Text(
-                        "STR $strength -> $projectedStrength",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (projectedStrength > strength) StatusConnected else TextMuted,
-                    )
-                }
-            }
-
-            // Strength moves in whole points, so a potion can be worth real XP and still not
-            // shift the number. Better to say so than to let it look like nothing happened.
-            if (maxStrength > 0 && projectedStrength == strength) {
-                Text(
-                    "This potion adds XP but not enough for the next STR point.",
-                    fontSize = 10.sp,
-                    color = TextMuted,
-                    lineHeight = 13.sp,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                ) {
-                    Text("Cancel", fontSize = 12.sp, color = TextSecondary)
-                }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                ) {
-                    Text("Use", fontSize = 12.sp, color = OnAccent)
-                }
-            }
-        }
-    }
-}
-
-/** `20,000`, so a five-figure XP amount stays readable at a glance. */
-private fun formatXp(xp: Int): String = "%,d".format(Locale.US, xp)
-
-/**
- * One-tap Hunger Potion action inside the feed picker. Shown only when the player owns at
- * least one, counting both the inventory and the Tool Shack: a potion still in the shack is
- * retrieved before use, which the caller handles.
- */
-@Composable
-private fun HungerPotionRow(
-    inInventory: Int,
-    inShack: Int,
-    apiReady: Boolean,
-    onClick: () -> Unit,
-) {
-    val entry = remember(apiReady) { MgApi.findItem(REPLENISH_POTION_ID) }
-    val name = entry?.name ?: "Hunger Potion"
-    val stockText = when {
-        inInventory > 0 && inShack > 0 -> "x$inInventory in inventory, x$inShack in Tool Shack"
-        inInventory > 0 -> "x$inInventory in inventory"
-        else -> "x$inShack in Tool Shack, retrieved on use"
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AppTheme.shapes.smallShape)
-            .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
-            .background(Accent.copy(alpha = 0.08f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Text(stockText, fontSize = 10.sp, color = TextMuted, lineHeight = 13.sp)
-        }
-        Text("Use", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Accent)
-    }
-}
-
-@Composable
-private fun FeedProduceTile(
-    item: InventoryProduceItem,
-    apiReady: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    val entry = remember(item.species, apiReady) { MgApi.findItem(item.species) }
-    val name = entry?.name?.removeSuffix(" Seed") ?: item.species
-    val color = rarityColor(entry?.rarity)
-    val borderColor = if (isSelected) StatusConnected else color.copy(alpha = 0.5f)
-    val borderWidth = if (isSelected) 2.5.dp else 1.5.dp
-    val price = remember(item.species, item.size, item.mutations, apiReady) {
-        PriceCalculator.calculateCropSellPrice(item.species, item.size, item.mutations)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AppTheme.shapes.smallShape)
-            .border(borderWidth, borderColor, AppTheme.shapes.smallShape)
-            .background(if (isSelected) StatusConnected.copy(0.1f) else SurfaceDark)
-            .clickable(onClick = onClick)
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        SpriteImage(category = "plants", name = item.species, size = 28.dp, contentDescription = name, mutations = item.mutations)
-        Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        if (price != null) {
-            Text(PriceCalculator.formatPrice(price), fontSize = 8.sp, fontWeight = FontWeight.Bold,
-                color = Color(0xFFFFD700), lineHeight = 10.sp)
-        }
-        if (item.mutations.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                sortMutations(item.mutations).take(3).forEach { SpriteImage(url = mutationSpriteUrl(it), size = 12.dp, contentDescription = it) }
-            }
-        }
-        if (isSelected) {
-            Text("\u2713", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusConnected, lineHeight = 12.sp)
-        }
     }
 }
