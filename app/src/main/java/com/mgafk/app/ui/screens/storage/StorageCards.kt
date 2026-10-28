@@ -75,39 +75,17 @@ import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
+import com.mgafk.app.data.repository.PetTileStrength
+import com.mgafk.app.data.repository.RaritySort
+import com.mgafk.app.ui.components.GridOf
+import com.mgafk.app.ui.components.LockOverlay
+import com.mgafk.app.ui.components.LockToggleIcon
+import com.mgafk.app.ui.components.PetTile
+import com.mgafk.app.ui.components.TILE_MIN_WIDTH
+import com.mgafk.app.ui.components.TILE_SPACING
+import com.mgafk.app.ui.components.formatQuantity
 
 
-
-private val TILE_MIN = 76.dp
-private val GAP = 6.dp
-
-private const val XP_H = 3600.0; private const val BASE_S = 80; private const val MAX_S = 100; private const val S_GAIN = 30
-private fun maxStr(sp: String, sc: Double): Int {
-    val ms = MgApi.findPet(sp)?.maxScale ?: return BASE_S
-    if (sc <= 1.0) return BASE_S; if (sc >= ms) return MAX_S
-    return (BASE_S + 20 * (sc - 1.0) / (ms - 1.0)).toInt()
-}
-private fun curStr(sp: String, xp: Double, max: Int): Int {
-    val htm = MgApi.findPet(sp)?.hoursToMature ?: return max - S_GAIN
-    return ((max - S_GAIN) + minOf(S_GAIN / htm * (xp / XP_H), S_GAIN.toDouble())).toInt()
-}
-
-private val RARITY_ORDER = listOf("Celestial", "Divine", "Mythic", "Mythical", "Legendary", "Rare", "Uncommon", "Common")
-private fun raritySort(id: String): Int {
-    val r = MgApi.findItem(id)?.rarity ?: return RARITY_ORDER.size
-    return RARITY_ORDER.indexOfFirst { it.equals(r, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
-}
-private fun raritySortPet(sp: String): Int {
-    val r = MgApi.findPet(sp)?.rarity ?: return RARITY_ORDER.size
-    return RARITY_ORDER.indexOfFirst { it.equals(r, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
-}
-
-private fun fmtQty(q: Int): String = when {
-    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0)
-    q >= 10_000 -> "${q / 1000}K"
-    q >= 1_000 -> "%.1fK".format(q / 1000.0)
-    else -> "$q"
-}
 
 // ── Seed Silo ──
 
@@ -124,7 +102,7 @@ fun SeedSiloCard(
     onMoveToInventory: (String) -> Unit = {},
     onUpgrade: () -> Unit = {},
 ) {
-    val sorted = remember(seeds, apiReady) { seeds.sortedBy { raritySort(it.species) } }
+    val sorted = remember(seeds, apiReady) { seeds.sortedBy { RaritySort.item(it.species) } }
     var selectedSpecies by remember { mutableStateOf<String?>(null) }
     var selectedRarity by remember { mutableStateOf<String?>(null) }
     val availableRarities = remember(sorted, apiReady) {
@@ -208,7 +186,7 @@ fun DecorShedCard(
     onMoveToInventory: (String) -> Unit = {},
     onUpgrade: () -> Unit = {},
 ) {
-    val sorted = remember(decors, apiReady) { decors.sortedBy { raritySort(it.decorId) } }
+    val sorted = remember(decors, apiReady) { decors.sortedBy { RaritySort.item(it.decorId) } }
     var selectedDecorId by remember { mutableStateOf<String?>(null) }
     var selectedRarity by remember { mutableStateOf<String?>(null) }
     val availableRarities = remember(sorted, apiReady) {
@@ -292,7 +270,7 @@ fun ToolShackCard(
     onMoveToInventory: (String) -> Unit = {},
     onUpgrade: () -> Unit = {},
 ) {
-    val sorted = remember(tools, apiReady) { tools.sortedBy { raritySort(it.toolId) } }
+    val sorted = remember(tools, apiReady) { tools.sortedBy { RaritySort.item(it.toolId) } }
     var selectedToolId by remember { mutableStateOf<String?>(null) }
     var selectedRarity by remember { mutableStateOf<String?>(null) }
     val availableRarities = remember(sorted, apiReady) {
@@ -377,7 +355,7 @@ fun FeedingTroughCard(
     onAddItems: (List<InventoryProduceItem>) -> Unit = {},
     onRemoveItem: (String) -> Unit = {},
 ) {
-    val sorted = remember(crops, apiReady) { crops.sortedBy { raritySort(it.species) } }
+    val sorted = remember(crops, apiReady) { crops.sortedBy { RaritySort.item(it.species) } }
     val troughIds = remember(crops) { crops.map { it.id }.toSet() }
     val availableProduce = remember(produce, troughIds) { produce.filter { it.id !in troughIds } }
     val slotsLeft = (FEEDING_TROUGH_MAX - crops.size).coerceAtLeast(0)
@@ -459,7 +437,7 @@ private fun FeedingTroughPickerDialog(
     onConfirm: (List<InventoryProduceItem>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sorted = remember(produce, apiReady) { produce.sortedBy { raritySort(it.species) } }
+    val sorted = remember(produce, apiReady) { produce.sortedBy { RaritySort.item(it.species) } }
     var selected by remember { mutableStateOf(setOf<String>()) } // item IDs
 
     Dialog(onDismissRequest = onDismiss) {
@@ -486,9 +464,9 @@ private fun FeedingTroughPickerDialog(
                 Text("No produce in inventory.", fontSize = 12.sp, color = TextMuted)
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(TILE_MIN),
-                    horizontalArrangement = Arrangement.spacedBy(GAP),
-                    verticalArrangement = Arrangement.spacedBy(GAP),
+                    columns = GridCells.Adaptive(TILE_MIN_WIDTH),
+                    horizontalArrangement = Arrangement.spacedBy(TILE_SPACING),
+                    verticalArrangement = Arrangement.spacedBy(TILE_SPACING),
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 100.dp)
@@ -626,7 +604,7 @@ fun PetHutchCard(
     onUpgrade: () -> Unit = {},
     onMoveToInventory: (String) -> Unit = {},
 ) {
-    val sorted = remember(pets, apiReady) { pets.sortedBy { raritySortPet(it.petSpecies) } }
+    val sorted = remember(pets, apiReady) { pets.sortedBy { RaritySort.pet(it.petSpecies) } }
     var selectedPetId by remember { mutableStateOf<String?>(null) }
     var selectedRarity by remember { mutableStateOf<String?>(null) }
     val availableRarities = remember(sorted, apiReady) {
@@ -809,40 +787,6 @@ private fun StorageUpgradePanel(
     }
 }
 
-// ── Lock badge overlay ──
-
-@Composable
-private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
-    Box {
-        content()
-        if (isLocked) {
-            SpriteImage(
-                url = MgApi.lockSpriteUrl,
-                size = 12.dp,
-                contentDescription = "Locked",
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(3.dp),
-            )
-        }
-    }
-}
-
-// ── Lock toggle icon ──
-
-@Composable
-private fun LockToggleIcon(isLocked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    SpriteImage(
-        url = if (isLocked) MgApi.lockSpriteUrl else MgApi.unlockSpriteUrl,
-        size = 28.dp,
-        contentDescription = if (isLocked) "Locked" else "Unlocked",
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .clickable { onClick() }
-            .padding(2.dp),
-    )
-}
-
 // ── Storage item detail dialog ──
 
 @Composable
@@ -925,8 +869,8 @@ private fun StoragePetDetailDialog(
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
     val color = rarityColor(entry?.rarity)
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
+    val ms = PetTileStrength.maxStr(pet.petSpecies, pet.targetScale)
+    val cs = PetTileStrength.curStr(pet.petSpecies, pet.xp, ms)
     val sellPrice = remember(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations, apiReady) {
         PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations)
     }
@@ -1122,88 +1066,6 @@ private fun QtyTile(itemId: String, quantity: Int, apiReady: Boolean) {
         SpriteImage(url = entry?.sprite, size = 28.dp, contentDescription = name)
         Text(name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp)
-        Text(fmtQty(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
-    }
-}
-
-// ── Shared: pet tile (compact card, same style as pet selector) ──
-
-@Composable
-private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
-    val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
-    val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val rarityId = entry?.rarity
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
-    val isMax = cs >= ms
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clip(AppTheme.shapes.smallShape)
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark),
-    ) {
-        // Mutation icons top-left
-        if (pet.mutations.isNotEmpty()) {
-            Row(
-                modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                sortMutations(pet.mutations).take(2).forEach {
-                    SpriteImage(url = mutationSpriteUrl(it), size = 12.dp, contentDescription = it)
-                }
-            }
-        }
-        // Center content - STR goes below the name (top-right is reserved for the
-        // lock icon in the Pet Hutch card)
-        Column(
-            modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
-            Text(
-                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
-            )
-            if (ms > 0) {
-                val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) StatusConnecting else Accent
-                Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
-            }
-            if (pet.abilities.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    pet.abilities.forEach { abilityId ->
-                        val entry = remember(abilityId, apiReady) { MgApi.getAbilities()[abilityId] }
-                        val bg = remember(abilityId, apiReady) { abilityBrush(abilityId) }
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(bg),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── Adaptive grid ──
-
-@Composable
-private fun GridOf(count: Int, content: @Composable (Int) -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val cols = ((maxWidth + GAP) / (TILE_MIN + GAP)).toInt().coerceAtLeast(1)
-        Column(verticalArrangement = Arrangement.spacedBy(GAP)) {
-            (0 until count).chunked(cols).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                    row.forEach { i -> Box(Modifier.weight(1f)) { content(i) } }
-                    repeat(cols - row.size) { Box(Modifier.weight(1f)) }
-                }
-            }
-        }
+        Text(formatQuantity(quantity), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Accent, lineHeight = 11.sp)
     }
 }

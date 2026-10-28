@@ -87,46 +87,16 @@ import com.mgafk.app.ui.theme.rarityBorder
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
 import androidx.compose.ui.window.Dialog
+import com.mgafk.app.data.repository.PetTileStrength
+import com.mgafk.app.data.repository.RaritySort
+import com.mgafk.app.ui.components.GridOf
+import com.mgafk.app.ui.components.LockOverlay
+import com.mgafk.app.ui.components.LockToggleIcon
+import com.mgafk.app.ui.components.PetTile
 
 // ── Rarity colors ──
 
 
-
-private val TILE_MIN_WIDTH = 76.dp
-private val TILE_SPACING = 6.dp
-
-// ── Strength (from game source) ──
-
-private const val XP_PER_HOUR = 3600.0
-private const val BASE_STR = 80
-private const val MAX_STR = 100
-private const val STR_GAINED = 30
-
-private fun maxStr(species: String, scale: Double): Int {
-    val ms = MgApi.findPet(species)?.maxScale ?: return BASE_STR
-    if (scale <= 1.0) return BASE_STR
-    if (scale >= ms) return MAX_STR
-    return (BASE_STR + 20 * (scale - 1.0) / (ms - 1.0)).toInt()
-}
-
-private fun curStr(species: String, xp: Double, max: Int): Int {
-    val htm = MgApi.findPet(species)?.hoursToMature ?: return max - STR_GAINED
-    val gained = minOf(STR_GAINED / htm * (xp / XP_PER_HOUR), STR_GAINED.toDouble())
-    return ((max - STR_GAINED) + gained).toInt()
-}
-
-private val RARITY_ORDER = listOf("Celestial", "Divine", "Mythic", "Mythical", "Legendary", "Rare", "Uncommon", "Common")
-
-/** Rarity index for sorting (lower = rarer = first). Unknown rarities go last. */
-private fun raritySort(itemId: String): Int {
-    val rarity = MgApi.findItem(itemId)?.rarity ?: return RARITY_ORDER.size
-    return RARITY_ORDER.indexOfFirst { it.equals(rarity, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
-}
-
-private fun raritySortPet(species: String): Int {
-    val rarity = MgApi.findPet(species)?.rarity ?: return RARITY_ORDER.size
-    return RARITY_ORDER.indexOfFirst { it.equals(rarity, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
-}
 
 private fun itemRarity(itemId: String): String? = MgApi.findItem(itemId)?.rarity
 private fun petRarity(species: String): String? = MgApi.findPet(species)?.rarity
@@ -195,13 +165,13 @@ fun InventoryCard(
         if (totalItems == 0) {
             Text("No inventory data yet.", fontSize = 12.sp, color = TextMuted)
         } else {
-            val sortedSeeds = remember(inventory.seeds, apiReady) { inventory.seeds.sortedBy { raritySort(it.species) } }
-            val sortedTools = remember(inventory.tools, apiReady) { inventory.tools.sortedBy { raritySort(it.toolId) } }
-            val sortedEggs = remember(inventory.eggs, apiReady) { inventory.eggs.sortedBy { raritySort(it.eggId) } }
-            val sortedPlants = remember(inventory.plants, apiReady) { inventory.plants.sortedBy { raritySort(it.species) } }
-            val sortedProduce = remember(inventory.produce, apiReady) { inventory.produce.sortedBy { raritySort(it.species) } }
-            val sortedDecors = remember(inventory.decors, apiReady) { inventory.decors.sortedBy { raritySort(it.decorId) } }
-            val sortedPets = remember(inventory.pets, apiReady) { inventory.pets.sortedBy { raritySortPet(it.petSpecies) } }
+            val sortedSeeds = remember(inventory.seeds, apiReady) { inventory.seeds.sortedBy { RaritySort.item(it.species) } }
+            val sortedTools = remember(inventory.tools, apiReady) { inventory.tools.sortedBy { RaritySort.item(it.toolId) } }
+            val sortedEggs = remember(inventory.eggs, apiReady) { inventory.eggs.sortedBy { RaritySort.item(it.eggId) } }
+            val sortedPlants = remember(inventory.plants, apiReady) { inventory.plants.sortedBy { RaritySort.item(it.species) } }
+            val sortedProduce = remember(inventory.produce, apiReady) { inventory.produce.sortedBy { RaritySort.item(it.species) } }
+            val sortedDecors = remember(inventory.decors, apiReady) { inventory.decors.sortedBy { RaritySort.item(it.decorId) } }
+            val sortedPets = remember(inventory.pets, apiReady) { inventory.pets.sortedBy { RaritySort.pet(it.petSpecies) } }
 
             val allRarities = remember(sortedSeeds, sortedTools, sortedEggs, sortedPlants, sortedProduce, sortedDecors, sortedPets, apiReady) {
                 val present = buildSet {
@@ -774,75 +744,12 @@ private fun PetsList(
 }
 
 @Composable
-private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
-    val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
-    val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
-    val rarityId = entry?.rarity
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
-    val isMax = cs >= ms
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clip(AppTheme.shapes.smallShape)
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
-            .background(SurfaceDark),
-    ) {
-        // Mutation icons top-left
-        if (pet.mutations.isNotEmpty()) {
-            Row(
-                modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
-                horizontalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                sortMutations(pet.mutations).take(2).forEach {
-                    SpriteImage(url = mutationSpriteUrl(it), size = 12.dp, contentDescription = it)
-                }
-            }
-        }
-        // Center content
-        Column(
-            modifier = Modifier.align(Alignment.Center).padding(top = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            SpriteImage(category = "pets", name = pet.petSpecies, size = 28.dp, contentDescription = pet.petSpecies, mutations = pet.mutations)
-            Text(
-                name, fontSize = 8.sp, fontWeight = FontWeight.Medium, color = TextPrimary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, lineHeight = 10.sp,
-            )
-            // STR centered
-            if (ms > 0) {
-                val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) StatusConnecting else Accent
-                Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
-            }
-            if (pet.abilities.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    pet.abilities.forEach { abilityId ->
-                        val entry = remember(abilityId, apiReady) { MgApi.getAbilities()[abilityId] }
-                        val bg = remember(abilityId, apiReady) { abilityBrush(abilityId) }
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(bg),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Long, dust: Long = 0L) {
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
     val rarityId = entry?.rarity
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
+    val ms = PetTileStrength.maxStr(pet.petSpecies, pet.targetScale)
+    val cs = PetTileStrength.curStr(pet.petSpecies, pet.xp, ms)
     val isMax = cs >= ms
 
     Box(
@@ -1748,40 +1655,6 @@ private fun SellAllCropsDialog(
     }
 }
 
-// ── Lock badge overlay ──
-
-@Composable
-private fun LockOverlay(isLocked: Boolean, content: @Composable () -> Unit) {
-    Box {
-        content()
-        if (isLocked) {
-            SpriteImage(
-                url = MgApi.lockSpriteUrl,
-                size = 12.dp,
-                contentDescription = "Locked",
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(3.dp),
-            )
-        }
-    }
-}
-
-// ── Lock toggle icon (top-right of detail dialogs) ──
-
-@Composable
-private fun LockToggleIcon(isLocked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    SpriteImage(
-        url = if (isLocked) MgApi.lockSpriteUrl else MgApi.unlockSpriteUrl,
-        size = 28.dp,
-        contentDescription = if (isLocked) "Locked" else "Unlocked",
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .clickable { onClick() }
-            .padding(2.dp),
-    )
-}
-
 // ── Generic item detail dialog ──
 
 @Composable
@@ -1866,8 +1739,8 @@ private fun PetDetailDialog(
     val entry = remember(pet.petSpecies, apiReady) { MgApi.findPet(pet.petSpecies) }
     val name = pet.name?.ifBlank { null } ?: entry?.name ?: pet.petSpecies
     val color = rarityColor(entry?.rarity)
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
+    val ms = PetTileStrength.maxStr(pet.petSpecies, pet.targetScale)
+    val cs = PetTileStrength.curStr(pet.petSpecies, pet.xp, ms)
     val sellPrice = remember(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations, apiReady) {
         PriceCalculator.calculatePetSellPrice(pet.petSpecies, pet.xp, pet.targetScale, pet.mutations)
     }
@@ -2257,23 +2130,6 @@ private fun ProduceDetailDialog(
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
-        }
-    }
-}
-
-// ── Adaptive grid ──
-
-@Composable
-private fun GridOf(count: Int, content: @Composable (Int) -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val cols = ((maxWidth + TILE_SPACING) / (TILE_MIN_WIDTH + TILE_SPACING)).toInt().coerceAtLeast(1)
-        Column(verticalArrangement = Arrangement.spacedBy(TILE_SPACING)) {
-            (0 until count).chunked(cols).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_SPACING)) {
-                    row.forEach { i -> Box(Modifier.weight(1f)) { content(i) } }
-                    repeat(cols - row.size) { Box(Modifier.weight(1f)) }
-                }
-            }
         }
     }
 }

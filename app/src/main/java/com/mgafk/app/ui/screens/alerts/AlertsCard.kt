@@ -66,6 +66,7 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
+import com.mgafk.app.data.repository.CoreShops
 
 
 
@@ -83,15 +84,6 @@ private const val HUNGER_KEY = "hunger<5"
 private const val TROUGH_KEY = "trough_low"
 
 private val HUNGER_THRESHOLDS = listOf(5, 10, 15, 20, 25)
-
-private val CORE_SHOP_CATEGORIES = listOf(
-    "Seeds" to "seed",
-    "Tools" to "tool",
-    "Eggs" to "egg",
-    "Decors" to "decor",
-)
-
-private val CORE_SHOP_KEYS = CORE_SHOP_CATEGORIES.map { it.second }.toSet()
 
 /** Emits 4 separate collapsible cards with per-section mode. */
 @Composable
@@ -303,10 +295,10 @@ private fun ShopAlertsCard(
                 .flatMap { it.eligibleShops }
                 .distinct()
                 .map { it.lowercase() }
-                .filter { it !in CORE_SHOP_KEYS }
+                .filter { it !in CoreShops.KEYS }
                 .sorted()
                 .map { key -> "${key.replaceFirstChar { c -> c.uppercase() }} Shop" to key }
-            CORE_SHOP_CATEGORIES + dynamic
+            CoreShops.LABELED + dynamic
         }
 
         allCategories.forEachIndexed { index, (label, category) ->

@@ -76,13 +76,14 @@ import com.mgafk.app.ui.theme.rarityBorder
 import androidx.compose.ui.window.Dialog
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
+import com.mgafk.app.ui.components.TILE_MIN_WIDTH
+import com.mgafk.app.ui.components.TILE_SPACING
+import com.mgafk.app.ui.components.formatTimeRemaining
+import com.mgafk.app.ui.components.formatQuantity
 
 
 
 private val RARITY_TIERS = listOf("Common", "Uncommon", "Rare", "Legendary", "Mythic", "Divine", "Celestial")
-
-private val TILE_MIN_WIDTH = 76.dp
-private val TILE_SPACING = 6.dp
 
 /** Growth progress 0..100 based on startTime/endTime vs now. */
 private fun growthPercent(startTime: Long, endTime: Long): Int {
@@ -90,21 +91,6 @@ private fun growthPercent(startTime: Long, endTime: Long): Int {
     val now = System.currentTimeMillis()
     if (now >= endTime) return 100
     return ((now - startTime).toDouble() / (endTime - startTime) * 100).toInt().coerceIn(0, 100)
-}
-
-/** Format remaining time as compact string (e.g. "2m 30s", "1h 5m"). */
-private fun formatTimeRemaining(endTime: Long): String {
-    val remaining = endTime - System.currentTimeMillis()
-    if (remaining <= 0) return ""
-    val totalSec = remaining / 1000
-    val hours = totalSec / 3600
-    val minutes = (totalSec % 3600) / 60
-    val seconds = totalSec % 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m ${seconds}s"
-        else -> "${seconds}s"
-    }
 }
 
 /** A tick that increments every second to force recomposition of time-dependent UI. */
@@ -118,13 +104,6 @@ private fun rememberSecondTick(): Long {
         }
     }
     return tick
-}
-
-private fun fmtQty(q: Int): String = when {
-    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0)
-    q >= 10_000 -> "${q / 1000}K"
-    q >= 1_000 -> "%.1fK".format(q / 1000.0)
-    else -> "$q"
 }
 
 /** Pre-resolved plant data - computed once per plants change, reused by filters + tiles. */
@@ -895,7 +874,7 @@ private fun PlantDetailDialog(
 
             // Remaining time info (shown above buttons when growing)
             if (!isMature) {
-                val remaining = formatTimeRemaining(plant.snapshot.endTime)
+                val remaining = formatTimeRemaining(plant.snapshot.endTime, System.currentTimeMillis())
                 if (remaining.isNotEmpty()) {
                     Text(
                         remaining,
@@ -976,7 +955,7 @@ private fun PlantDetailDialog(
                 val cleanseLabel = when {
                     plant.snapshot.mutations.isEmpty() -> "No mutations"
                     cropCleansers <= 0 -> "No cleansers"
-                    else -> "Cleanse x${fmtQty(cropCleansers)}"
+                    else -> "Cleanse x${formatQuantity(cropCleansers)}"
                 }
                 Text(
                     cleanseLabel,
@@ -1001,7 +980,7 @@ private fun PlantDetailDialog(
                 SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(
-                    if (canPot) "Pot x${fmtQty(planterPots)}" else "No pots",
+                    if (canPot) "Pot x${formatQuantity(planterPots)}" else "No pots",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (canPot) Color.White else Color.White.copy(alpha = 0.4f),
@@ -1142,7 +1121,7 @@ private fun MultiSlotPlantDetailDialog(
                 SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(
-                    if (canPot) "Pot x${fmtQty(planterPots)}" else "No pots",
+                    if (canPot) "Pot x${formatQuantity(planterPots)}" else "No pots",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (canPot) Color.White else Color.White.copy(alpha = 0.4f),
@@ -1199,7 +1178,7 @@ private fun CropSlotRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (!isMature) {
-                    val remaining = formatTimeRemaining(crop.snapshot.endTime)
+                    val remaining = formatTimeRemaining(crop.snapshot.endTime, System.currentTimeMillis())
                     if (remaining.isNotEmpty()) {
                         Text(remaining, fontSize = 9.sp, color = TextSecondary)
                     }

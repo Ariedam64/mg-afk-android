@@ -22,3 +22,29 @@ fun formatClock(seconds: Int): String {
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, (s % 3600) / 60, s % 60)
     else "%d:%02d".format(s / 60, s % 60)
 }
+
+/**
+ * Time left until [endTime] as the garden and egg tiles show it: "2m 30s", "1h 5m", "45s",
+ * or "" once [now] has reached it.
+ */
+fun formatTimeRemaining(endTime: Long, now: Long): String {
+    val remaining = (endTime - now).coerceAtLeast(0)
+    if (remaining <= 0) return ""
+    val totalSec = remaining / 1000
+    val hours = totalSec / 3600
+    val minutes = (totalSec % 3600) / 60
+    val seconds = totalSec % 60
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m ${seconds}s"
+        else -> "${seconds}s"
+    }
+}
+
+/** Compact item count for a tile badge: "999", "1.5K", "12K", "1.2M". */
+fun formatQuantity(q: Int): String = when {
+    q >= 1_000_000 -> "%.1fM".format(q / 1_000_000.0)
+    q >= 10_000 -> "${q / 1000}K"
+    q >= 1_000 -> "%.1fK".format(q / 1000.0)
+    else -> "$q"
+}

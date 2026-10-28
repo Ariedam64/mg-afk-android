@@ -60,18 +60,10 @@ import com.mgafk.app.ui.theme.TextMuted
 import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.delay
+import com.mgafk.app.data.repository.CoreShops
 
 
 
-
-private val CORE_SHOPS = listOf(
-    "Seeds" to "seed",
-    "Tools" to "tool",
-    "Eggs" to "egg",
-    "Decors" to "decor",
-)
-
-private val CORE_SHOP_KEYS = CORE_SHOPS.map { it.second }.toSet()
 
 /** Emits one AppCard per shop category. Call inside a Column with spacedBy. */
 @Composable
@@ -159,7 +151,7 @@ fun ShopsCards(
         }
     }
 
-    CORE_SHOPS.forEach { (label, key) ->
+    CoreShops.LABELED.forEach { (label, key) ->
         val shop = shops.find { it.type == key }
         ShopCategoryCard(
             label = label,
@@ -172,7 +164,7 @@ fun ShopsCards(
         )
     }
 
-    shops.filter { it.type !in CORE_SHOP_KEYS }.forEach { shop ->
+    shops.filter { it.type !in CoreShops.KEYS }.forEach { shop ->
         val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock(System.currentTimeMillis()) > 0
         if (!isActive) return@forEach
         // Alerts and Autobuy label these "Rain Shop", "Amber Shop"... - match them.

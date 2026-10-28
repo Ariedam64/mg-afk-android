@@ -84,30 +84,9 @@ import com.mgafk.app.ui.theme.rarityBorder
 import kotlin.math.roundToInt
 import com.mgafk.app.ui.components.mutationSpriteUrl
 import com.mgafk.app.ui.components.sortMutations
-
-// ── Shared constants ──
-
-private val TILE_MIN = 76.dp
-private val GAP = 6.dp
-
-
-
-private val RARITY_ORDER = listOf("Celestial", "Divine", "Mythic", "Mythical", "Legendary", "Rare", "Uncommon", "Common")
-private fun raritySortPet(species: String): Int {
-    val rarity = MgApi.findPet(species)?.rarity ?: return RARITY_ORDER.size
-    return RARITY_ORDER.indexOfFirst { it.equals(rarity, ignoreCase = true) }.let { if (it < 0) RARITY_ORDER.size else it }
-}
-
-private const val XP_H = 3600.0; private const val BASE_S = 80; private const val MAX_S = 100; private const val S_GAIN = 30
-private fun maxStr(sp: String, sc: Double): Int {
-    val ms = MgApi.findPet(sp)?.maxScale ?: return BASE_S
-    if (sc <= 1.0) return BASE_S; if (sc >= ms) return MAX_S
-    return (BASE_S + 20 * (sc - 1.0) / (ms - 1.0)).toInt()
-}
-private fun curStr(sp: String, xp: Double, max: Int): Int {
-    val htm = MgApi.findPet(sp)?.hoursToMature ?: return max - S_GAIN
-    return ((max - S_GAIN) + minOf(S_GAIN / htm * (xp / XP_H), S_GAIN.toDouble())).toInt()
-}
+import com.mgafk.app.data.repository.PetTileStrength
+import com.mgafk.app.ui.components.TILE_MIN_WIDTH
+import com.mgafk.app.ui.components.TILE_SPACING
 
 /** Unified pet candidate for the team editor picker. */
 data class TeamPetCandidate(
@@ -660,8 +639,8 @@ private fun FilledSlotTile(
     val entry = remember(pet.species, apiReady) { MgApi.findPet(pet.species) }
     val displayName = pet.name.ifBlank { entry?.name ?: pet.species }
     val rarityId = entry?.rarity
-    val ms = maxStr(pet.species, pet.targetScale)
-    val cs = curStr(pet.species, pet.xp, ms)
+    val ms = PetTileStrength.maxStr(pet.species, pet.targetScale)
+    val cs = PetTileStrength.curStr(pet.species, pet.xp, ms)
     val isMax = cs >= ms
 
     Box(
@@ -759,9 +738,9 @@ private fun PetPickerDialog(
                 Text("No pets available.", fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(vertical = 16.dp))
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(TILE_MIN),
-                    horizontalArrangement = Arrangement.spacedBy(GAP),
-                    verticalArrangement = Arrangement.spacedBy(GAP),
+                    columns = GridCells.Adaptive(TILE_MIN_WIDTH),
+                    horizontalArrangement = Arrangement.spacedBy(TILE_SPACING),
+                    verticalArrangement = Arrangement.spacedBy(TILE_SPACING),
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 100.dp)
@@ -796,8 +775,8 @@ private fun PickerPetTile(
     val entry = remember(candidate.species, apiReady) { MgApi.findPet(candidate.species) }
     val displayName = candidate.name.ifBlank { entry?.name ?: candidate.species }
     val rarityId = entry?.rarity
-    val ms = maxStr(candidate.species, candidate.targetScale)
-    val cs = curStr(candidate.species, candidate.xp, ms)
+    val ms = PetTileStrength.maxStr(candidate.species, candidate.targetScale)
+    val cs = PetTileStrength.curStr(candidate.species, candidate.xp, ms)
     val isMax = cs >= ms
 
     Box(

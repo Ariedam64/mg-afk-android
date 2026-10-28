@@ -73,45 +73,13 @@ import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.mgafk.app.data.repository.PetTileStrength
+import com.mgafk.app.ui.components.TILE_MIN_WIDTH
+import com.mgafk.app.ui.components.TILE_SPACING
+import com.mgafk.app.ui.components.formatTimeRemaining
 
 // Rarity colors
 
-
-private val TILE_MIN_WIDTH = 76.dp
-private val TILE_SPACING = 6.dp
-
-// STR helpers (same as InventoryCard)
-private const val XP_PER_HOUR = 3600.0
-private const val BASE_STR = 80
-private const val MAX_STR = 100
-private const val STR_GAINED = 30
-
-private fun maxStr(species: String, scale: Double): Int {
-    val ms = MgApi.findPet(species)?.maxScale ?: return BASE_STR
-    if (scale <= 1.0) return BASE_STR
-    if (scale >= ms) return MAX_STR
-    return (BASE_STR + 20 * (scale - 1.0) / (ms - 1.0)).toInt()
-}
-
-private fun curStr(species: String, xp: Double, max: Int): Int {
-    val htm = MgApi.findPet(species)?.hoursToMature ?: return max - STR_GAINED
-    val gained = minOf(STR_GAINED / htm * (xp / XP_PER_HOUR), STR_GAINED.toDouble())
-    return ((max - STR_GAINED) + gained).toInt()
-}
-
-private fun formatTimeRemaining(endTime: Long, now: Long): String {
-    val remaining = (endTime - now).coerceAtLeast(0)
-    if (remaining <= 0) return ""
-    val totalSec = remaining / 1000
-    val hours = totalSec / 3600
-    val minutes = (totalSec % 3600) / 60
-    val seconds = totalSec % 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m ${seconds}s"
-        else -> "${seconds}s"
-    }
-}
 
 @Composable
 fun EggsCard(
@@ -449,8 +417,8 @@ private fun HatchedPetDialog(
     val eggEntry = remember(eggId, apiReady) { MgApi.findItem(eggId) }
     val name = pet.name?.ifBlank { null } ?: petEntry?.name ?: pet.petSpecies
     val color = rarityColor(petEntry?.rarity)
-    val ms = maxStr(pet.petSpecies, pet.targetScale)
-    val cs = curStr(pet.petSpecies, pet.xp, ms)
+    val ms = PetTileStrength.maxStr(pet.petSpecies, pet.targetScale)
+    val cs = PetTileStrength.curStr(pet.petSpecies, pet.xp, ms)
 
     // Animation state
     var phase by remember { mutableIntStateOf(PHASE_EGG_SHAKE) }
