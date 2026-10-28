@@ -33,6 +33,7 @@ object PetTileStrength {
     /** Current strength from [xp] against the species' [hoursToMature], under its ceiling [max]. */
     fun curStr(hoursToMature: Double?, xp: Double, max: Int): Int {
         val htm = hoursToMature ?: return max - STR_GAINED
+        if (htm <= 0) return max
         val gained = minOf(STR_GAINED / htm * (xp / XP_PER_HOUR), STR_GAINED.toDouble())
         return ((max - STR_GAINED) + gained).toInt()
     }

@@ -77,7 +77,6 @@ internal fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     pet.abilities.forEach { abilityId ->
-                        val entry = remember(abilityId, apiReady) { MgApi.getAbilities()[abilityId] }
                         val bg = remember(abilityId, apiReady) { abilityBrush(abilityId) }
                         Box(
                             modifier = Modifier

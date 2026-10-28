@@ -49,6 +49,11 @@ class PetTileStrengthTest {
     }
 
     /** For ordinary pets the tiles and the price calculator must show the same number. */
+    @Test fun `a species that matures instantly sits at its ceiling`() {
+        assertEquals(90, PetTileStrength.curStr(0.0, 0.0, 90))
+        assertEquals(90, PetTileStrength.curStr(0.0, 500.0, 90))
+    }
+
     @Test fun `it agrees with the price calculator for ordinary pets`() {
         val fullyGrownXp = hoursToMature * 3600.0
         for (xp in listOf(0.0, 1_000.0, fullyGrownXp / 2, fullyGrownXp - 1.0, fullyGrownXp, fullyGrownXp * 2)) {
