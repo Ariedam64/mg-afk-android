@@ -1,5 +1,7 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.OnStatusConnected
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -383,11 +385,11 @@ fun GardenCard(
                             color = if (isSelected) Accent else TextSecondary,
                             maxLines = 1,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(AppTheme.shapes.smallShape)
                                 .border(
                                     1.dp,
                                     if (isSelected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
-                                    RoundedCornerShape(12.dp),
+                                    AppTheme.shapes.smallShape,
                                 )
                                 .background(if (isSelected) Accent.copy(alpha = 0.18f) else SurfaceCard)
                                 .clickable { sortModeName = if (isSelected) SortMode.NONE.name else mode.name }
@@ -568,11 +570,11 @@ private fun ViewModeChip(label: String, selected: Boolean, onClick: () -> Unit) 
         color = if (selected) Accent else TextSecondary,
         maxLines = 1,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppTheme.shapes.smallShape)
             .border(
                 1.dp,
                 if (selected) Accent.copy(alpha = 0.5f) else SurfaceBorder,
-                RoundedCornerShape(12.dp),
+                AppTheme.shapes.smallShape,
             )
             .background(if (selected) Accent.copy(alpha = 0.18f) else SurfaceCard)
             .clickable(onClick = onClick)
@@ -591,8 +593,8 @@ private fun GardenPlantTile(rp: ResolvedPlant) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rp.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rp.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -652,8 +654,8 @@ private fun MultiSlotPlantTile(entry: GardenEntry.MultiSlotPlant) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(if (entry.totalValue > 0) 0.85f else 1f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -774,7 +776,7 @@ private fun PlantDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -924,7 +926,7 @@ private fun PlantDetailDialog(
                         disabledContainerColor = Color(0xFF3B82F6).copy(alpha = 0.2f),
                         disabledContentColor = Color.White.copy(alpha = 0.4f),
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (!isMature && wateringCans > 0) "Water ($wateringCans)"
@@ -946,13 +948,13 @@ private fun PlantDetailDialog(
                         disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
                         disabledContentColor = Color.White.copy(alpha = 0.4f),
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (isMature) "Harvest" else "Growing…",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isMature) Color.White else Color.White.copy(alpha = 0.4f),
+                        color = if (isMature) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
                     )
                 }
             }
@@ -967,7 +969,7 @@ private fun PlantDetailDialog(
                     disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 SpriteImage(url = cleanserSprite, size = 18.dp, contentDescription = "cleanser")
                 Spacer(modifier = Modifier.size(6.dp))
@@ -994,7 +996,7 @@ private fun PlantDetailDialog(
                     disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
                 Spacer(modifier = Modifier.size(6.dp))
@@ -1033,7 +1035,7 @@ private fun MultiSlotPlantDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1135,7 +1137,7 @@ private fun MultiSlotPlantDetailDialog(
                     disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 SpriteImage(url = potSprite, size = 18.dp, contentDescription = "pot")
                 Spacer(modifier = Modifier.size(6.dp))
@@ -1249,7 +1251,7 @@ private fun CropSlotRow(
                     disabledContainerColor = Color(0xFF3B82F6).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.shapes.smallShape,
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             ) {
                 Text(
@@ -1268,14 +1270,14 @@ private fun CropSlotRow(
                     disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.shapes.smallShape,
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             ) {
                 Text(
                     if (isMature) "Harvest" else "Growing…",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isMature) Color.White else Color.White.copy(alpha = 0.4f),
+                    color = if (isMature) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
                 )
             }
             Button(
@@ -1287,7 +1289,7 @@ private fun CropSlotRow(
                     disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.shapes.smallShape,
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
             ) {
                 val label = when {

@@ -202,7 +202,7 @@ fun SegmentedPills(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
-            .background(colors.surface)
+            .background(colors.surfaceHigh)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {

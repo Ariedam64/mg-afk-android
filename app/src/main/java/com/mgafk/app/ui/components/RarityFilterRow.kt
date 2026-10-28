@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.components
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,8 +61,8 @@ private fun AllFilterChip(selected: Boolean, onClick: () -> Unit) {
     val bgColor = if (selected) Accent.copy(alpha = 0.15f) else SurfaceDark
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(20.dp))
+            .clip(AppTheme.shapes.largeShape)
+            .border(1.5.dp, borderColor, AppTheme.shapes.largeShape)
             .background(bgColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),

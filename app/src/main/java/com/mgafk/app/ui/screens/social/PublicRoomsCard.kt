@@ -1,5 +1,8 @@
 package com.mgafk.app.ui.screens.social
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -142,7 +145,7 @@ fun PublicRoomsCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(AppTheme.shapes.smallShape)
                                     .background(SurfaceDark),
                             )
                         }
@@ -189,7 +192,7 @@ private fun RoomCard(
     onJoin: () -> Unit,
 ) {
     val countColor = when {
-        room.playersCount >= 5 -> Color(0xFFFBBF24)
+        room.playersCount >= 5 -> StatusConnecting
         room.playersCount >= 3 -> Accent
         else -> Accent.copy(alpha = 0.7f)
     }
@@ -197,10 +200,10 @@ private fun RoomCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark)
             .then(
-                if (isCurrent) Modifier.border(1.5.dp, StatusConnected.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                if (isCurrent) Modifier.border(1.5.dp, StatusConnected.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                 else Modifier
             )
             .padding(12.dp),
@@ -292,15 +295,15 @@ private fun RoomCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Accent,
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
                 contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
-                Text("Join", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Join", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = OnAccent)
             }
         } else {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(StatusConnected.copy(alpha = 0.15f))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {

@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.components
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -40,7 +41,7 @@ fun StatusChip(status: SessionStatus, modifier: Modifier = Modifier) {
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(AppTheme.shapes.largeShape)
             .background(color.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +57,7 @@ fun CrystalTileDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {

@@ -1,5 +1,7 @@
 package com.mgafk.app.ui.screens.bugreport
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.AppTheme
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -351,12 +353,12 @@ private fun ReportFormCard(
                 disabledContainerColor = Accent.copy(alpha = 0.25f),
                 disabledContentColor = Color.White.copy(alpha = 0.5f),
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = AppTheme.shapes.smallShape,
         ) {
             if (state.sending) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    color = Color.White,
+                    color = OnAccent,
                     strokeWidth = 2.dp,
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -383,12 +385,12 @@ private fun SectionLabel(text: String) {
 private fun OptionChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(if (selected) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
             .border(
                 1.dp,
                 if (selected) Accent.copy(alpha = 0.5f) else SurfaceBorder.copy(alpha = 0.4f),
-                RoundedCornerShape(8.dp),
+                AppTheme.shapes.smallShape,
             )
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
@@ -447,7 +449,7 @@ private fun ReportTextField(
         minLines = minLines,
         textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = AppTheme.shapes.smallShape,
         colors = reportFieldColors(),
     )
 }
@@ -462,8 +464,8 @@ private fun ScreenshotThumb(shot: PickedScreenshot, removable: Boolean, onRemove
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, SurfaceBorder, RoundedCornerShape(10.dp)),
+                .clip(AppTheme.shapes.smallShape)
+                .border(1.dp, SurfaceBorder, AppTheme.shapes.smallShape),
         )
         if (removable) {
             Box(
@@ -492,7 +494,7 @@ private fun ProcessingThumb() {
     Box(
         modifier = Modifier
             .size(THUMB_SIZE)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f)),
         contentAlignment = Alignment.Center,
     ) {
@@ -505,9 +507,9 @@ private fun AddScreenshotTile(enabled: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(THUMB_SIZE)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f))
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+            .border(1.dp, SurfaceBorder.copy(alpha = 0.6f), AppTheme.shapes.smallShape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -534,7 +536,7 @@ private fun AccountStateRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f))
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(end = 12.dp, top = 2.dp, bottom = 10.dp),
@@ -574,9 +576,9 @@ private fun SentBanner(ref: String, note: String?, onDismiss: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(StatusConnected.copy(alpha = 0.1f))
-            .border(1.dp, StatusConnected.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .border(1.dp, StatusConnected.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -723,7 +725,7 @@ private fun ReportItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .clickable { expanded = !expanded }
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -763,9 +765,9 @@ private fun ReportItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.08f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .padding(10.dp),
             ) {
                 Text("Developer reply", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Accent)
@@ -839,7 +841,7 @@ private fun CommentInput(
         minLines = 2,
         textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = AppTheme.shapes.smallShape,
         colors = reportFieldColors(),
     )
     Spacer(modifier = Modifier.height(6.dp))
@@ -857,12 +859,12 @@ private fun CommentInput(
                 containerColor = Accent,
                 disabledContainerColor = Accent.copy(alpha = 0.25f),
             ),
-            shape = RoundedCornerShape(10.dp),
+            shape = AppTheme.shapes.smallShape,
         ) {
             if (sending) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = OnAccent, strokeWidth = 2.dp)
             } else {
-                Text("Send", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text("Send", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = OnAccent)
             }
         }
     }
@@ -874,7 +876,7 @@ private fun CommentBubble(comment: BugReportComment) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(if (fromPlayer) SurfaceBorder.copy(alpha = 0.25f) else Accent.copy(alpha = 0.08f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {

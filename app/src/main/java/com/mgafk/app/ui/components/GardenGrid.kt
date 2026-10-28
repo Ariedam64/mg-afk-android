@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.components
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -168,7 +169,7 @@ private fun GridControls(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceCard.copy(alpha = 0.85f))
             .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),

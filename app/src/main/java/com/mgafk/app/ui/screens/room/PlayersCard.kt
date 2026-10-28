@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.room
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,7 +68,7 @@ private fun PlayerRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

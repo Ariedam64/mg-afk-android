@@ -58,6 +58,8 @@ data class AppColors(
     val warn: Color,
     val bad: Color,
     val idle: Color,
+    val onGood: Color,
+    val onBad: Color,
 )
 
 fun PaletteArgb.toColors() = AppColors(
@@ -79,6 +81,8 @@ fun PaletteArgb.toColors() = AppColors(
     warn = Color(warn),
     bad = Color(bad),
     idle = Color(idle),
+    onGood = Color(onGood),
+    onBad = Color(onBad),
 )
 
 /** Corner radii. `large` is for cards, `medium` for buttons and tiles, `small` for chips. */
@@ -124,9 +128,9 @@ object AppTheme {
 // user's accent and light/dark choice reach them without touching every call site.
 
 val BgDark: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.background
-val SurfaceDark: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.surfaceLow
+val SurfaceDark: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.surfaceHigh
 val SurfaceCard: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.surface
-val SurfaceBorder: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.outline
+val SurfaceBorder: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.surfaceHigh
 val Accent: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.accent
 val AccentDim: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.accentContainer
 val TextPrimary: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.textPrimary
@@ -136,6 +140,9 @@ val StatusConnected: Color @Composable @ReadOnlyComposable get() = LocalAppColor
 val StatusConnecting: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.warn
 val StatusError: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.bad
 val StatusIdle: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.idle
+val OnAccent: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.onAccent
+val OnStatusConnected: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.onGood
+val OnStatusError: Color @Composable @ReadOnlyComposable get() = LocalAppColors.current.onBad
 
 // ── Type ──
 

@@ -1,5 +1,11 @@
 package com.mgafk.app.ui.screens.storage
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.OnStatusError
+import com.mgafk.app.ui.theme.OnStatusConnected
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.StatusError
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -301,14 +307,14 @@ fun InventoryCard(
                             Button(
                                 onClick = { showSellAllCrops = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                                shape = AppTheme.shapes.smallShape,
                             ) {
                                 Text(
                                     "Sell All Crops (${unlockedProduce.size})",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = OnStatusError,
                                 )
                             }
                         }
@@ -337,14 +343,14 @@ fun InventoryCard(
                             Button(
                                 onClick = { showSellAllPets = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                                shape = AppTheme.shapes.smallShape,
                             ) {
                                 Text(
                                     "Sell All Unlocked (${unlockedPets.size})",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = OnStatusError,
                                 )
                             }
                         }
@@ -456,12 +462,12 @@ fun InventoryCard(
                             containerColor = Accent,
                             disabledContainerColor = SurfaceDark,
                         ),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToShack) "Move to Tool Shack" else "Tool Shack full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToShack) Color.White else TextMuted,
+                            color = if (canMoveToShack) OnAccent else TextMuted,
                         )
                     }
                 }),
@@ -523,12 +529,12 @@ fun InventoryCard(
                             containerColor = Accent,
                             disabledContainerColor = SurfaceDark,
                         ),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToShed) "Move to Decor Shed" else "Decor Shed full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToShed) Color.White else TextMuted,
+                            color = if (canMoveToShed) OnAccent else TextMuted,
                         )
                     }
                 }),
@@ -654,8 +660,8 @@ private fun QuantityTile(itemId: String, quantity: Int, apiReady: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -685,8 +691,8 @@ private fun ProduceTile(item: InventoryProduceItem, apiReady: Boolean, playerCou
     Column(
         modifier = Modifier
             .fillMaxWidth().aspectRatio(0.85f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -729,8 +735,8 @@ private fun PlantTile(item: InventoryPlantItem, apiReady: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(if (item.totalPrice > 0) 0.85f else 1f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -780,8 +786,8 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left
@@ -808,7 +814,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             // STR centered
             if (ms > 0) {
                 val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) Color(0xFFFBBF24) else Accent
+                val strColor = if (isMax) StatusConnecting else Accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {
@@ -843,8 +849,8 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
         modifier = Modifier
             .fillMaxWidth()
             .height(82.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left
@@ -870,7 +876,7 @@ private fun PetTileWithPrice(pet: InventoryPetItem, apiReady: Boolean, price: Lo
             )
             if (ms > 0) {
                 val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) Color(0xFFFBBF24) else Accent
+                val strColor = if (isMax) StatusConnecting else Accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {
@@ -943,7 +949,7 @@ private fun PlantUnpotDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1019,7 +1025,7 @@ private fun PlantUnpotDialog(
                     "$freePlantTiles",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (canPlant) StatusConnected else Color(0xFFEF4444),
+                    color = if (canPlant) StatusConnected else StatusError,
                 )
             }
 
@@ -1034,13 +1040,13 @@ private fun PlantUnpotDialog(
                     disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text(
                     if (canPlant) "Plant in Garden" else "No free tiles",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (canPlant) Color.White else Color.White.copy(alpha = 0.4f),
+                    color = if (canPlant) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
                 )
             }
 
@@ -1148,7 +1154,7 @@ private fun EggGrowDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1188,7 +1194,7 @@ private fun EggGrowDialog(
                         "$freePlantTiles",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (canGrow) StatusConnected else Color(0xFFEF4444),
+                        color = if (canGrow) StatusConnected else StatusError,
                     )
                 }
             }
@@ -1204,7 +1210,7 @@ private fun EggGrowDialog(
                     disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text(
                     if (canGrow) "Grow Egg" else "No free tiles",
@@ -1244,7 +1250,7 @@ private fun SeedDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1305,7 +1311,7 @@ private fun SeedDetailDialog(
                         "$freePlantTiles",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (canPlant) StatusConnected else Color(0xFFEF4444),
+                        color = if (canPlant) StatusConnected else StatusError,
                     )
                 }
             }
@@ -1322,13 +1328,13 @@ private fun SeedDetailDialog(
                     disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text(
                     if (canPlant) "Plant Seed" else "No free tiles",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (canPlant) Color.White else Color.White.copy(alpha = 0.4f),
+                    color = if (canPlant) OnStatusConnected else OnStatusConnected.copy(alpha = 0.4f),
                 )
             }
 
@@ -1344,12 +1350,12 @@ private fun SeedDetailDialog(
                         containerColor = Accent,
                         disabledContainerColor = SurfaceDark,
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToSilo) "Move to Seed Silo" else "Seed Silo full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToSilo) Color.White else TextMuted,
+                        color = if (canMoveToSilo) OnAccent else TextMuted,
                     )
                 }
             }
@@ -1390,7 +1396,7 @@ private fun SellAllPetsDialog(
         Dialog(onDismissRequest = onDismiss) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1431,9 +1437,9 @@ private fun SellAllPetsDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusConnected)
                 }
             }
         }
@@ -1443,7 +1449,7 @@ private fun SellAllPetsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1526,7 +1532,7 @@ private fun SellAllPetsDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
@@ -1536,10 +1542,10 @@ private fun SellAllPetsDialog(
                         confirmed = true
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
                 }
             }
         }
@@ -1573,7 +1579,7 @@ private fun SellAllCropsDialog(
         Dialog(onDismissRequest = onDismiss) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1599,9 +1605,9 @@ private fun SellAllCropsDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Nice!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusConnected)
                 }
             }
         }
@@ -1611,7 +1617,7 @@ private fun SellAllCropsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1649,7 +1655,7 @@ private fun SellAllCropsDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(AppTheme.shapes.smallShape)
                             .background(SurfaceDark)
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1722,7 +1728,7 @@ private fun SellAllCropsDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
@@ -1732,10 +1738,10 @@ private fun SellAllCropsDialog(
                         confirmed = true
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sell All", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
                 }
             }
         }
@@ -1796,7 +1802,7 @@ private fun ItemDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1876,7 +1882,7 @@ private fun PetDetailDialog(
         Dialog(onDismissRequest = { showConfirm = false }) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1911,7 +1917,7 @@ private fun PetDetailDialog(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
                         Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
@@ -1921,10 +1927,10 @@ private fun PetDetailDialog(
                             onSell()
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
-                        Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
                     }
                 }
             }
@@ -1935,7 +1941,7 @@ private fun PetDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1965,7 +1971,7 @@ private fun PetDetailDialog(
                             Text(
                                 if (isMax) "$cs" else "$cs/$ms",
                                 fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                color = if (isMax) Color(0xFFFBBF24) else Accent,
+                                color = if (isMax) StatusConnecting else Accent,
                             )
                         }
                     }
@@ -2073,12 +2079,12 @@ private fun PetDetailDialog(
                             containerColor = Accent,
                             disabledContainerColor = SurfaceDark,
                         ),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             if (canMoveToHutch) "Move to Pet Hutch" else "Pet Hutch full",
                             fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = if (canMoveToHutch) Color.White else TextMuted,
+                            color = if (canMoveToHutch) OnAccent else TextMuted,
                         )
                     }
 
@@ -2089,10 +2095,10 @@ private fun PetDetailDialog(
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
                 }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
@@ -2128,7 +2134,7 @@ private fun ProduceDetailDialog(
         Dialog(onDismissRequest = { showConfirm = false }) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2153,14 +2159,14 @@ private fun ProduceDetailDialog(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
                     Button(
                         onClick = { showConfirm = false; onSell() },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        shape = AppTheme.shapes.smallShape,
+                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
                 }
             }
         }
@@ -2170,7 +2176,7 @@ private fun ProduceDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -2243,10 +2249,10 @@ private fun ProduceDetailDialog(
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
-                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError)
                 }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,

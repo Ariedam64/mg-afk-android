@@ -28,6 +28,8 @@ class TonalPaletteTest {
             assertTrue("accent on surface, $where", TonalPalette.contrast(p.accent, p.surface) >= 4.5)
             assertTrue("status on surface, $where", listOf(p.good, p.warn, p.bad).all { TonalPalette.contrast(it, p.surface) >= 4.5 })
             assertTrue("onAccent on accent, $where", TonalPalette.contrast(p.onAccent, p.accent) >= 4.5)
+            assertTrue("onGood on good, $where", TonalPalette.contrast(p.onGood, p.good) >= 4.5)
+            assertTrue("onBad on bad, $where", TonalPalette.contrast(p.onBad, p.bad) >= 4.5)
             assertTrue("onAccentContainer, $where", TonalPalette.contrast(p.onAccentContainer, p.accentContainer) >= 4.5)
         }
     }

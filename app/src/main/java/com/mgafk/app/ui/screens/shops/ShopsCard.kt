@@ -1,5 +1,7 @@
 package com.mgafk.app.ui.screens.shops
 
+import com.mgafk.app.ui.theme.StatusError
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -59,7 +61,6 @@ import com.mgafk.app.ui.theme.TextPrimary
 import com.mgafk.app.ui.theme.rarityBorder
 import kotlinx.coroutines.delay
 
-private val StatusError = Color(0xFFF87171)
 
 
 
@@ -101,9 +102,9 @@ fun ShopsCards(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(Accent.copy(alpha = 0.1f))
-                .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                 .clickable { onDismissTip() }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
@@ -144,9 +145,9 @@ fun ShopsCards(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(StatusError.copy(alpha = 0.15f))
-                .border(1.dp, StatusError.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .border(1.dp, StatusError.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Text(
@@ -268,10 +269,10 @@ private fun ShopItemTile(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .then(
-                    if (inShop) Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = borderAlpha)
-                    else Modifier.border(1.5.dp, TextMuted.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    if (inShop) Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = borderAlpha)
+                    else Modifier.border(1.5.dp, TextMuted.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                 )
                 .background(SurfaceDark)
                 // Use combinedClickable instead of pointerInput(Unit). The latter

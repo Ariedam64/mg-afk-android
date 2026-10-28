@@ -2,7 +2,6 @@ package com.mgafk.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,13 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
@@ -32,10 +29,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.TextMuted
+import androidx.compose.ui.unit.sp
+import com.mgafk.app.ui.theme.AppTheme
 
 /**
  * Holds persisted card collapse state and a callback to update it.
@@ -98,13 +95,13 @@ fun AppCard(
         label = "contentAlpha",
     )
 
+    // Tonal surface, no border: the redesign separates cards by color, not outlines.
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, SurfaceBorder),
+        colors = CardDefaults.cardColors(containerColor = AppTheme.colors.surface),
+        shape = AppTheme.shapes.largeShape,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(AppTheme.spacing.card)) {
             if (title != null) {
                 Row(
                     modifier = Modifier
@@ -117,7 +114,9 @@ fun AppCard(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AppTheme.colors.textPrimary,
                         modifier = Modifier.weight(1f),
                     )
                     trailing?.invoke()
@@ -125,9 +124,9 @@ fun AppCard(
                         Icon(
                             imageVector = Icons.Default.ExpandMore,
                             contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            tint = TextMuted,
+                            tint = AppTheme.colors.textMuted,
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(22.dp)
                                 .rotate(chevronRotation),
                         )
                     }

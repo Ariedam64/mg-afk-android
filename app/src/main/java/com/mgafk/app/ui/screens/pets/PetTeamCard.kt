@@ -1,5 +1,8 @@
 package com.mgafk.app.ui.screens.pets
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
@@ -178,9 +181,9 @@ fun PetTeamCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
@@ -224,7 +227,7 @@ fun PetTeamCard(
                             .offset {
                                 IntOffset(0, if (isDragging) dragOffsetY.roundToInt() else 0)
                             }
-                            .then(if (isDragging) Modifier.shadow(elevation, RoundedCornerShape(10.dp)) else Modifier)
+                            .then(if (isDragging) Modifier.shadow(elevation, AppTheme.shapes.smallShape) else Modifier)
                             .onGloballyPositioned { coords ->
                                 if (rowHeight == 0) rowHeight = coords.size.height
                             },
@@ -320,8 +323,8 @@ private fun AddTeamTile(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -357,8 +360,8 @@ private fun TeamRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.dp, borderColor, AppTheme.shapes.smallShape)
             .background(if (isActive) StatusConnected.copy(alpha = 0.06f) else SurfaceBorder.copy(alpha = 0.08f))
             .clickable { onActivate() }
             .padding(horizontal = 6.dp, vertical = 10.dp),
@@ -521,7 +524,7 @@ private fun TeamEditorDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -601,7 +604,7 @@ private fun TeamEditorDialog(
                     enabled = slots.any { it != null },
                     colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 ) {
-                    Text(if (isNew) "Create" else "Save", fontSize = 12.sp, color = Color.White)
+                    Text(if (isNew) "Create" else "Save", fontSize = 12.sp, color = OnAccent)
                 }
             }
         }
@@ -633,8 +636,8 @@ private fun EmptySlotTile(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.75f)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -665,8 +668,8 @@ private fun FilledSlotTile(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.75f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Remove button top-right
@@ -709,7 +712,7 @@ private fun FilledSlotTile(
                     isMax -> "STR $cs"
                     else -> "STR $cs/$ms"
                 }
-                val strColor = if (isMax || strengthBonus > 0) Color(0xFFFBBF24) else Accent
+                val strColor = if (isMax || strengthBonus > 0) StatusConnecting else Accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {
@@ -743,7 +746,7 @@ private fun PetPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -801,8 +804,8 @@ private fun PickerPetTile(
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
     ) {
@@ -816,7 +819,7 @@ private fun PickerPetTile(
         }
         if (ms > 0) {
             val strText = if (isMax) "$cs" else "$cs/$ms"
-            val strColor = if (isMax) Color(0xFFFBBF24) else Accent
+            val strColor = if (isMax) StatusConnecting else Accent
             Text(
                 strText, fontSize = 7.sp, fontWeight = FontWeight.Bold,
                 color = strColor, lineHeight = 9.sp,

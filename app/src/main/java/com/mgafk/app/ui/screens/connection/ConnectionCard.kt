@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.connection
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,7 +63,7 @@ fun ConnectionCard(
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = AppTheme.shapes.smallShape,
             colors = fieldColors,
         )
 
@@ -74,7 +75,7 @@ fun ConnectionCard(
             label = { Text("Room code (optional)", fontSize = 12.sp) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = AppTheme.shapes.smallShape,
             colors = fieldColors,
         )
 
@@ -86,7 +87,7 @@ fun ConnectionCard(
                 onClick = onLogin,
                 modifier = Modifier.weight(1f),
                 enabled = !session.connected && !session.busy,
-                shape = RoundedCornerShape(12.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text("Login with Discord", fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
@@ -94,7 +95,7 @@ fun ConnectionCard(
             OutlinedButton(
                 onClick = onLogout,
                 enabled = session.cookie.isNotBlank() && !session.connected,
-                shape = RoundedCornerShape(12.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text("Logout", fontSize = 12.sp)
             }
@@ -119,7 +120,7 @@ fun ConnectionCard(
                 .fillMaxWidth()
                 .height(44.dp),
             enabled = !session.busy && session.cookie.isNotBlank(),
-            shape = RoundedCornerShape(12.dp),
+            shape = AppTheme.shapes.smallShape,
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (session.connected) StatusError else StatusConnected,
             ),

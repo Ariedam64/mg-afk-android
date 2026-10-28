@@ -1,5 +1,8 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.OnStatusConnected
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -225,8 +228,8 @@ private fun EggTile(egg: GardenEggSnapshot, apiReady: Boolean, now: Long) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -312,7 +315,7 @@ private fun EggDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -413,7 +416,7 @@ private fun EggDetailDialog(
                     disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
                     disabledContentColor = Color.White.copy(alpha = 0.4f),
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text(
                     if (isMature) "Hatch" else "Not ready",
@@ -519,7 +522,7 @@ private fun HatchedPetDialog(
     Dialog(onDismissRequest = { if (phase >= PHASE_INFO) onDismiss() }) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
             contentAlignment = Alignment.Center,
         ) {
@@ -622,7 +625,7 @@ private fun HatchedPetDialog(
                                 "$cs/$ms",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (cs >= ms) Color(0xFFFBBF24) else Accent,
+                                color = if (cs >= ms) StatusConnecting else Accent,
                             )
                         }
 
@@ -677,13 +680,13 @@ private fun HatchedPetDialog(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = StatusConnected),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) {
                         Text(
                             "Nice!",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = OnStatusConnected,
                         )
                     }
                 }

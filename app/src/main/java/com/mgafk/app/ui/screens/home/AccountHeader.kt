@@ -74,7 +74,7 @@ fun AccountHeader(
         Box(Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .clickable(role = Role.DropdownList) { menuOpen = true }
                     .padding(vertical = 2.dp, horizontal = 2.dp),
             ) {

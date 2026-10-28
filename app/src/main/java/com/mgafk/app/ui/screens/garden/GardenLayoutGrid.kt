@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,7 +59,7 @@ internal fun GardenLayoutGrid(
         modifier = Modifier
             .fillMaxWidth()
             .height(VIEWPORT_HEIGHT)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark),
     ) {
         for (row in 0 until GRID_ROWS) {

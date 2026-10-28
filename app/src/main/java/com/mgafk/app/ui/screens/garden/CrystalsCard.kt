@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -173,9 +174,9 @@ private fun PlantedCrystalRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -217,9 +218,9 @@ private fun ShardRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),

@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.room
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -103,7 +104,7 @@ fun ChatCard(
                 textStyle = TextStyle(fontSize = 12.sp),
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp)),
+                    .clip(AppTheme.shapes.smallShape),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = SurfaceDark,
                     unfocusedContainerColor = SurfaceDark,
@@ -145,7 +146,7 @@ private fun MessageRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Top,

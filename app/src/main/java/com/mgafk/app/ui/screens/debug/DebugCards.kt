@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.debug
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -139,9 +140,9 @@ private fun CrashLogDebugCard() {
 private fun DebugActionChip(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(color.copy(alpha = 0.12f))
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
@@ -170,9 +171,9 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.10f))
-                    .border(1.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .border(1.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                     .clickable { onTestAlert(AlertMode.NOTIFICATION) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
@@ -188,9 +189,9 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF87171).copy(alpha = 0.10f))
-                    .border(1.dp, Color(0xFFF87171).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .clip(AppTheme.shapes.smallShape)
+                    .background(StatusError.copy(alpha = 0.10f))
+                    .border(1.dp, StatusError.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
                     .clickable { onTestAlert(AlertMode.ALARM) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
@@ -199,7 +200,7 @@ private fun AlertDebugCard(onTestAlert: (AlertMode) -> Unit) {
                     "Test Alarm",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFFF87171),
+                    color = StatusError,
                 )
             }
         }
@@ -258,7 +259,7 @@ private fun WebSocketDebugCard(wsLogs: List<WsLog>, onClear: () -> Unit) {
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(SurfaceBorder.copy(alpha = 0.3f))
                         .clickable(onClick = onClear)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
@@ -369,7 +370,7 @@ private fun ServiceDebugCard(logs: List<AfkService.ServiceLog>, onClear: () -> U
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(SurfaceBorder.copy(alpha = 0.3f))
                         .clickable(onClick = onClear)
                         .padding(horizontal = 10.dp, vertical = 4.dp),

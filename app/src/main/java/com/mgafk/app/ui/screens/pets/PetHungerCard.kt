@@ -1,5 +1,8 @@
 package com.mgafk.app.ui.screens.pets
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -160,9 +163,9 @@ fun ActivePetsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
@@ -244,7 +247,7 @@ private fun ActivePetRow(
     val hungerPercent = ((pet.hunger.toFloat() / maxHunger) * 100).coerceIn(0f, 100f)
     val hungerColor = when {
         hungerPercent < 5f -> StatusError
-        hungerPercent < 25f -> Color(0xFFFBBF24)
+        hungerPercent < 25f -> StatusConnecting
         else -> StatusConnected
     }
 
@@ -265,8 +268,8 @@ private fun ActivePetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, Color.White.copy(alpha = if (isSelected) 0.25f else 0.12f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.dp, Color.White.copy(alpha = if (isSelected) 0.25f else 0.12f), AppTheme.shapes.smallShape)
             .clickable { onSelect() }
             .background(SurfaceBorder.copy(alpha = 0.10f))
             .padding(10.dp),
@@ -304,7 +307,7 @@ private fun ActivePetRow(
                         isMaxStrength -> "STR $strength"
                         else -> "STR $strength/$maxStrength"
                     }
-                    val strColor = if (isMaxStrength || strengthBonus > 0) Color(0xFFFBBF24) else Accent
+                    val strColor = if (isMaxStrength || strengthBonus > 0) StatusConnecting else Accent
                     Text(
                         strText,
                         fontSize = 11.sp,
@@ -505,8 +508,8 @@ private fun EmptyPetSlot(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.dp, Color.White.copy(alpha = 0.08f), AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.06f))
             .clickable { showPicker = true },
         contentAlignment = Alignment.Center,
@@ -546,7 +549,7 @@ private fun PetPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -617,8 +620,8 @@ private fun PetCandidateTile(
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
     ) {
@@ -634,7 +637,7 @@ private fun PetCandidateTile(
         // STR top-right
         if (maxStr > 0) {
             val strText = if (isMaxStr) "$str" else "$str/$maxStr"
-            val strColor = if (isMaxStr) Color(0xFFFBBF24) else Accent
+            val strColor = if (isMaxStr) StatusConnecting else Accent
             Text(
                 strText, fontSize = 7.sp, fontWeight = FontWeight.Bold,
                 color = strColor, lineHeight = 9.sp,
@@ -690,7 +693,7 @@ private fun FeedPetPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -778,7 +781,7 @@ private fun FeedPetPickerDialog(
                     enabled = selected.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 ) {
-                    Text("Feed ${selected.size}", fontSize = 12.sp, color = Color.White)
+                    Text("Feed ${selected.size}", fontSize = 12.sp, color = OnAccent)
                 }
             }
         }
@@ -815,7 +818,7 @@ private fun XpPotionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -835,8 +838,8 @@ private fun XpPotionDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .border(1.5.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .clip(AppTheme.shapes.smallShape)
+                    .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.08f))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -883,7 +886,7 @@ private fun XpPotionDialog(
                     onClick = onConfirm,
                     colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 ) {
-                    Text("Use", fontSize = 12.sp, color = Color.White)
+                    Text("Use", fontSize = 12.sp, color = OnAccent)
                 }
             }
         }
@@ -916,8 +919,8 @@ private fun HungerPotionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.5.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
             .background(Accent.copy(alpha = 0.08f))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -952,8 +955,8 @@ private fun FeedProduceTile(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(borderWidth, borderColor, RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(borderWidth, borderColor, AppTheme.shapes.smallShape)
             .background(if (isSelected) StatusConnected.copy(0.1f) else SurfaceDark)
             .clickable(onClick = onClick)
             .padding(4.dp),

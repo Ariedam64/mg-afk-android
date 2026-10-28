@@ -1,5 +1,7 @@
 package com.mgafk.app.ui.screens.room
 
+import com.mgafk.app.ui.theme.StatusError
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -89,12 +91,12 @@ fun PopulateCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(if (canPopulate) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
                 .border(
                     1.dp,
                     if (canPopulate) Accent.copy(alpha = 0.5f) else SurfaceBorder.copy(alpha = 0.4f),
-                    RoundedCornerShape(8.dp),
+                    AppTheme.shapes.smallShape,
                 )
                 .alpha(controlsAlpha)
                 .then(if (canPopulate) Modifier.clickable { onPopulate() } else Modifier)
@@ -127,9 +129,9 @@ fun PopulateCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF87171).copy(alpha = 0.1f))
-                    .border(1.dp, Color(0xFFF87171).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
+                    .background(StatusError.copy(alpha = 0.1f))
+                    .border(1.dp, StatusError.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     .clickable { onDisconnectAll() }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
@@ -138,7 +140,7 @@ fun PopulateCard(
                     "Disconnect All",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFFF87171),
+                    color = StatusError,
                 )
             }
         }
@@ -150,7 +152,7 @@ private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
     val statusColor = when (bot.status) {
         BotStatus.CONNECTED -> StatusConnected
         BotStatus.CONNECTING, BotStatus.RECONNECTING -> Accent
-        BotStatus.DISCONNECTED -> Color(0xFFF87171)
+        BotStatus.DISCONNECTED -> StatusError
     }
     val statusLabel = when (bot.status) {
         BotStatus.CONNECTING -> "Connecting…"
@@ -162,7 +164,7 @@ private fun BotRow(bot: BotSnapshot, onDisconnect: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

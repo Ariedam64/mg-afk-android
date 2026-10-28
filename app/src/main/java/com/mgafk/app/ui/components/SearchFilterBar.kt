@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.components
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -89,9 +90,9 @@ fun SearchFilterBar(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(SurfaceDark.copy(alpha = 0.5f))
-                        .border(1.dp, SurfaceBorder, RoundedCornerShape(12.dp))
+                        .border(1.dp, SurfaceBorder, AppTheme.shapes.smallShape)
                         .padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -121,9 +122,9 @@ private fun SearchField(
     Row(
         modifier = modifier
             .height(40.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark)
-            .border(1.dp, SurfaceBorder, RoundedCornerShape(10.dp))
+            .border(1.dp, SurfaceBorder, AppTheme.shapes.smallShape)
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -172,7 +173,7 @@ private fun FilterToggleButton(
         animationSpec = tween(200),
         label = "filterChevron",
     )
-    val shape = RoundedCornerShape(10.dp)
+    val shape = AppTheme.shapes.smallShape
 
     // Badge is a sibling of the clipped button surface (not a child of it) so it can sit
     // outside the button's rounded-rect bounds without being cut off by that clip.

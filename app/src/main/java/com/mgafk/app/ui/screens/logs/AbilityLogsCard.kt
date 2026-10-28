@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.logs
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -108,7 +109,7 @@ fun AbilityLogsCard(
                 textStyle = TextStyle(fontSize = 12.sp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp)),
+                    .clip(AppTheme.shapes.smallShape),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = SurfaceDark,
                     unfocusedContainerColor = SurfaceDark,
@@ -147,7 +148,7 @@ private fun LogRow(log: AbilityLog, dateFormat: SimpleDateFormat, apiReady: Bool
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.3f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

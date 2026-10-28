@@ -1,5 +1,8 @@
 package com.mgafk.app.ui.screens.alerts
 
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.StatusError
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,8 +68,6 @@ import com.mgafk.app.ui.theme.TextSecondary
 import com.mgafk.app.ui.theme.rarityBorder
 
 
-private val CustomModeColor = Color(0xFF8B5CF6) // indigo/violet - distinct from Accent (blue) and Alarm (red)
-private val AlarmModeColor = Color(0xFFF87171) // red - section/item alarm mode
 
 
 private val WEATHER_ITEMS = listOf(
@@ -187,17 +188,17 @@ private fun SectionModePicker(currentMode: AlertMode, onModeChange: (AlertMode) 
                 AlertMode.CUSTOM -> "Custom"
             }
             val color = when (mode) {
-                AlertMode.ALARM -> AlarmModeColor
-                AlertMode.CUSTOM -> CustomModeColor
+                AlertMode.ALARM -> StatusError
+                AlertMode.CUSTOM -> StatusConnecting
                 AlertMode.NOTIFICATION -> Accent
             }
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(if (selected) color.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
                     .then(
-                        if (selected) Modifier.border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        if (selected) Modifier.border(1.dp, color.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable { onModeChange(mode) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -218,7 +219,7 @@ private fun CustomModeHint() {
     Text(
         "Long press an item to switch between notification and alarm.",
         fontSize = 10.sp,
-        color = CustomModeColor,
+        color = StatusConnecting,
         fontWeight = FontWeight.Medium,
     )
 }
@@ -227,7 +228,7 @@ private fun CustomModeHint() {
 @Composable
 private fun ItemModeToggle(currentMode: AlertMode, onChange: (AlertMode) -> Unit) {
     val isAlarm = currentMode == AlertMode.ALARM
-    val color = if (isAlarm) AlarmModeColor else Accent
+    val color = if (isAlarm) StatusError else Accent
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
@@ -446,7 +447,7 @@ private fun WeatherAlertsCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(SurfaceBorder.copy(alpha = 0.2f))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -520,7 +521,7 @@ private fun PetAlertsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(SurfaceBorder.copy(alpha = 0.2f))
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -610,7 +611,7 @@ private fun FeedingTroughAlertsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(SurfaceBorder.copy(alpha = 0.2f))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -665,11 +666,11 @@ private fun ThresholdPicker(
             val isSelected = value == selected
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(if (isSelected) Accent.copy(alpha = 0.12f) else SurfaceBorder.copy(alpha = 0.2f))
                     .then(
-                        if (isSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        if (isSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable { onSelect(value) }
                     .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -751,7 +752,7 @@ private fun AbilityAlertsCard(
             textStyle = TextStyle(fontSize = 12.sp),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp)),
+                .clip(AppTheme.shapes.smallShape),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = SurfaceDark,
                 unfocusedContainerColor = SurfaceDark,
@@ -793,7 +794,7 @@ private fun AbilityAlertChip(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = AppTheme.shapes.smallShape
     Row(
         modifier = Modifier
             .clip(shape)
@@ -861,10 +862,10 @@ private fun AlertItemTile(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .then(
-                    if (enabled) Modifier.border(1.5.dp, Accent, RoundedCornerShape(10.dp))
-                    else Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+                    if (enabled) Modifier.border(1.5.dp, Accent, AppTheme.shapes.smallShape)
+                    else Modifier.rarityBorder(rarity = rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
                 )
                 .background(bgColor)
                 .combinedClickable(onClick = onClick, onLongClick = onLongPress)
@@ -909,7 +910,7 @@ private fun AlertItemTile(
 
         if (showModeIndicator) {
             val isAlarm = itemMode == AlertMode.ALARM
-            val color = if (isAlarm) AlarmModeColor else Accent
+            val color = if (isAlarm) StatusError else Accent
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

@@ -1,5 +1,10 @@
 package com.mgafk.app.ui.screens.storage
 
+import com.mgafk.app.ui.theme.OnAccent
+import com.mgafk.app.ui.theme.OnStatusError
+import com.mgafk.app.ui.theme.StatusConnecting
+import com.mgafk.app.ui.theme.StatusError
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -385,9 +390,9 @@ fun FeedingTroughCard(
         AnimatedVisibility(visible = showTip, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(Accent.copy(alpha = 0.1f))
-                    .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                     .clickable { onDismissTip() }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
@@ -434,8 +439,8 @@ private fun AddTile(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.5.dp, Accent.copy(alpha = 0.3f), AppTheme.shapes.smallShape)
             .background(SurfaceDark)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -460,7 +465,7 @@ private fun FeedingTroughPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
         ) {
@@ -526,7 +531,7 @@ private fun FeedingTroughPickerDialog(
                     enabled = selected.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 ) {
-                    Text("Add ${selected.size}", fontSize = 12.sp, color = Color.White)
+                    Text("Add ${selected.size}", fontSize = 12.sp, color = OnAccent)
                 }
             }
         }
@@ -553,8 +558,8 @@ private fun PickerProduceTile(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(if (item.mutations.isNotEmpty() || price != null) 0.8f else 1f)
-            .clip(RoundedCornerShape(10.dp))
-            .border(borderWidth, borderColor, RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(borderWidth, borderColor, AppTheme.shapes.smallShape)
             .background(if (isSelected) StatusConnected.copy(0.1f) else SurfaceDark)
             .clickable(onClick = onClick)
             .padding(4.dp),
@@ -587,8 +592,8 @@ private fun CropTile(item: InventoryCropsItem, apiReady: Boolean, onClick: () ->
 
     Column(
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark)
             .clickable(onClick = onClick)
             .padding(4.dp),
@@ -711,7 +716,7 @@ private fun StorageUpgradePanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceDark)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -739,7 +744,7 @@ private fun StorageUpgradePanel(
                     SpriteImage(url = MgApi.magicDustUrl, size = 12.dp, contentDescription = "cost")
                     Text(PriceCalculator.formatPrice(nextUpgrade.dustCost),
                         fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = if (canAfford) Color(0xFFC084FC) else Color(0xFFEF4444))
+                        color = if (canAfford) Color(0xFFC084FC) else StatusError)
                 }
             }
             Button(
@@ -750,7 +755,7 @@ private fun StorageUpgradePanel(
                     containerColor = Color(0xFF7C3AED),
                     disabledContainerColor = SurfaceCard,
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = AppTheme.shapes.smallShape,
             ) {
                 Text(
                     if (canAfford) "Upgrade to level ${nextUpgrade.targetLevel}"
@@ -766,7 +771,7 @@ private fun StorageUpgradePanel(
         Dialog(onDismissRequest = { showConfirm = false }) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -790,13 +795,13 @@ private fun StorageUpgradePanel(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
                     Button(
                         onClick = { showConfirm = false; onUpgrade() },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) { Text("Upgrade", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
                 }
             }
@@ -858,7 +863,7 @@ private fun StorageItemDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -888,12 +893,12 @@ private fun StorageItemDetailDialog(
                         containerColor = Accent,
                         disabledContainerColor = SurfaceDark,
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToInventory) "Move to Inventory" else "Inventory full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToInventory) Color.White else TextMuted,
+                        color = if (canMoveToInventory) OnAccent else TextMuted,
                     )
                 }
             }
@@ -935,7 +940,7 @@ private fun StoragePetDetailDialog(
         Dialog(onDismissRequest = { showConfirm = false }) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(AppTheme.shapes.mediumShape)
                     .background(SurfaceCard)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -962,14 +967,14 @@ private fun StoragePetDetailDialog(
                         onClick = { showConfirm = false },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = AppTheme.shapes.smallShape,
                     ) { Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
                     Button(
                         onClick = { showConfirm = false; onSell() },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                        shape = AppTheme.shapes.smallShape,
+                    ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
                 }
             }
         }
@@ -979,7 +984,7 @@ private fun StoragePetDetailDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard),
         ) {
             Column(
@@ -1002,7 +1007,7 @@ private fun StoragePetDetailDialog(
                             Text("STR", fontSize = 12.sp, color = TextSecondary)
                             val isMax = cs >= ms
                             Text(if (isMax) "$cs" else "$cs/$ms", fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                color = if (isMax) Color(0xFFFBBF24) else Accent)
+                                color = if (isMax) StatusConnecting else Accent)
                         }
                     }
                     if (sellPrice != null) {
@@ -1076,21 +1081,21 @@ private fun StoragePetDetailDialog(
                         containerColor = Accent,
                         disabledContainerColor = SurfaceDark,
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = AppTheme.shapes.smallShape,
                 ) {
                     Text(
                         if (canMoveToInventory) "Move to Inventory" else "Inventory full",
                         fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                        color = if (canMoveToInventory) Color.White else TextMuted,
+                        color = if (canMoveToInventory) OnAccent else TextMuted,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp),
-                ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusError),
+                    shape = AppTheme.shapes.smallShape,
+                ) { Text("Sell", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = OnStatusError) }
             }
             LockToggleIcon(isLocked = isLocked, onClick = onToggleLock,
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
@@ -1108,8 +1113,8 @@ private fun QtyTile(itemId: String, quantity: Int, apiReady: Boolean) {
 
     Column(
         modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = entry?.rarity, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark).padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -1136,8 +1141,8 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = RoundedCornerShape(10.dp), alpha = 0.5f)
+            .clip(AppTheme.shapes.smallShape)
+            .rarityBorder(rarity = rarityId, width = 1.5.dp, shape = AppTheme.shapes.smallShape, alpha = 0.5f)
             .background(SurfaceDark),
     ) {
         // Mutation icons top-left
@@ -1164,7 +1169,7 @@ private fun PetTile(pet: InventoryPetItem, apiReady: Boolean) {
             )
             if (ms > 0) {
                 val strText = if (isMax) "$cs" else "$cs/$ms"
-                val strColor = if (isMax) Color(0xFFFBBF24) else Accent
+                val strColor = if (isMax) StatusConnecting else Accent
                 Text(strText, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = strColor, lineHeight = 9.sp)
             }
             if (pet.abilities.isNotEmpty()) {

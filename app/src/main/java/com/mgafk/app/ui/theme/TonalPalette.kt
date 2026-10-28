@@ -35,6 +35,9 @@ data class PaletteArgb(
     val warn: Int,
     val bad: Int,
     val idle: Int,
+    /** Text on a [good] or [bad] fill, e.g. a confirm or delete button. */
+    val onGood: Int,
+    val onBad: Int,
 )
 
 object TonalPalette {
@@ -94,6 +97,8 @@ object TonalPalette {
             warn = warn,
             bad = bad,
             idle = idle,
+            onGood = bestOn(good, INK_DARK, WHITE),
+            onBad = bestOn(bad, INK_DARK, WHITE),
         )
     }
 

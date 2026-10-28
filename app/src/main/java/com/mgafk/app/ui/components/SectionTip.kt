@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.components
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,9 +31,9 @@ fun SectionTip(visible: Boolean, text: String, onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(Accent.copy(alpha = 0.1f))
-                .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                .border(1.dp, Accent.copy(alpha = 0.25f), AppTheme.shapes.smallShape)
                 .clickable { onDismiss() }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {

@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.garden
 
+import com.mgafk.app.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -113,7 +114,7 @@ fun ManualPlantTileDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(AppTheme.shapes.mediumShape)
                 .background(SurfaceCard)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -143,7 +144,7 @@ fun ManualPlantTileDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(VIEWPORT_HEIGHT)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(SurfaceDark),
             )
 

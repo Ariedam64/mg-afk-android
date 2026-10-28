@@ -1,5 +1,6 @@
 package com.mgafk.app.ui.screens.settings
 
+import com.mgafk.app.ui.theme.AppTheme
 import android.app.Activity
 import android.app.TimePickerDialog
 import android.content.Intent
@@ -138,7 +139,7 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(SurfaceBorder.copy(alpha = 0.2f))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -196,14 +197,14 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(
                             if (selected) Accent.copy(alpha = 0.12f)
                             else SurfaceBorder.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(wakeLockMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -242,14 +243,14 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
                     val selected = option.value == settings.wakeLockAutoDelayMin
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(AppTheme.shapes.smallShape)
                             .background(
                                 if (selected) Accent.copy(alpha = 0.12f)
                                 else SurfaceBorder.copy(alpha = 0.2f)
                             )
                             .then(
-                                if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                                else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                             )
                             .clickable { onUpdate(settings.copy(wakeLockAutoDelayMin = option.value)) }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -294,14 +295,14 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(
                         if (optimizedSelected) Accent.copy(alpha = 0.12f)
                         else SurfaceBorder.copy(alpha = 0.2f)
                     )
                     .then(
-                        if (optimizedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        if (optimizedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable {
                         val intent = Intent(
@@ -327,14 +328,14 @@ private fun BackgroundCard(settings: AppSettings, onUpdate: (AppSettings) -> Uni
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .background(
                         if (unrestrictedSelected) Accent.copy(alpha = 0.12f)
                         else SurfaceBorder.copy(alpha = 0.2f)
                     )
                     .then(
-                        if (unrestrictedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        if (unrestrictedSelected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                        else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                     )
                     .clickable {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -391,14 +392,14 @@ private fun ShopsSettingsCard(settings: AppSettings, onUpdate: (AppSettings) -> 
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(
                             if (selected) Accent.copy(alpha = 0.12f)
                             else SurfaceBorder.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(purchaseMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -446,14 +447,14 @@ private fun GardenSettingsCard(settings: AppSettings, onUpdate: (AppSettings) ->
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(
                             if (selected) Accent.copy(alpha = 0.12f)
                             else SurfaceBorder.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onUpdate(settings.copy(plantPlacementMode = mode)) }
                         .padding(vertical = 10.dp),
@@ -618,7 +619,7 @@ private fun AlarmCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(SurfaceBorder.copy(alpha = 0.2f))
                 .clickable {
                     val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
@@ -682,9 +683,9 @@ private fun AlarmCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(Accent.copy(alpha = 0.12f))
-                .border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
                 .clickable { onPreviewAlarm() }
                 .padding(vertical = 10.dp),
             contentAlignment = Alignment.Center,
@@ -741,9 +742,9 @@ private fun AlarmCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(AppTheme.shapes.smallShape)
                 .background(Accent.copy(alpha = 0.12f))
-                .border(1.dp, Accent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .border(1.dp, Accent.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                 .clickable {
                     val next = AlarmSchedule(
                         label = "Schedule ${schedules.size + 1}",
@@ -784,8 +785,8 @@ private fun AlarmScheduleBlock(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .clip(AppTheme.shapes.smallShape)
+            .border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
             .padding(12.dp),
     ) {
         Row(
@@ -819,7 +820,7 @@ private fun AlarmScheduleBlock(
                 tint = TextMuted,
                 modifier = Modifier
                     .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(AppTheme.shapes.smallShape)
                     .clickable { onDelete() }
                     .padding(6.dp),
             )
@@ -869,7 +870,7 @@ private fun AlarmScheduleBlock(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 32.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(
                             if (isSelected) Accent.copy(alpha = 0.12f * controlsAlpha)
                             else SurfaceBorder.copy(alpha = 0.2f * controlsAlpha)
@@ -878,7 +879,7 @@ private fun AlarmScheduleBlock(
                             1.dp,
                             if (isSelected) Accent.copy(alpha = 0.5f * controlsAlpha)
                             else SurfaceBorder.copy(alpha = 0.4f * controlsAlpha),
-                            RoundedCornerShape(8.dp),
+                            AppTheme.shapes.smallShape,
                         )
                         .clickable(enabled = schedule.enabled) {
                             val newDays = if (isSelected) schedule.activeDays - dayValue
@@ -923,7 +924,7 @@ private fun TimePickerBox(
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f * alpha))
             .clickable(enabled = enabled) {
                 TimePickerDialog(
@@ -1049,7 +1050,7 @@ private fun ToggleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(AppTheme.shapes.smallShape)
             .background(SurfaceBorder.copy(alpha = 0.2f))
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1099,14 +1100,14 @@ private fun SettingRow(
                 val selected = option.ms == selectedMs
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(AppTheme.shapes.smallShape)
                         .background(
                             if (selected) Accent.copy(alpha = 0.12f)
                             else SurfaceBorder.copy(alpha = 0.2f)
                         )
                         .then(
-                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            if (selected) Modifier.border(1.dp, Accent.copy(alpha = 0.5f), AppTheme.shapes.smallShape)
+                            else Modifier.border(1.dp, SurfaceBorder.copy(alpha = 0.4f), AppTheme.shapes.smallShape)
                         )
                         .clickable { onSelect(option.ms) }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
