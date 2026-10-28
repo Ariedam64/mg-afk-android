@@ -4,6 +4,7 @@ import com.mgafk.app.data.model.InventoryDecorItem
 import com.mgafk.app.data.model.InventorySeedItem
 import com.mgafk.app.data.model.InventoryToolItem
 import com.mgafk.app.data.model.Session
+import com.mgafk.app.data.repository.SingleCropSale
 import com.mgafk.app.service.AutoStockTracker
 
 /** The inventory and the storage buildings: locks, selling, upgrades, moves, and auto-stock. */
@@ -176,44 +177,17 @@ class StorageActions(private val ctx: SessionContext) {
     fun sellSingleCrop(sessionId: String, itemId: String) {
         val actions = ctx.actions(sessionId) ?: return
         val session = ctx.session(sessionId) ?: return
+        val plan = SingleCropSale.plan(
+            produce = session.inventory.produce,
+            locked = session.favoritedItemIds,
+            targetId = itemId,
+        ) ?: return
 
-        // Find all unlocked produces except the target
-        val toTempLock = session.inventory.produce.filter { produce ->
-            produce.id != itemId &&
-                produce.id !in session.favoritedItemIds &&
-                produce.species !in session.favoritedItemIds
-        }
-
-        // If the target itself is locked, unlock it first
-        val targetLocked = itemId in session.favoritedItemIds
-        if (targetLocked) {
-            actions.toggleLockItem(itemId = itemId)
-        }
-        // Also check species lock
-        val targetProduce = session.inventory.produce.find { it.id == itemId }
-        val speciesLocked = targetProduce != null && targetProduce.species in session.favoritedItemIds
-        if (speciesLocked) {
-            actions.toggleLockItem(itemId = targetProduce!!.species)
-        }
-
-        // Lock all other unlocked produces
-        val lockedIds = toTempLock.map { it.id }
-        lockedIds.forEach { id -> actions.toggleLockItem(itemId = id) }
-
-        // Sell (only the target remains unlocked)
+        plan.unlock.forEach { actions.toggleLockItem(itemId = it) }
+        plan.tempLock.forEach { actions.toggleLockItem(itemId = it) }
         actions.sellAllCrops()
-
-        // Unlock everything we temporarily locked
-        lockedIds.forEach { id -> actions.toggleLockItem(itemId = id) }
-
-        // Re-lock target if it was locked before
-        if (targetLocked) {
-            // Don't re-lock since we just sold it
-        }
-        // Re-lock species if it was locked
-        if (speciesLocked) {
-            actions.toggleLockItem(itemId = targetProduce!!.species)
-        }
+        plan.tempLock.forEach { actions.toggleLockItem(itemId = it) }
+        plan.relock.forEach { actions.toggleLockItem(itemId = it) }
     }
 
     /** Sell multiple pets at once (one request per pet). */
