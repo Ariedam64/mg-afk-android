@@ -162,7 +162,7 @@ fun ShopsCards(
     shops.filter { it.type !in CoreShops.KEYS }.forEach { shop ->
         val isActive = shop.itemNames.isNotEmpty() || shop.secondsUntilRestock(System.currentTimeMillis()) > 0
         if (!isActive) return@forEach
-        // Alerts and Autobuy label these "Rain Shop", "Amber Shop"... - match them.
+        // Alerts label these "Rain Shop", "Amber Shop"... - match them.
         val label = "${shop.type.replaceFirstChar { it.uppercase() }} Shop"
         ShopCategoryCard(
             label = label,
