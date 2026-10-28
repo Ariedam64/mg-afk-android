@@ -1,156 +1,74 @@
 package com.mgafk.app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.People
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Feedback
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Grass
-import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.MeetingRoom
-import androidx.compose.material.icons.outlined.Pets
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.ShoppingCart
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import com.mgafk.app.data.repository.MgApi
-import com.mgafk.app.data.repository.PriceCalculator
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mgafk.app.data.model.AlertItem
-import com.mgafk.app.data.model.AlertMode
-import com.mgafk.app.data.model.AlertSection
-import com.mgafk.app.data.model.PlantPlacementMode
-import com.mgafk.app.data.model.REPLENISH_POTION_ID
-import com.mgafk.app.data.model.XP_POTION_ID
-import com.mgafk.app.data.model.Session
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.ui.MainViewModel
+import com.mgafk.app.ui.UiState
 import com.mgafk.app.ui.components.CardCollapseState
 import com.mgafk.app.ui.components.LocalCardCollapseState
-import com.mgafk.app.ui.components.verticalScrollbar
-import com.mgafk.app.ui.screens.alerts.AlertsCards
-import com.mgafk.app.ui.screens.bugreport.BugReportCards
-import com.mgafk.app.ui.screens.debug.DebugCards
-import com.mgafk.app.ui.screens.settings.SettingsCards
-import com.mgafk.app.ui.screens.connection.ConnectionCard
-import com.mgafk.app.ui.screens.room.ChatCard
-import com.mgafk.app.ui.screens.room.PlayersCard
-import com.mgafk.app.ui.screens.room.PopulateCard
-import com.mgafk.app.ui.screens.logs.AbilityLogsCard
-import com.mgafk.app.data.repository.Crystals
-import com.mgafk.app.ui.screens.garden.CrystalsCard
-import com.mgafk.app.ui.screens.garden.EggsCard
-import com.mgafk.app.ui.screens.garden.GardenCard
-import com.mgafk.app.ui.screens.garden.ManualPlantTarget
-import com.mgafk.app.ui.screens.garden.ManualPlantTileDialog
-import com.mgafk.app.ui.screens.storage.DecorShedCard
-import com.mgafk.app.ui.screens.storage.FeedingTroughCard
-import com.mgafk.app.ui.screens.storage.InventoryCard
-import com.mgafk.app.ui.screens.storage.PetHutchCard
-import com.mgafk.app.ui.screens.storage.SeedSiloCard
-import com.mgafk.app.ui.screens.storage.ToolShackCard
-import com.mgafk.app.ui.screens.pets.ActivePetsCard
-import com.mgafk.app.ui.screens.pets.PetTeamCard
-import com.mgafk.app.ui.screens.shops.ShopsCards
-import com.mgafk.app.ui.screens.status.LiveStatusCard
-import com.mgafk.app.ui.screens.status.WeatherStationCard
-import com.mgafk.app.ui.theme.Accent
-import com.mgafk.app.ui.theme.BgDark
-import com.mgafk.app.ui.theme.StatusConnected
-import com.mgafk.app.ui.theme.StatusConnecting
-import com.mgafk.app.ui.theme.StatusError
-import com.mgafk.app.ui.theme.StatusIdle
-import com.mgafk.app.ui.theme.SurfaceBorder
-import com.mgafk.app.ui.theme.SurfaceCard
-import com.mgafk.app.ui.theme.SurfaceDark
-import com.mgafk.app.ui.theme.TextMuted
-import com.mgafk.app.ui.theme.TextPrimary
-import com.mgafk.app.ui.theme.TextSecondary
+import com.mgafk.app.ui.components.ScreenTitle
+import com.mgafk.app.ui.navigation.Destination
+import com.mgafk.app.ui.navigation.FloatingNavBar
+import com.mgafk.app.ui.navigation.FloatingNavBarClearance
+import com.mgafk.app.ui.screens.alerts.AlertsScreen
+import com.mgafk.app.ui.screens.bugreport.BugReportScreen
+import com.mgafk.app.ui.screens.customize.CustomizeScreen
+import com.mgafk.app.ui.screens.debug.DebugScreen
+import com.mgafk.app.ui.screens.garden.GardenScreen
+import com.mgafk.app.ui.screens.home.HomeScreen
+import com.mgafk.app.ui.screens.more.MoreScreen
+import com.mgafk.app.ui.screens.pets.PetsScreen
+import com.mgafk.app.ui.screens.room.RoomScreen
+import com.mgafk.app.ui.screens.settings.SettingsScreen
+import com.mgafk.app.ui.screens.shops.ShopsScreen
+import com.mgafk.app.ui.screens.social.SocialScreen
+import com.mgafk.app.ui.screens.storage.StorageScreen
+import com.mgafk.app.ui.theme.AppTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-/** Master switch for the Room → Populate UI. Flip to true to re-enable. */
-private const val POPULATE_ENABLED = false
-
-// ── Navigation sections ──
-
-enum class NavSection(
-    val label: String,
-    val icon: ImageVector,
-    val requiresConnection: Boolean = false,
-) {
-    DASHBOARD("Dashboard", Icons.Outlined.Dashboard),
-    ROOM("Room", Icons.Outlined.MeetingRoom, requiresConnection = true),
-    PETS("Pets", Icons.Outlined.Pets, requiresConnection = true),
-    STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true),
-    GARDEN("Garden", Icons.Outlined.Grass, requiresConnection = true),
-    SHOPS("Shops", Icons.Outlined.ShoppingCart, requiresConnection = true),
-    SOCIAL("Social", Icons.Outlined.People),
-    ALERTS("Alerts", Icons.Outlined.Notifications),
-    SETTINGS("Settings", Icons.Outlined.Settings),
-    REPORT_BUG("Report a bug", Icons.Outlined.Feedback),
-    DEBUG("Debug", Icons.Outlined.BugReport),
-}
-
-// ── Main Screen ──
-
+/**
+ * The app shell: one screen at a time above the floating bottom bar.
+ *
+ * Every screen stays composed once built and the hidden ones are slid off to the side, so
+ * switching keeps scroll positions and half-typed input. They are built one by one behind
+ * the loading overlay the first time, which keeps the spinner animating on slow phones.
+ */
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -159,32 +77,35 @@ fun MainScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val session = state.activeSession
+    val connected = session.status == SessionStatus.CONNECTED
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    var currentSection by rememberSaveable { mutableStateOf(NavSection.DASHBOARD.name) }
-    val selected = NavSection.valueOf(currentSection)
+    var currentName by rememberSaveable { mutableStateOf(Destination.HOME.name) }
+    val current = Destination.valueOf(currentName)
+    val navigate: (Destination) -> Unit = { currentName = it.name }
 
-    // Compose sections one by one after API loads, behind the loading overlay
-    var readySections by remember { mutableStateOf(emptySet<NavSection>()) }
-    var allReady by remember { mutableStateOf(false) }
+    // A screen that needs the game falls back to Home when the session drops.
+    LaunchedEffect(connected, current) {
+        if (current.requiresConnection && !connected) navigate(Destination.HOME)
+    }
+    BackHandler(enabled = current != Destination.HOME) {
+        navigate(current.parent ?: Destination.HOME)
+    }
+
+    var built by remember { mutableStateOf(emptySet<Destination>()) }
+    var allBuilt by remember { mutableStateOf(false) }
     var loadingStep by remember { mutableStateOf("") }
-
-    // Track ViewModel loading steps
     LaunchedEffect(state.loadingStep) {
         if (state.loadingStep.isNotBlank()) loadingStep = state.loadingStep
     }
-
-    // After API ready, compose sections one by one behind the overlay
     LaunchedEffect(state.apiReady) {
         if (state.apiReady) {
-            NavSection.entries.forEach { section ->
-                loadingStep = "Preparing ${section.label}…"
-                readySections = readySections + section
-                delay(150) // yield frames so spinner keeps animating
+            Destination.entries.forEach { destination ->
+                loadingStep = "Preparing ${destination.label}…"
+                built = built + destination
+                delay(120) // yield frames so the spinner keeps turning
             }
             loadingStep = ""
-            allReady = true
+            allBuilt = true
         }
     }
 
@@ -196,1032 +117,128 @@ fun MainScreen(
     }
 
     CompositionLocalProvider(LocalCardCollapseState provides cardCollapseState) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            gesturesEnabled = allReady,
-            drawerContent = {
-                DrawerContent(
-                    selected = selected,
-                    connected = session.connected,
-                    playerName = session.playerName,
-                    updateAvailable = state.updateAvailable,
-                    showDebugMenu = state.settings.showDebugMenu,
-                    onSelect = { section ->
-                        currentSection = section.name
-                        scope.launch { drawerState.snapTo(DrawerValue.Closed) }
-                    },
-                )
-            },
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppTheme.colors.background)
+                .clipToBounds(),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(BgDark),
-            ) {
-                // ── Top bar ──
-                TopBar(
-                    sectionLabel = selected.label,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                )
-
-                HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
-
-                // ── Sections: always laid out at full size, slid off-screen when hidden ──
-                Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
-                    NavSection.entries.forEach { section ->
-                        if (section in readySections) {
-                            val isVisible = section == selected
-                            val slide by animateFloatAsState(
-                                targetValue = if (isVisible) 0f else 1f,
-                                animationSpec = tween(300),
-                                label = "slide_${section.name}",
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer { translationX = slide * size.width }
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                ) {
-                                    SectionContent(
-                                        section = section,
-                                        session = session,
-                                        state = state,
-                                        viewModel = viewModel,
-                                        onLoginRequest = onLoginRequest,
-                                        onPlayRequest = onPlayRequest,
-                                        isVisible = isVisible,
-                                    )
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-                            }
+            Destination.entries.forEach { destination ->
+                if (destination in built) {
+                    val visible = destination == current
+                    val offset by animateFloatAsState(
+                        targetValue = if (visible) 0f else 1f,
+                        animationSpec = tween(250),
+                        label = "screen_${destination.name}",
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationX = offset * size.width
+                                alpha = 1f - offset
+                            },
+                    ) {
+                        ScreenFrame(destination) {
+                            ScreenContent(destination, state, viewModel, visible, navigate, onLoginRequest, onPlayRequest)
                         }
                     }
                 }
             }
-        }
 
-        // ── Loading overlay - visible until ALL sections are composed ──
-        AnimatedVisibility(
-            visible = !allReady,
-            enter = fadeIn(),
-            exit = fadeOut(animationSpec = tween(400)),
-        ) {
-            LoadingOverlay(step = loadingStep)
+            FloatingNavBar(
+                selected = current,
+                connected = connected,
+                onSelect = navigate,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp),
+            )
+
+            AnimatedVisibility(
+                visible = !allBuilt,
+                enter = fadeIn(),
+                exit = fadeOut(animationSpec = tween(400)),
+            ) {
+                LoadingOverlay(step = loadingStep)
+            }
         }
     }
-    } // CompositionLocalProvider
 }
 
-// ── Loading overlay ──
+/** Scrolling column with the theme's gutters, room for the bottom bar, and a title. */
+@Composable
+private fun ScreenFrame(destination: Destination, content: @Composable () -> Unit) {
+    val spacing = AppTheme.spacing
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .statusBarsPadding()
+            .padding(horizontal = spacing.screen, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing.gap),
+    ) {
+        content()
+        Spacer(Modifier.navigationBarsPadding().height(FloatingNavBarClearance))
+    }
+}
+
+@Composable
+private fun ScreenContent(
+    destination: Destination,
+    state: UiState,
+    viewModel: MainViewModel,
+    visible: Boolean,
+    navigate: (Destination) -> Unit,
+    onLoginRequest: (sessionId: String) -> Unit,
+    onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit,
+) {
+    if (destination != Destination.HOME) {
+        ScreenTitle(
+            title = destination.label,
+            onBack = destination.parent?.let { parent -> { navigate(parent) } },
+        )
+    }
+    when (destination) {
+        Destination.HOME -> HomeScreen(state, viewModel, navigate, onLoginRequest, onPlayRequest)
+        Destination.GARDEN -> GardenScreen(state, viewModel)
+        Destination.PETS -> PetsScreen(state, viewModel)
+        Destination.SHOPS -> ShopsScreen(state, viewModel)
+        Destination.MORE -> MoreScreen(
+            connected = state.activeSession.status == SessionStatus.CONNECTED,
+            showDebug = state.settings.showDebugMenu,
+            updateAvailable = state.updateAvailable,
+            onNavigate = navigate,
+        )
+        Destination.ROOM -> RoomScreen(state, viewModel)
+        Destination.STORAGE -> StorageScreen(state, viewModel)
+        Destination.SOCIAL -> SocialScreen(state, viewModel)
+        Destination.ALERTS -> AlertsScreen(state, viewModel)
+        Destination.CUSTOMIZE -> CustomizeScreen(
+            appearance = state.settings.appearance,
+            onChange = viewModel::updateAppearance,
+        )
+        Destination.SETTINGS -> SettingsScreen(state, viewModel)
+        Destination.REPORT_BUG -> BugReportScreen(state, viewModel, isVisible = visible)
+        Destination.DEBUG -> DebugScreen(state, viewModel)
+    }
+}
 
 @Composable
 private fun LoadingOverlay(step: String) {
+    val colors = AppTheme.colors
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BgDark),
+        modifier = Modifier.fillMaxSize().background(colors.background),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text(
-                text = "MG AFK",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Accent,
-                letterSpacing = (-0.5).sp,
-            )
-
-            CircularProgressIndicator(
-                modifier = Modifier.size(32.dp),
-                color = Accent,
-                strokeWidth = 3.dp,
-            )
-
-            if (step.isNotBlank()) {
-                Text(
-                    text = step,
-                    fontSize = 12.sp,
-                    color = TextMuted,
-                )
-            }
-        }
-    }
-}
-
-// ── Drawer content ──
-
-@Composable
-private fun DrawerContent(
-    selected: NavSection,
-    connected: Boolean,
-    playerName: String,
-    updateAvailable: com.mgafk.app.data.repository.AppRelease?,
-    showDebugMenu: Boolean,
-    onSelect: (NavSection) -> Unit,
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    ModalDrawerSheet(
-        drawerContainerColor = SurfaceDark,
-        modifier = Modifier.width(260.dp),
-    ) {
-        // Header
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
-            Text(
-                text = "MG AFK",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Accent,
-                letterSpacing = (-0.5).sp,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "v${com.mgafk.app.BuildConfig.VERSION_NAME}",
-                    fontSize = 11.sp,
-                    color = TextMuted,
-                )
-                if (updateAvailable != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Update ${updateAvailable.tagName}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = StatusConnected,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(StatusConnected.copy(alpha = 0.12f))
-                            .clickable {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(updateAvailable.downloadUrl),
-                                )
-                                context.startActivity(intent)
-                            }
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Scrollable middle region (Dashboard + session-dependent items). Takes the
-        // available height and scrolls when the list is taller than the sheet, so the
-        // bottom block (Settings, Debug, ...) always stays visible. The scrollbar thumb
-        // is a visual hint that this region scrolls - without it, a flush list gives no
-        // indication that items are hidden below (reported by users in landscape, where
-        // the shorter screen height makes this region small enough to matter most).
-        val drawerScrollState = rememberScrollState()
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(drawerScrollState)
-                .verticalScrollbar(drawerScrollState),
-        ) {
-            // Dashboard (standalone)
-            DrawerItem(
-                icon = NavSection.DASHBOARD.icon,
-                label = NavSection.DASHBOARD.label,
-                selected = selected == NavSection.DASHBOARD,
-                enabled = true,
-                onClick = { onSelect(NavSection.DASHBOARD) },
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Active session sub-category
-            val sessionLabel = if (connected && playerName.isNotBlank()) playerName else "Session"
-            Text(
-                text = sessionLabel,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (connected) Accent.copy(alpha = 0.7f) else TextMuted.copy(alpha = 0.5f),
-                letterSpacing = 0.5.sp,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-            )
-
-            // Session-dependent items (Pets, Shops)
-            NavSection.entries
-                .filter { it.requiresConnection }
-                .forEach { section ->
-                    val isSelected = section == selected
-                    DrawerItem(
-                        icon = section.icon,
-                        label = section.label,
-                        selected = isSelected,
-                        enabled = connected,
-                        onClick = { if (connected) onSelect(section) },
-                    )
-                }
-        }
-
-        // Social, Alerts, Settings, Report a bug & Debug - pinned at bottom
-        HorizontalDivider(color = SurfaceBorder, thickness = 1.dp)
-        Spacer(modifier = Modifier.height(4.dp))
-        DrawerItem(
-            icon = NavSection.SOCIAL.icon,
-            label = NavSection.SOCIAL.label,
-            selected = selected == NavSection.SOCIAL,
-            enabled = true,
-            onClick = { onSelect(NavSection.SOCIAL) },
-        )
-        DrawerItem(
-            icon = NavSection.ALERTS.icon,
-            label = NavSection.ALERTS.label,
-            selected = selected == NavSection.ALERTS,
-            enabled = true,
-            onClick = { onSelect(NavSection.ALERTS) },
-        )
-        DrawerItem(
-            icon = NavSection.SETTINGS.icon,
-            label = NavSection.SETTINGS.label,
-            selected = selected == NavSection.SETTINGS,
-            enabled = true,
-            onClick = { onSelect(NavSection.SETTINGS) },
-        )
-        // Always there, connected or not: a player who cannot connect is the one with something to report.
-        DrawerItem(
-            icon = NavSection.REPORT_BUG.icon,
-            label = NavSection.REPORT_BUG.label,
-            selected = selected == NavSection.REPORT_BUG,
-            enabled = true,
-            onClick = { onSelect(NavSection.REPORT_BUG) },
-        )
-        if (showDebugMenu) {
-            DrawerItem(
-                icon = NavSection.DEBUG.icon,
-                label = NavSection.DEBUG.label,
-                selected = selected == NavSection.DEBUG,
-                enabled = true,
-                onClick = { onSelect(NavSection.DEBUG) },
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-@Composable
-private fun DrawerItem(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val bgColor = if (selected) Accent.copy(alpha = 0.12f) else SurfaceDark
-    val contentColor = when {
-        !enabled -> TextMuted.copy(alpha = 0.4f)
-        selected -> Accent
-        else -> TextPrimary
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = contentColor,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = contentColor,
-        )
-    }
-}
-
-// ── Top bar ──
-
-@Composable
-private fun TopBar(sectionLabel: String, onMenuClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SurfaceDark)
-            .statusBarsPadding()
-            .padding(horizontal = 4.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onMenuClick) {
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = "Menu",
-                tint = TextPrimary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Text(
-            text = sectionLabel,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
-            letterSpacing = (-0.3).sp,
-        )
-    }
-}
-
-// ── Section content router ──
-
-@Composable
-private fun SectionContent(
-    section: NavSection,
-    session: Session,
-    state: com.mgafk.app.ui.UiState,
-    viewModel: MainViewModel,
-    onLoginRequest: (sessionId: String) -> Unit,
-    onPlayRequest: (sessionId: String, cookie: String, room: String, gameUrl: String) -> Unit = { _, _, _, _ -> },
-    isVisible: Boolean = false,
-) {
-    when (section) {
-        NavSection.DASHBOARD -> {
-            // ── Session selector (chips) ──
-            SessionChips(
-                sessions = state.sessions,
-                activeId = state.activeSessionId,
-                onSelect = { viewModel.selectSession(it) },
-                onAdd = { viewModel.addSession() },
-            )
-
-            ConnectionCard(
-                session = session,
-                onCookieChange = { viewModel.updateSession(session.id) { s -> s.copy(cookie = it) } },
-                onRoomChange = { viewModel.updateSession(session.id) { s -> s.copy(room = it) } },
-                onConnect = { viewModel.connect(session.id) },
-                onDisconnect = { viewModel.disconnect(session.id) },
-                onLogin = { onLoginRequest(session.id) },
-                onLogout = { viewModel.clearToken(session.id) },
-            )
-            PlayInGameCard(
-                canPlay = session.cookie.isNotBlank() && session.room.isNotBlank(),
-                injectGemini = state.settings.injectGeminiMod,
-                onToggleInjectGemini = { enabled ->
-                    viewModel.updateSettings { it.copy(injectGeminiMod = enabled) }
-                },
-                onPlay = {
-                    onPlayRequest(session.id, session.cookie, session.room, session.gameUrl)
-                },
-            )
-
-            LiveStatusCard(session = session)
-            WeatherStationCard(forecast = state.weatherForecast)
-
-            // ── Remove session ──
-            RemoveSessionButton(
-                sessionName = session.name,
-                onRemove = { viewModel.removeSession(session.id) },
-            )
-        }
-        NavSection.ROOM -> {
-            PlayersCard(
-                players = session.playersList,
-                gameVersion = session.gameVersion,
-                gameHost = session.gameUrl,
-                hostPlayerId = session.hostPlayerId,
-            )
-            // Populate hidden for now - code kept so we can flip this back on
-            // without touching MainViewModel / BotClient.
-            @Suppress("KotlinConstantConditions")
-            if (POPULATE_ENABLED) {
-                PopulateCard(
-                    isHost = session.playerId.isNotBlank() && session.playerId == session.hostPlayerId,
-                    playersConnected = session.players,
-                    bots = session.bots,
-                    onPopulate = { viewModel.populateRoom(session.id) },
-                    onDisconnectBot = { botId -> viewModel.disconnectBot(session.id, botId) },
-                    onDisconnectAll = { viewModel.disconnectAllBots(session.id) },
-                )
-            }
-            ChatCard(
-                messages = session.chatMessages,
-                players = session.playersList,
-                gameVersion = session.gameVersion,
-                gameHost = session.gameUrl,
-                onSend = { message -> viewModel.sendChat(session.id, message) },
-            )
-        }
-        NavSection.GARDEN -> {
-            SectionTip(
-                visible = state.showGardenTip,
-                text = "Tap any crop or egg to view its details and perform actions like watering, harvesting, potting and hatching.",
-                onDismiss = { viewModel.dismissGardenTip() },
-            )
-            GardenCard(
-                plants = session.garden,
-                apiReady = state.apiReady,
-                gardenEggs = session.gardenEggs,
-                onHarvest = { slot, slotIndex -> viewModel.harvestCrop(session.id, slot, slotIndex) },
-                onWater = { slot -> viewModel.waterPlant(session.id, slot) },
-                onPot = { slot -> viewModel.potPlant(session.id, slot) },
-                onCleanse = { tileId, slotIdx -> viewModel.cropCleanse(session.id, tileId, slotIdx) },
-                wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
-                planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
-                cropCleansers = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0,
-            )
-            EggsCard(
-                eggs = session.gardenEggs,
-                apiReady = state.apiReady,
-                onHatch = { slot -> viewModel.hatchEgg(session.id, slot) },
-                lastHatchedPet = session.lastHatchedPet,
-                lastHatchedEggId = session.lastHatchedEggId,
-                instantHatch = state.settings.instantHatch,
-                onDismissHatchedPet = { viewModel.clearHatchedPet(session.id) },
-            )
-            CrystalsCard(
-                crystals = session.crystals,
-                tools = session.inventory.tools,
-                connected = session.status == SessionStatus.CONNECTED,
-                crystalsReadAtMs = session.crystalsReadAtMs,
-                occupiedTiles = session.occupiedTiles,
-                apiReady = state.apiReady,
-                onPlant = { type, ref ->
-                    viewModel.placeCrystal(session.id, type, ref.tileType, ref.index)
-                },
-                onFuse = { crystal -> viewModel.fuseCrystal(session.id, crystal) },
-                onPickup = { crystal -> viewModel.pickupCrystal(session.id, crystal) },
-            )
-        }
-        NavSection.PETS -> {
-            ActivePetsCard(
-                pets = session.pets,
-                produce = session.inventory.produce,
-                inventoryPets = session.inventory.pets,
-                hutchPets = session.petHutch,
-                apiReady = state.apiReady,
-                showTip = state.showPetTip,
-                onDismissTip = { viewModel.dismissPetTip() },
-                potionsInInventory = session.inventory.tools
-                    .find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0,
-                potionsInShack = session.toolShack
-                    .find { it.toolId == REPLENISH_POTION_ID }?.quantity ?: 0,
-                xpPotionsInInventory = session.inventory.tools
-                    .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
-                xpPotionsInShack = session.toolShack
-                    .find { it.toolId == XP_POTION_ID }?.quantity ?: 0,
-                strengthBonus = Crystals.effects(session.crystals).strengthBonus,
-                onFeedPet = { petItemId, cropItemIds ->
-                    viewModel.feedPet(session.id, petItemId, cropItemIds)
-                },
-                onUsePotionOnPet = { petItemId ->
-                    viewModel.useReplenishPotionOnPet(session.id, petItemId)
-                },
-                onUseXpPotionOnPet = { petItemId ->
-                    viewModel.useXpPotionOnPet(session.id, petItemId)
-                },
-                onSwapPet = { activePetId, targetPetId, isInHutch ->
-                    viewModel.swapPet(session.id, activePetId, targetPetId, isInHutch)
-                },
-                onEquipPet = { targetPetId, isInHutch ->
-                    viewModel.equipPet(session.id, targetPetId, isInHutch)
-                },
-                onUnequipPet = { petId ->
-                    viewModel.unequipPet(session.id, petId)
-                },
-            )
-            PetTeamCard(
-                teams = session.petTeams,
-                activePets = session.pets,
-                inventoryPets = session.inventory.pets,
-                hutchPets = session.petHutch,
-                activeTeamId = remember(session.pets, session.petTeams) {
-                    viewModel.detectActiveTeamId(session.id)
-                },
-                apiReady = state.apiReady,
-                strengthBonus = Crystals.effects(session.crystals).strengthBonus,
-                onCreate = { name, petIds -> viewModel.createPetTeam(session.id, name, petIds) },
-                onUpdate = { teamId, name, petIds ->
-                    viewModel.updatePetTeam(session.id, teamId, name, petIds)
-                },
-                onDelete = { teamId -> viewModel.deletePetTeam(session.id, teamId) },
-                onReorder = { from, to -> viewModel.reorderPetTeams(session.id, from, to) },
-                onActivate = { team -> viewModel.activateTeam(session.id, team) },
-                showTip = state.showTeamTip,
-                onDismissTip = { viewModel.dismissTeamTip() },
-            )
-            AbilityLogsCard(logs = session.logs, apiReady = state.apiReady, onClear = { viewModel.clearLogs(session.id) })
-        }
-        NavSection.SHOPS -> {
-            ShopsCards(
-                shops = session.shops,
-                session = session,
-                apiReady = state.apiReady,
-                purchaseMode = state.settings.purchaseMode,
-                purchaseError = state.purchaseError,
-                showTip = state.showShopTip,
-                onDismissTip = { viewModel.dismissShopTip() },
-                onBuy = { shopType, itemName -> viewModel.purchaseShopItem(session.id, shopType, itemName) },
-                onBuyAll = { shopType, itemName -> viewModel.purchaseAllShopItem(session.id, shopType, itemName) },
-            )
-        }
-        NavSection.STORAGE -> {
-            SectionTip(
-                visible = state.showStorageTip,
-                text = "Tap any item to view its details, lock/unlock it, or perform actions like planting, selling and more.",
-                onDismiss = { viewModel.dismissStorageTip() },
-            )
-            val inv = session.inventory
-            val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
-                inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
-            val hutchMax = session.hutchCapacitySlots
-            val siloMax = session.siloCapacitySlots
-            val decorShedMax = session.decorShedCapacitySlots
-            val toolShackMax = session.toolShackCapacitySlots
-            // Storage cards and their "move to storage" buttons only make sense for
-            // structures the player has actually placed in the garden.
-            val hasSeedSilo = "SeedSilo" in session.availableStorages
-            val hasDecorShed = "DecorShed" in session.availableStorages
-            val hasPetHutch = "PetHutch" in session.availableStorages
-            val hasFeedingTrough = "FeedingTrough" in session.availableStorages
-            val hasToolShack = "ToolShack" in session.availableStorages
-            val seedSiloSpecies = remember(session.seedSilo) { session.seedSilo.map { it.species }.toSet() }
-            val decorShedIds = remember(session.decorShed) { session.decorShed.map { it.decorId }.toSet() }
-            val toolShackToolIds = remember(session.toolShack) { session.toolShack.map { it.toolId }.toSet() }
-            // Manual planting can either drop on the first free tile or ask the player to point
-            // at one on the garden grid (see PlantPlacementMode). Nothing is remembered either
-            // way - this is a one-shot placement, not auto-plant.
-            val plantOnGrid = state.settings.plantPlacementMode == PlantPlacementMode.GRID
-            var manualPlantTarget by remember { mutableStateOf<ManualPlantTarget?>(null) }
-
-            val invSeedSpecies = remember(inv.seeds) { inv.seeds.map { it.species }.toSet() }
-            val invDecorIds = remember(inv.decors) { inv.decors.map { it.decorId }.toSet() }
-            val invToolIds = remember(inv.tools) { inv.tools.map { it.toolId }.toSet() }
-
-            InventoryCard(
-                inventory = session.inventory,
-                apiReady = state.apiReady,
-                freePlantTiles = session.freePlantTiles,
-                favoritedItemIds = session.favoritedItemIds,
-                hasPetHutch = hasPetHutch,
-                petHutchCount = session.petHutch.size,
-                petHutchMax = hutchMax,
-                hasSeedSilo = hasSeedSilo,
-                seedSiloCount = session.seedSilo.size,
-                seedSiloMax = siloMax,
-                seedSiloSpecies = seedSiloSpecies,
-                hasDecorShed = hasDecorShed,
-                decorShedCount = session.decorShed.size,
-                decorShedMax = decorShedMax,
-                decorShedDecorIds = decorShedIds,
-                hasToolShack = hasToolShack,
-                toolShackCount = session.toolShack.size,
-                toolShackMax = toolShackMax,
-                toolShackToolIds = toolShackToolIds,
-                onPlantSeed = { species ->
-                    if (plantOnGrid) manualPlantTarget = ManualPlantTarget.Seed(species)
-                    else viewModel.plantSeed(session.id, species)
-                },
-                onGrowEgg = { eggId -> viewModel.growEgg(session.id, eggId) },
-                onPlantGardenPlant = { itemId ->
-                    if (plantOnGrid) manualPlantTarget = ManualPlantTarget.Pot(itemId)
-                    else viewModel.plantGardenPlant(session.id, itemId)
-                },
-                onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
-                onSellAllUnlockedPets = { itemIds -> viewModel.sellAllUnlockedPets(session.id, itemIds) },
-                onSellAllCrops = { viewModel.sellAllCrops(session.id) },
-                onSellCrop = { itemId -> viewModel.sellSingleCrop(session.id, itemId) },
-                onMovePetToHutch = { petId -> viewModel.movePetToHutch(session.id, petId) },
-                onMoveSeedToSilo = { species -> viewModel.moveSeedToSilo(session.id, species) },
-                onMoveDecorToShed = { decorId -> viewModel.moveDecorToShed(session.id, decorId) },
-                onMoveToolToShack = { toolId -> viewModel.moveToolToShack(session.id, toolId) },
-                playerCount = session.players,
-            )
-
-            when (val target = manualPlantTarget) {
-                null -> Unit
-                is ManualPlantTarget.Seed -> {
-                    val entry = MgApi.findItem(target.species)
-                    ManualPlantTileDialog(
-                        species = target.species,
-                        displayName = entry?.name ?: target.species,
-                        spriteUrl = entry?.sprite,
-                        // Falls to 0 as the optimistic update empties the stack, closing the popup.
-                        remaining = inv.seeds.find { it.species == target.species }?.quantity ?: 0,
-                        garden = session.garden,
-                        gardenEggs = session.gardenEggs,
-                        // This build does not track garden decor, so decor tiles read as free
-                        // here and the server is what refuses one.
-                        decorSpriteByTile = emptyMap(),
-                        onPlantTile = { tileId ->
-                            viewModel.plantSeed(session.id, target.species, tileId)
-                        },
-                        onDismiss = { manualPlantTarget = null },
-                    )
-                }
-                is ManualPlantTarget.Pot -> {
-                    val pot = inv.plants.find { it.id == target.itemId }
-                    val entry = pot?.let { MgApi.findItem(it.species) }
-                    ManualPlantTileDialog(
-                        species = null,
-                        displayName = entry?.name ?: pot?.species.orEmpty(),
-                        spriteUrl = entry?.cropSprite ?: entry?.sprite,
-                        remaining = if (pot != null) 1 else 0,
-                        garden = session.garden,
-                        gardenEggs = session.gardenEggs,
-                        decorSpriteByTile = emptyMap(),
-                        onPlantTile = { tileId ->
-                            viewModel.plantGardenPlant(session.id, target.itemId, tileId)
-                        },
-                        onDismiss = { manualPlantTarget = null },
-                    )
-                }
-            }
-
-            if (hasSeedSilo) {
-                SeedSiloCard(seeds = session.seedSilo, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                    inventorySeedSpecies = invSeedSpecies,
-                    inventoryItemCount = totalInventoryItems,
-                    magicDust = session.magicDust,
-                    capacitySlots = siloMax,
-                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                    onMoveToInventory = { species -> viewModel.moveSeedFromSilo(session.id, species) },
-                    onUpgrade = { viewModel.upgradeSeedSilo(session.id) })
-            }
-            if (hasDecorShed) {
-                DecorShedCard(decors = session.decorShed, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                    inventoryDecorIds = invDecorIds,
-                    inventoryItemCount = totalInventoryItems,
-                    magicDust = session.magicDust,
-                    capacitySlots = decorShedMax,
-                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                    onMoveToInventory = { decorId -> viewModel.moveDecorFromShed(session.id, decorId) },
-                    onUpgrade = { viewModel.upgradeDecorShed(session.id) })
-            }
-            if (hasToolShack) {
-                ToolShackCard(tools = session.toolShack, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                    inventoryToolIds = invToolIds,
-                    inventoryItemCount = totalInventoryItems,
-                    magicDust = session.magicDust,
-                    capacitySlots = toolShackMax,
-                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                    onMoveToInventory = { toolId -> viewModel.moveToolFromShack(session.id, toolId) },
-                    onUpgrade = { viewModel.upgradeToolShack(session.id) })
-            }
-            if (hasPetHutch) {
-                PetHutchCard(pets = session.petHutch, apiReady = state.apiReady, favoritedItemIds = session.favoritedItemIds,
-                    magicDust = session.magicDust,
-                    capacitySlots = hutchMax,
-                    inventoryItemCount = totalInventoryItems,
-                    onToggleLock = { itemId -> viewModel.toggleLockItem(session.id, itemId) },
-                    onSellPet = { itemId -> viewModel.sellPet(session.id, itemId) },
-                    onUpgrade = { viewModel.upgradePetHutch(session.id) },
-                    onMoveToInventory = { petId -> viewModel.movePetFromHutch(session.id, petId) })
-            }
-            if (hasFeedingTrough) {
-                FeedingTroughCard(
-                    crops = session.feedingTrough,
-                    produce = session.inventory.produce,
-                    apiReady = state.apiReady,
-                    showTip = state.showTroughTip,
-                    onDismissTip = { viewModel.dismissTroughTip() },
-                    onAddItems = { items ->
-                        viewModel.putItemsInFeedingTrough(session.id, items)
-                    },
-                    onRemoveItem = { itemId ->
-                        viewModel.removeItemFromFeedingTrough(session.id, itemId)
-                    },
-                )
-            }
-        }
-        NavSection.SOCIAL -> {
-            com.mgafk.app.ui.screens.social.PublicRoomsCard(
-                rooms = state.publicRooms,
-                loading = state.publicRoomsLoading,
-                currentRoomId = session.roomId.ifBlank { session.room },
-                isConnected = session.status == SessionStatus.CONNECTED,
-                onRefresh = { viewModel.fetchPublicRooms() },
-                onJoin = { roomId -> viewModel.joinPublicRoom(session.id, roomId) },
-            )
-        }
-        NavSection.ALERTS -> {
-            AlertsCards(
-                alerts = state.alerts,
-                apiReady = state.apiReady,
-                onToggle = { key, enabled ->
-                    viewModel.updateAlerts { config ->
-                        val items = config.items.toMutableMap()
-                        // Preserve any existing mode - only flip the enabled flag.
-                        val current = items[key] ?: AlertItem()
-                        items[key] = current.copy(enabled = enabled)
-                        config.copy(items = items)
-                    }
-                },
-                onSectionModeChange = { section, mode ->
-                    viewModel.updateAlerts { config ->
-                        config.copy(sectionModes = config.sectionModes + (section.key to mode))
-                    }
-                },
-                onItemModeChange = { key, mode ->
-                    viewModel.updateAlerts { config ->
-                        val items = config.items.toMutableMap()
-                        val current = items[key] ?: AlertItem()
-                        items[key] = current.copy(mode = mode)
-                        config.copy(items = items)
-                    }
-                },
-                onCollapseChange = { key, collapsed ->
-                    viewModel.updateAlerts { config ->
-                        config.copy(collapsed = config.collapsed + (key to collapsed))
-                    }
-                },
-                onPetThresholdChange = { threshold ->
-                    viewModel.updateAlerts { config ->
-                        config.copy(petHungerThreshold = threshold)
-                    }
-                },
-            )
-        }
-        NavSection.SETTINGS -> {
-            SettingsCards(
-                settings = state.settings,
-                availableStorages = session.availableStorages,
-                onUpdate = { newSettings -> viewModel.updateSettings { newSettings } },
-                onPreviewAlarm = { viewModel.previewAlarmSound() },
-                onStopPreviewAlarm = { viewModel.stopPreviewAlarmSound() },
-            )
-        }
-        NavSection.REPORT_BUG -> {
-            BugReportCards(
-                visible = isVisible,
-                sessionConnected = session.status == SessionStatus.CONNECTED,
-                // Read at tap time only: the session data and logs of that moment.
-                snapshot = { viewModel.bugReportSnapshot() },
-            )
-        }
-        NavSection.DEBUG -> {
-            DebugCards(
-                session = session,
-                serviceLogs = state.serviceLogs,
-                onTestAlert = { mode -> viewModel.testAlert(mode) },
-                onClearWsLogs = { viewModel.clearWsLogs(session.id) },
-                onClearServiceLogs = { viewModel.clearServiceLogs() },
-            )
-        }
-    }
-}
-
-// ── Session chips ──
-
-@Composable
-private fun SessionChips(
-    sessions: List<Session>,
-    activeId: String,
-    onSelect: (String) -> Unit,
-    onAdd: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        sessions.forEach { s ->
-            val isActive = s.id == activeId
-            val statusColor = when (s.status) {
-                SessionStatus.CONNECTED -> StatusConnected
-                SessionStatus.CONNECTING -> StatusConnecting
-                SessionStatus.ERROR -> StatusError
-                SessionStatus.IDLE -> StatusIdle
-            }
-
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .then(
-                        if (isActive) Modifier.background(Accent.copy(alpha = 0.15f))
-                            .border(1.dp, Accent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                        else Modifier.background(SurfaceCard)
-                            .border(1.dp, SurfaceBorder, RoundedCornerShape(20.dp))
-                    )
-                    .clickable { onSelect(s.id) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(statusColor),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = s.name,
-                    fontSize = 12.sp,
-                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (isActive) TextPrimary else TextMuted,
-                )
-            }
-        }
-
-        // Add session chip
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(SurfaceBorder.copy(alpha = 0.5f))
-                .clickable { onAdd() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = "Add session",
-                tint = Accent,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-    }
-}
-
-// ── Play in game (opens WebView with cookie + Gemini userscript injected) ──
-
-@Composable
-private fun PlayInGameCard(
-    canPlay: Boolean,
-    injectGemini: Boolean,
-    onToggleInjectGemini: (Boolean) -> Unit,
-    onPlay: () -> Unit,
-) {
-    com.mgafk.app.ui.components.AppCard(
-        title = "Play in game",
-        collapsible = true,
-        persistKey = "dashboard_play",
-    ) {
-        Text(
-            "Open the game in-app with your session cookie. AFK pauses while you play.",
-            fontSize = 11.sp,
-            color = TextMuted,
-            lineHeight = 15.sp,
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Inject Gemini toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceBorder.copy(alpha = 0.2f))
-                .clickable { onToggleInjectGemini(!injectGemini) }
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Inject Gemini mod",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
-                )
-                Text(
-                    if (injectGemini) "Latest release auto-downloaded from GitHub."
-                    else "Vanilla game, no userscript.",
-                    fontSize = 10.sp,
-                    color = TextMuted,
-                    lineHeight = 13.sp,
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            androidx.compose.material3.Switch(
-                checked = injectGemini,
-                onCheckedChange = onToggleInjectGemini,
-                colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = Accent),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        androidx.compose.material3.Button(
-            onClick = onPlay,
-            enabled = canPlay,
-            modifier = Modifier.fillMaxWidth(),
-            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                containerColor = StatusConnected,
-                disabledContainerColor = StatusConnected.copy(alpha = 0.2f),
-                disabledContentColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f),
-            ),
-            shape = RoundedCornerShape(10.dp),
-        ) {
-            Text(
-                if (canPlay) (if (injectGemini) "Play with Gemini" else "Play vanilla")
-                else "Set cookie & room first",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (canPlay) androidx.compose.ui.graphics.Color.White
-                else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f),
-            )
-        }
-    }
-}
-
-// ── Remove session button ──
-
-@Composable
-private fun RemoveSessionButton(
-    sessionName: String,
-    onRemove: () -> Unit,
-) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, StatusError.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-            .clickable { showDialog = true }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.DeleteOutline,
-            contentDescription = "Remove session",
-            tint = StatusError.copy(alpha = 0.7f),
-            modifier = Modifier.size(16.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Remove $sessionName",
-            fontSize = 13.sp,
-            color = StatusError.copy(alpha = 0.7f),
-            fontWeight = FontWeight.Medium,
-        )
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            containerColor = SurfaceDark,
-            titleContentColor = TextPrimary,
-            textContentColor = TextSecondary,
-            title = { Text("Remove session") },
-            text = { Text("Remove \"$sessionName\"? This will disconnect and delete all its data.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDialog = false
-                    onRemove()
-                }) {
-                    Text("Remove", color = StatusError)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancel", color = TextMuted)
-                }
-            },
-        )
-    }
-}
-
-// ── Section tip (dismissable, shown once) ──
-
-@Composable
-private fun SectionTip(visible: Boolean, text: String, onDismiss: () -> Unit) {
-    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Accent.copy(alpha = 0.1f))
-                .border(1.dp, Accent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                .clickable { onDismiss() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        ) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text,
-                    fontSize = 11.sp,
-                    color = Accent,
-                    lineHeight = 15.sp,
-                    modifier = Modifier.weight(1f),
-                )
-                Text("OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Accent,
-                    modifier = Modifier.clickable { onDismiss() })
-            }
+            Text("MG AFK", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = colors.accent, letterSpacing = (-0.5).sp)
+            CircularProgressIndicator(modifier = Modifier.size(32.dp), color = colors.accent, trackColor = colors.surfaceHigh, strokeWidth = 3.dp)
+            if (step.isNotBlank()) Text(step, fontSize = 13.sp, color = colors.textMuted)
         }
     }
 }

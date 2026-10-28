@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.model.AppSettings
+import com.mgafk.app.data.model.Appearance
 import com.mgafk.app.data.repository.CropSize
 import com.mgafk.app.data.repository.PetTeams
 import com.mgafk.app.data.repository.GardenTiles
@@ -1942,6 +1943,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(settings = newSettings) }
         viewModelScope.launch { repo.saveSettings(newSettings) }
         applySettings(newSettings)
+    }
+
+    private var saveAppearanceJob: Job? = null
+
+    /**
+     * Changes how the app looks. Applied at once, saved a moment later: the hue slider calls
+     * this on every frame of a drag, and only where it stops needs to reach the disk.
+     */
+    fun updateAppearance(transform: (Appearance) -> Appearance) {
+        _state.update { it.copy(settings = it.settings.copy(appearance = transform(it.settings.appearance))) }
+        saveAppearanceJob?.cancel()
+        saveAppearanceJob = viewModelScope.launch {
+            delay(400)
+            repo.saveSettings(_state.value.settings)
+        }
     }
 
     private fun applySettings(settings: AppSettings) {
