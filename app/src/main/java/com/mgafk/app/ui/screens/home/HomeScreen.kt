@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -135,6 +137,7 @@ fun HomeScreen(
 
 // ── Weather ──
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WeatherHero(forecast: WeatherForecast?, nowMs: Long) {
     val colors = AppTheme.colors
@@ -166,7 +169,8 @@ private fun WeatherHero(forecast: WeatherForecast?, nowMs: Long) {
                 Icon(Icons.Rounded.Cloud, contentDescription = null, tint = colors.accent, modifier = Modifier.size(56.dp))
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Wraps whole chips to a second line rather than squeezing one onto two.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             forecast.nextHydro(nowMs)?.let { hydro ->
                 ForecastChip(hydro.label, formatCountdown(hydro.startsInMs(nowMs)))
             }
@@ -188,8 +192,8 @@ private fun ForecastChip(label: String, countdown: String) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        Text(countdown, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textMuted)
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(countdown, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppTheme.colors.textMuted, maxLines = 1)
     }
 }
 
