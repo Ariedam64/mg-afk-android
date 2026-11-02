@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -76,8 +77,9 @@ internal object FloatingNavBarLayout {
      * Where a tap at ([x], [y]) lands. [x] runs from the left edge of the screen, [y] from the
      * top of the pill; [itemWidths] are the tabs' widths in order.
      *
-     * Tabs are laid out with [Arrangement.SpaceBetween] and centered vertically. Only the tabs
-     * are clickable: the pill just draws, so a tap no tab claims goes on to the screen behind.
+     * Tabs are laid out with [Arrangement.SpaceBetween] and centered vertically. The pill is a
+     * touch target of its own, so a tap no tab claims stops on it instead of reaching the
+     * screen behind.
      */
     fun touchAt(x: Float, y: Float, screenWidth: Float, itemWidths: List<Float>): NavBarTouch {
         val pillLeft = SIDE_MARGIN
@@ -102,7 +104,7 @@ internal object FloatingNavBarLayout {
             }
             left += width + gap
         }
-        return NavBarTouch.Behind
+        return NavBarTouch.Pill
     }
 }
 
@@ -124,6 +126,10 @@ fun FloatingNavBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = FloatingNavBarLayout.SIDE_MARGIN.dp)
+            // Makes the whole pill a hit target: a tap between or around the tabs stops here
+            // instead of falling through to the screen scrolling behind the bar. Nothing is
+            // consumed, so the tabs' own clicks behave as before.
+            .pointerInput(Unit) {}
             .shadow(16.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(shape)
             .background(colors.surfaceHigh)
