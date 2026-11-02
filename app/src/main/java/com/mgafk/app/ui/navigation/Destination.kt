@@ -17,7 +17,7 @@ import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Every screen of the app. The five with [inBottomBar] sit in the floating bar; the rest
+ * Every screen of the app. The six with [inBottomBar] sit in the floating bar; the rest
  * are listed on More and open with a back arrow that returns there.
  */
 enum class Destination(
@@ -31,11 +31,11 @@ enum class Destination(
     HOME("Home", Icons.Rounded.Home, inBottomBar = true),
     GARDEN("Garden", Icons.Rounded.Grass, requiresConnection = true, inBottomBar = true),
     PETS("Pets", Icons.Rounded.Pets, requiresConnection = true, inBottomBar = true),
+    STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true, inBottomBar = true, description = "Inventory, silo, hutch, trough"),
     SHOPS("Shops", Icons.Rounded.ShoppingCart, requiresConnection = true, inBottomBar = true),
     MORE("More", Icons.Rounded.MoreHoriz, inBottomBar = true),
 
     ROOM("Room", Icons.Outlined.MeetingRoom, requiresConnection = true, description = "Players and chat"),
-    STORAGE("Storage", Icons.Outlined.Inventory2, requiresConnection = true, description = "Inventory, silo, hutch, trough"),
     SOCIAL("Social", Icons.Outlined.People, description = "Browse and join public rooms"),
     ALERTS("Alerts", Icons.Outlined.Notifications, description = "Notifications and alarms"),
     CUSTOMIZE("Customize", Icons.Outlined.Palette, description = "Colors, theme, corners, text size"),

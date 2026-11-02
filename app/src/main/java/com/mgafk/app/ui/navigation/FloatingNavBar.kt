@@ -32,6 +32,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.ui.theme.AppTheme
@@ -63,8 +65,9 @@ internal object FloatingNavBarLayout {
     const val INNER_PADDING = 8f
     const val ITEM_MIN_HEIGHT = 48f
     const val ICON_SIZE = 22f
-    const val ITEM_PADDING = 12f
-    const val SELECTED_ITEM_PADDING = 16f
+    /** Kept tight so six tabs and the selected label fit on a 360 dp wide screen. */
+    const val ITEM_PADDING = 8f
+    const val SELECTED_ITEM_PADDING = 12f
     /** Space between the icon and the label of the selected tab. */
     const val LABEL_GAP = 8f
 
@@ -72,6 +75,15 @@ internal object FloatingNavBarLayout {
     fun itemWidth(selected: Boolean, labelWidth: Float = 0f): Float =
         if (selected) ICON_SIZE + 2 * SELECTED_ITEM_PADDING + LABEL_GAP + labelWidth
         else ICON_SIZE + 2 * ITEM_PADDING
+
+    /**
+     * Width left for the selected tab's label on a screen [screenWidth] dp wide holding
+     * [itemCount] tabs. A longer label is cut with an ellipsis instead of overflowing.
+     */
+    fun selectedLabelRoom(screenWidth: Float, itemCount: Int): Float =
+        screenWidth - 2 * SIDE_MARGIN - 2 * INNER_PADDING -
+            (itemCount - 1).coerceAtLeast(0) * itemWidth(selected = false) -
+            itemWidth(selected = true)
 
     /**
      * Where a tap at ([x], [y]) lands. [x] runs from the left edge of the screen, [y] from the
@@ -108,6 +120,10 @@ internal object FloatingNavBarLayout {
     }
 }
 
+/** [FloatingNavBarLayout.selectedLabelRoom] in Dp: 68 dp on a 360 dp screen with six tabs. */
+internal fun navBarSelectedLabelRoom(screenWidth: Dp, itemCount: Int): Dp =
+    FloatingNavBarLayout.selectedLabelRoom(screenWidth.value, itemCount).dp
+
 /**
  * The floating pill at the bottom of the screen. The selected item expands into an accent
  * pill with its label; the others are icon-only. Items that need a connection are dimmed and
@@ -142,11 +158,14 @@ fun FloatingNavBar(
         val highlighted = selected.parent ?: selected
         Destination.bottomBar.forEach { destination ->
             val enabled = connected || !destination.requiresConnection
+            val isSelected = destination == highlighted
             NavItem(
                 destination = destination,
-                selected = destination == highlighted,
+                selected = isSelected,
                 enabled = enabled,
                 onClick = { onSelect(destination) },
+                // The selected tab never takes more than the room the others leave.
+                modifier = if (isSelected) Modifier.weight(1f, fill = false) else Modifier,
             )
         }
     }
@@ -158,6 +177,7 @@ private fun NavItem(
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
     val background by animateColorAsState(if (selected) colors.accent else Color.Transparent, label = "navBg")
@@ -167,7 +187,7 @@ private fun NavItem(
         else -> colors.textMuted.copy(alpha = 0.45f)
     }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .heightIn(min = FloatingNavBarLayout.ITEM_MIN_HEIGHT.dp)
             .clip(RoundedCornerShape(50))
             .background(background)
@@ -195,7 +215,15 @@ private fun NavItem(
         ) {
             Row {
                 Spacer(Modifier.width(FloatingNavBarLayout.LABEL_GAP.dp))
-                Text(destination.label, color = content, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    destination.label,
+                    color = content,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
