@@ -326,6 +326,7 @@ private fun ShopItemTile(
             val label = when (buyState) {
                 ShopItemBuyState.Owned -> "OWNED"
                 ShopItemBuyState.MaxReached -> "MAX"
+                ShopItemBuyState.InventoryFull -> "FULL"
                 ShopItemBuyState.Buyable -> ""
             }
             Box(
