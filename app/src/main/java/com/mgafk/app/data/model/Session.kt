@@ -131,6 +131,12 @@ data class InventorySnapshot(
     val pets: List<InventoryPetItem> = emptyList(),
     val tools: List<InventoryToolItem> = emptyList(),
     val decors: List<InventoryDecorItem> = emptyList(),
+    /**
+     * The tools pinned in the game's tool ring (`inventory.toolRing`), by
+     * [InventoryToolItem.storageKey]. A pinned tool stays in [tools] but the game leaves it
+     * out of the bag limit: see [com.mgafk.app.data.repository.StorageCapacity.bagCount].
+     */
+    val toolRingIds: List<String> = emptyList(),
 )
 
 @Serializable

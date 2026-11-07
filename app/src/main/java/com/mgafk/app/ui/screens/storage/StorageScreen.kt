@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.mgafk.app.data.model.PlantPlacementMode
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.StorageCapacity
 import com.mgafk.app.data.model.Tip
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.UiState
@@ -28,8 +29,8 @@ fun StorageScreen(
         onDismiss = { viewModel.dismissTip(Tip.STORAGE) },
     )
     val inv = session.inventory
-    val totalInventoryItems = inv.seeds.size + inv.eggs.size + inv.produce.size +
-        inv.plants.size + inv.pets.size + inv.tools.size + inv.decors.size
+    // As the game counts the bag: tools pinned in the tool ring take no slot.
+    val totalInventoryItems = StorageCapacity.bagCount(inv)
     val hutchMax = session.hutchCapacitySlots
     val siloMax = session.siloCapacitySlots
     val decorShedMax = session.decorShedCapacitySlots

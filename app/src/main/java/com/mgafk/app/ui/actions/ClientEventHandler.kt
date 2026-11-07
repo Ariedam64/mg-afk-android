@@ -352,6 +352,15 @@ class ClientEventHandler(
                         }
                     }
                 }
+                // Tools pinned in the tool ring: they stay in `items` but the game leaves
+                // them out of the bag limit (StorageCapacity.bagCount validates the pins).
+                val toolRingIds = event.toolRing.mapNotNull { el ->
+                    val pin = el as? JsonObject ?: return@mapNotNull null
+                    val type = pin["itemType"]?.jsonPrimitive?.contentOrNull
+                    if (type != null && type != "Tool") return@mapNotNull null
+                    pin["id"]?.jsonPrimitive?.contentOrNull
+                }
+
                 // Server confirmed - cancel any pending rollbacks
                 petActions.onInventoryConfirmed(sessionId)
                 gardenActions.onInventoryConfirmed(sessionId)
@@ -367,7 +376,7 @@ class ClientEventHandler(
 
                 ctx.updateSession(sessionId) {
                     it.copy(
-                        inventory = InventorySnapshot(seeds, eggs, produce, plants, pets, tools, decors),
+                        inventory = InventorySnapshot(seeds, eggs, produce, plants, pets, tools, decors, toolRingIds),
                         seedSilo = siloSeeds,
                         decorShed = shedDecors,
                         petHutch = hutchPets,

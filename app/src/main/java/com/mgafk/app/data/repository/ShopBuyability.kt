@@ -55,8 +55,8 @@ fun Session.buyState(itemId: String): ShopItemBuyState {
         "items" -> inventory.tools.any { it.toolId == itemId && it.id == null }
         else -> false
     }
-    val entryCount = inventory.seeds.size + inventory.eggs.size + inventory.produce.size +
-        inventory.plants.size + inventory.pets.size + inventory.tools.size + inventory.decors.size
+    // Tools pinned in the tool ring stay in the inventory but take no bag slot (BR-36).
+    val entryCount = StorageCapacity.bagCount(inventory)
     if (!StorageCapacity.canAddStackable(entryCount, StorageCapacity.INVENTORY_LIMIT, stackExists)) {
         return ShopItemBuyState.InventoryFull
     }

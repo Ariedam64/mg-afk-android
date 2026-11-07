@@ -1,5 +1,7 @@
 package com.mgafk.app.data.repository
 
+import com.mgafk.app.data.model.InventorySnapshot
+
 /**
  * Storage capacity rules ported from QuinoaView (function returning capacity per
  * storage id). Values are baked into the game and not exposed via /data, so we
@@ -16,6 +18,28 @@ object StorageCapacity {
 
     const val INVENTORY_LIMIT = 100
     const val FEEDING_TROUGH_LIMIT = 9
+
+    /** Most tools the game's tool ring holds. */
+    const val TOOL_RING_LIMIT = 5
+
+    /**
+     * Entries that count toward [INVENTORY_LIMIT], as the game counts them (`tn()` in
+     * inventoryAtoms): every entry, minus the tools pinned in the tool ring. Only valid pins
+     * free a slot, like the game's `V()`: deduplicated, tool present in the inventory, and
+     * [TOOL_RING_LIMIT] at most.
+     */
+    fun bagCount(inventory: InventorySnapshot): Int {
+        val total = inventory.seeds.size + inventory.eggs.size + inventory.produce.size +
+            inventory.plants.size + inventory.pets.size + inventory.tools.size + inventory.decors.size
+        if (inventory.toolRingIds.isEmpty()) return total
+        val toolKeys = inventory.tools.map { it.storageKey }.toSet()
+        val pinned = inventory.toolRingIds
+            .distinct()
+            .filter { it in toolKeys }
+            .take(TOOL_RING_LIMIT)
+            .toSet()
+        return total - inventory.tools.count { it.storageKey in pinned }
+    }
 
     /**
      * Max items the named storage can currently hold. For upgradable storages

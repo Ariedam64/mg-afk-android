@@ -47,6 +47,8 @@ data class PlayerModel(
     val inventory: JsonArray = EMPTY_ARRAY,
     val storages: JsonArray = EMPTY_ARRAY,
     val favoritedItemIds: List<String> = emptyList(),
+    /** `inventory.toolRing`: references `{id, itemType}` to tools that stay in [inventory]. */
+    val toolRing: JsonArray = EMPTY_ARRAY,
     val garden: JsonObject? = null,
     val petSlots: JsonArray = EMPTY_ARRAY,
     val petTeams: JsonArray = EMPTY_ARRAY,
@@ -174,6 +176,7 @@ data class PlayerModel(
                 storages = inv?.get("storages") as? JsonArray ?: EMPTY_ARRAY,
                 favoritedItemIds = (inv?.get("favoritedItemIds") as? JsonArray)
                     ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                toolRing = inv?.get("toolRing") as? JsonArray ?: EMPTY_ARRAY,
                 garden = data?.get("garden") as? JsonObject,
                 petSlots = data?.get("petSlots") as? JsonArray ?: EMPTY_ARRAY,
                 petTeams = data?.get("petTeams") as? JsonArray ?: EMPTY_ARRAY,
