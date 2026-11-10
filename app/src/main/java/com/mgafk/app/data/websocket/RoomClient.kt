@@ -139,7 +139,15 @@ internal fun welcomeIdentityKey(player: JsonObject): String? =
  * identity field, or null when the Welcome is accepted.
  */
 internal fun welcomeAuthFailureMessage(me: JsonObject?): String? =
-    if (me != null && welcomeIdentityKey(me) == null) "Invalid mc_jwt cookie." else null
+    if (me != null && welcomeIdentityKey(me) == null) GUEST_SESSION_MESSAGE else null
+
+/**
+ * The cookie was accepted by the server, it just belongs to a guest account (the game
+ * signs in as a guest when it drops the Discord code), so say that instead of blaming
+ * the cookie.
+ */
+private const val GUEST_SESSION_MESSAGE =
+    "Signed in as a guest, not with your Discord account. Log in with Discord again."
 
 class RoomClient {
     companion object {
