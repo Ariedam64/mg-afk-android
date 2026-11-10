@@ -213,6 +213,12 @@ Sprites are loaded from the Magic Garden API and cached locally via Coil:
 256 MB of persistent disk cache survives app restarts, so composed mutation
 sprites aren't re-fetched between sessions.
 
+## Support
+
+Found a bug? Use the **Report a bug** button in the app's settings: it sends
+the logs along with your report. You can also open an issue here or ask on
+Discord.
+
 ## Build
 
 Prerequisites:
