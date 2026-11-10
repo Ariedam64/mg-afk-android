@@ -119,6 +119,28 @@ internal fun normalizeIncomingMessage(msg: JsonObject): JsonObject {
     }
 }
 
+/**
+ * Player fields that only carry a value once the server has accepted our
+ * mc_jwt cookie - a guest gets none of them. The field was `databaseUserId`
+ * until the server renamed it to `discordUserId`; we accept either so an
+ * older deployment keeps working. Any future rename shows up as a bogus
+ * 4800, so the failure path logs the keys the player actually has.
+ */
+private val AUTH_IDENTITY_KEYS = listOf("discordUserId", "databaseUserId")
+
+/** The first identity field [player] carries a value for, or null for a guest. */
+internal fun welcomeIdentityKey(player: JsonObject): String? =
+    AUTH_IDENTITY_KEYS.firstOrNull { key ->
+        player[key]?.jsonPrimitive?.contentOrNull != null
+    }
+
+/**
+ * The message the session fails with when the Welcome's own player [me] has no
+ * identity field, or null when the Welcome is accepted.
+ */
+internal fun welcomeAuthFailureMessage(me: JsonObject?): String? =
+    if (me != null && welcomeIdentityKey(me) == null) "Invalid mc_jwt cookie." else null
+
 class RoomClient {
     companion object {
         private const val TAG = "RoomClient"
@@ -128,15 +150,6 @@ class RoomClient {
          * closes the socket after ten seconds without it.
          */
         private const val SOCKET_OPENED = """{"type":"SocketOpened"}"""
-
-        /**
-         * Player fields that only carry a value once the server has accepted our
-         * mc_jwt cookie - a guest gets none of them. The field was `databaseUserId`
-         * until the server renamed it to `discordUserId`; we accept either so an
-         * older deployment keeps working. Any future rename shows up as a bogus
-         * 4800, so the failure path logs the keys the player actually has.
-         */
-        private val AUTH_IDENTITY_KEYS = listOf("discordUserId", "databaseUserId")
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -447,15 +460,12 @@ class RoomClient {
         val me = players?.firstOrNull { el ->
             (el as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull == playerId
         } as? JsonObject
-        val identityKey = me?.let { player ->
-            AUTH_IDENTITY_KEYS.firstOrNull { key ->
-                player[key]?.jsonPrimitive?.contentOrNull != null
-            }
-        }
-        if (me != null && identityKey == null) {
+        val identityKey = me?.let { player -> welcomeIdentityKey(player) }
+        val authFailure = welcomeAuthFailureMessage(me)
+        if (me != null && authFailure != null) {
             AppLog.e(TAG, "Auth failed, player found but no identity field")
             AppLog.e(TAG, "  keys=${me.keys}")
-            failAuth("Invalid mc_jwt cookie.")
+            failAuth(authFailure)
             return
         }
         AppLog.d(TAG, "Auth OK via $identityKey, me=${me != null} players=${players?.size ?: 0}")
