@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.GardenEggSnapshot
 import com.mgafk.app.data.model.GardenPlantSnapshot
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.ui.components.MultiSelectChip
@@ -137,6 +138,9 @@ fun GardenCard(
     wateringCans: Int = 0,
     planterPots: Int = 0,
     cropCleansers: Int = 0,
+    /** Held mutation potions, see [MutationPotions.available]. */
+    mutationPotions: List<MutationPotions.Available> = emptyList(),
+    onApplyPotion: (tileId: Int, slotIndex: Int, potion: MutationPotions.Available) -> Unit = { _, _, _ -> },
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var filtersExpanded by rememberSaveable { mutableStateOf(false) }
@@ -478,6 +482,8 @@ fun GardenCard(
                     selectedCropKey = null
                 },
                 onCleanse = { onCleanse(tileId, slotIndex) },
+                mutationPotions = mutationPotions,
+                onApplyPotion = { potion -> onApplyPotion(tileId, slotIndex, potion) },
                 onDismiss = { selectedCropKey = null },
             )
         } else {
@@ -498,6 +504,8 @@ fun GardenCard(
                 onWater = { slot -> onWater(slot) },
                 onPot = { slot -> onPot(slot) },
                 onCleanse = { slot, slotIndex -> onCleanse(slot, slotIndex) },
+                mutationPotions = mutationPotions,
+                onApplyPotion = { slot, slotIndex, potion -> onApplyPotion(slot, slotIndex, potion) },
                 onDismiss = { selectedMultiPlantTileId = null },
             )
         } else {

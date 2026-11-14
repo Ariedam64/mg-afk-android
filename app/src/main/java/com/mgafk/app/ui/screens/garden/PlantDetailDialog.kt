@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.SpriteImage
 import com.mgafk.app.ui.theme.rarityColor
@@ -46,6 +47,8 @@ internal fun PlantDetailDialog(
     onPot: () -> Unit,
     onCleanse: () -> Unit,
     onDismiss: () -> Unit,
+    mutationPotions: List<MutationPotions.Available> = emptyList(),
+    onApplyPotion: (MutationPotions.Available) -> Unit = {},
 ) {
     val color = rarityColor(plant.rarity)
     val sizePercent = plant.snapshot.size.toDouble()
@@ -261,6 +264,26 @@ internal fun PlantDetailDialog(
                     fontWeight = FontWeight.Bold,
                     color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
                 )
+            }
+
+            // Mutation potion buttons, one per held potion; the server decides whether it applies
+            mutationPotions.forEach { potion ->
+                val entry = remember(potion.toolId) { MgApi.findItem(potion.toolId) }
+                Button(
+                    onClick = { onApplyPotion(potion) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                    shape = AppTheme.shapes.smallShape,
+                ) {
+                    SpriteImage(url = entry?.sprite, size = 18.dp, contentDescription = potion.toolId)
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        "${entry?.name ?: potion.toolId} x${formatQuantity(potion.quantity)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                    )
+                }
             }
 
             // Pot button (separate row)

@@ -3,6 +3,8 @@ package com.mgafk.app.ui.screens.garden
 import androidx.compose.runtime.Composable
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.Tip
+import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.ui.MainViewModel
 import com.mgafk.app.ui.UiState
 import com.mgafk.app.ui.components.SectionTip
@@ -30,6 +32,10 @@ fun GardenScreen(
         wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
         planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
         cropCleansers = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0,
+        mutationPotions = MutationPotions.available(session.inventory.tools, MgApi::findItem),
+        onApplyPotion = { tileId, slotIdx, potion ->
+            viewModel.garden.applyMutationPotion(session.id, tileId, slotIdx, potion.toolId, potion.mutation)
+        },
     )
     EggsCard(
         eggs = session.gardenEggs,

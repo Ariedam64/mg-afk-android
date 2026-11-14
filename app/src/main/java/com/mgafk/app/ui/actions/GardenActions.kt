@@ -60,6 +60,52 @@ class GardenActions(private val ctx: SessionContext) {
         }
     }
 
+    private val pendingPotionJobs = mutableMapOf<String, Job>()
+
+    /**
+     * Apply a mutation potion ([toolId], granting [mutation]) to a crop slot. Whether the crop
+     * accepts it is the server's call; a refusal shows as the potion count coming back after 5s.
+     */
+    fun applyMutationPotion(
+        sessionId: String,
+        tileObjectIdx: Int,
+        growSlotIdx: Int,
+        toolId: String,
+        mutation: String,
+    ) {
+        val actions = ctx.actions(sessionId) ?: return
+        val session = ctx.session(sessionId) ?: return
+        val count = session.inventory.tools.filter { it.toolId == toolId }.sumOf { it.quantity }
+        if (count <= 0) return
+
+        // OPTIMISTIC: take one potion off the first stack of that tool
+        val previousInventory = session.inventory
+        ctx.updateSession(sessionId) { s ->
+            var taken = false
+            s.copy(
+                inventory = s.inventory.copy(
+                    tools = s.inventory.tools.mapNotNull { tool ->
+                        if (!taken && tool.toolId == toolId && tool.quantity > 0) {
+                            taken = true
+                            if (tool.quantity > 1) tool.copy(quantity = tool.quantity - 1) else null
+                        } else tool
+                    }
+                ),
+            )
+        }
+
+        actions.mutationPotion(tileObjectIdx = tileObjectIdx, growSlotIdx = growSlotIdx, mutation = mutation)
+
+        // Rollback after 5s if server hasn't confirmed
+        val key = "$sessionId:potion:$tileObjectIdx:$growSlotIdx"
+        pendingPotionJobs[key]?.cancel()
+        pendingPotionJobs[key] = ctx.scope.launch {
+            delay(5000)
+            ctx.updateSession(sessionId) { s -> s.copy(inventory = previousInventory) }
+            pendingPotionJobs.remove(key)
+        }
+    }
+
     private val pendingPotJobs = mutableMapOf<String, Job>()
 
     /** Pot a plant - moves it from garden to inventory. Requires a PlanterPot tool. */
@@ -401,10 +447,12 @@ class GardenActions(private val ctx: SessionContext) {
         pendingPotJobs.cancelForSession(sessionId)
         pendingUnpotJobs.cancelForSession(sessionId)
         pendingCleanseJobs.cancelForSession(sessionId)
+        pendingPotionJobs.cancelForSession(sessionId)
     }
 
     /** The server sent the inventory: every rollback of this session is moot. */
     internal fun onInventoryConfirmed(sessionId: String) {
+        pendingPotionJobs.cancelForSession(sessionId)
         pendingPlantJobs.cancelForSession(sessionId)
         pendingWaterJobs.cancelForSession(sessionId)
         pendingHatchJobs.cancelForSession(sessionId)

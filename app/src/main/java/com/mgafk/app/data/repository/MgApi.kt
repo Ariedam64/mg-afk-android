@@ -90,6 +90,8 @@ object MgApi {
         // ("Seed", "Dawn", "Egg"...). Empty when the API doesn't expose it
         // (older entries) - treat as the default shop for the category.
         val eligibleShops: List<String> = emptyList(),
+        // Tool-only: the mutation a mutation potion grants ("Ambershine" for AmberlitPotion).
+        val grantedMutation: String? = null,
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
 
@@ -131,6 +133,12 @@ object MgApi {
             angleDegrees = gradient["angleDegrees"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
             stops = stops,
         )
+    }
+
+    /** Reads a tool's `grantedMutation`, or null when it has none or it is blank. */
+    fun parseGrantedMutation(obj: JsonObject?): String? {
+        val value = (obj?.get("grantedMutation") as? JsonPrimitive)?.contentOrNull ?: return null
+        return value.takeIf { it.isNotBlank() }
     }
 
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
@@ -550,6 +558,7 @@ object MgApi {
                     maxInventoryQuantity = obj?.get("maxInventoryQuantity")?.jsonPrimitive?.intOrNull,
                     eligibleShops = eligibleShops,
                     coinsToFullyReplenishHunger = obj?.get("coinsToFullyReplenishHunger")?.jsonPrimitive?.intOrNull,
+                    grantedMutation = parseGrantedMutation(obj),
                 )
             }
         }

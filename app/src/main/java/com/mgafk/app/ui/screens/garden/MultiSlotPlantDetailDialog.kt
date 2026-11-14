@@ -17,10 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
 import com.mgafk.app.ui.components.PlantCompositeSprite
 import com.mgafk.app.ui.components.PlantSlotRender
@@ -53,6 +59,8 @@ internal fun MultiSlotPlantDetailDialog(
     onPot: (slot: Int) -> Unit,
     onCleanse: (slot: Int, slotIndex: Int) -> Unit,
     onDismiss: () -> Unit,
+    mutationPotions: List<MutationPotions.Available> = emptyList(),
+    onApplyPotion: (slot: Int, slotIndex: Int, potion: MutationPotions.Available) -> Unit = { _, _, _ -> },
 ) {
     val color = rarityColor(plant.rarity)
     // Not keyed on the tile - see [MultiSlotPlantTile].
@@ -148,6 +156,10 @@ internal fun MultiSlotPlantDetailDialog(
                         onHarvest = { onHarvest(crop.snapshot.tileId, crop.snapshot.slotIndex) },
                         onWater = { onWater(crop.snapshot.tileId) },
                         onCleanse = { onCleanse(crop.snapshot.tileId, crop.snapshot.slotIndex) },
+                        mutationPotions = mutationPotions,
+                        onApplyPotion = { potion ->
+                            onApplyPotion(crop.snapshot.tileId, crop.snapshot.slotIndex, potion)
+                        },
                     )
                 }
             }
@@ -194,7 +206,10 @@ private fun CropSlotRow(
     onHarvest: () -> Unit,
     onWater: () -> Unit,
     onCleanse: () -> Unit,
+    mutationPotions: List<MutationPotions.Available>,
+    onApplyPotion: (MutationPotions.Available) -> Unit,
 ) {
+    var potionMenuOpen by remember { mutableStateOf(false) }
     val sizePercent = crop.snapshot.size.toDouble()
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
@@ -332,6 +347,52 @@ private fun CropSlotRow(
                     fontWeight = FontWeight.Bold,
                     color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
                 )
+            }
+            // Mutation potion picker for this slot; the server decides whether it applies
+            Box(modifier = Modifier.weight(1f)) {
+                val hasPotions = mutationPotions.isNotEmpty()
+                Button(
+                    onClick = { potionMenuOpen = true },
+                    enabled = hasPotions,
+                    modifier = Modifier.fillMaxWidth().height(32.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0EA5E9),
+                        disabledContainerColor = Color(0xFF0EA5E9).copy(alpha = 0.2f),
+                        disabledContentColor = Color.White.copy(alpha = 0.4f),
+                    ),
+                    shape = AppTheme.shapes.smallShape,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                ) {
+                    Text(
+                        if (hasPotions) "Potion" else "No potion",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasPotions) Color.White else Color.White.copy(alpha = 0.4f),
+                    )
+                }
+                DropdownMenu(
+                    expanded = potionMenuOpen && hasPotions,
+                    onDismissRequest = { potionMenuOpen = false },
+                ) {
+                    mutationPotions.forEach { potion ->
+                        val entry = MgApi.findItem(potion.toolId)
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "${entry?.name ?: potion.toolId} x${formatQuantity(potion.quantity)}",
+                                    fontSize = 13.sp,
+                                )
+                            },
+                            leadingIcon = {
+                                SpriteImage(url = entry?.sprite, size = 18.dp, contentDescription = potion.toolId)
+                            },
+                            onClick = {
+                                potionMenuOpen = false
+                                onApplyPotion(potion)
+                            },
+                        )
+                    }
+                }
             }
         }
         }
