@@ -13,8 +13,8 @@ android {
         applicationId = "com.mgafk.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 86
-        versionName = "3.0.6"
+        versionCode = 87
+        versionName = "3.0.7"
     }
 
     signingConfigs {
