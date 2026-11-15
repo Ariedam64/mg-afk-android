@@ -17,15 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -209,7 +204,6 @@ private fun CropSlotRow(
     mutationPotions: List<MutationPotions.Offer>,
     onApplyPotion: (MutationPotions.Offer) -> Unit,
 ) {
-    var potionMenuOpen by remember { mutableStateOf(false) }
     val sizePercent = crop.snapshot.size.toDouble()
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
@@ -349,52 +343,14 @@ private fun CropSlotRow(
                 )
             }
             // Mutation potion picker for this slot; the server decides whether it applies
-            Box(modifier = Modifier.weight(1f)) {
-                val hasPotions = mutationPotions.isNotEmpty()
-                Button(
-                    onClick = { potionMenuOpen = true },
-                    enabled = hasPotions,
-                    modifier = Modifier.fillMaxWidth().height(32.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0EA5E9),
-                        disabledContainerColor = Color(0xFF0EA5E9).copy(alpha = 0.2f),
-                        disabledContentColor = Color.White.copy(alpha = 0.4f),
-                    ),
-                    shape = AppTheme.shapes.smallShape,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                ) {
-                    Text(
-                        if (hasPotions) "Potion" else "No potion",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (hasPotions) Color.White else Color.White.copy(alpha = 0.4f),
-                    )
-                }
-                DropdownMenu(
-                    expanded = potionMenuOpen && hasPotions,
-                    onDismissRequest = { potionMenuOpen = false },
-                ) {
-                    mutationPotions.forEach { potion ->
-                        val entry = MgApi.findItem(potion.toolId)
-                        DropdownMenuItem(
-                            enabled = isMutationPotionUsable(potion),
-                            text = {
-                                Text(
-                                    mutationPotionLabel(potion, entry?.name ?: potion.toolId),
-                                    fontSize = 13.sp,
-                                )
-                            },
-                            leadingIcon = {
-                                SpriteImage(url = entry?.sprite, size = 18.dp, contentDescription = potion.toolId)
-                            },
-                            onClick = {
-                                potionMenuOpen = false
-                                onApplyPotion(potion)
-                            },
-                        )
-                    }
-                }
-            }
+            MutationPotionPicker(
+                potions = mutationPotions,
+                onApplyPotion = onApplyPotion,
+                modifier = Modifier.weight(1f),
+                buttonHeight = 32.dp,
+                fontSize = 12.sp,
+                compact = true,
+            )
         }
         }
     }

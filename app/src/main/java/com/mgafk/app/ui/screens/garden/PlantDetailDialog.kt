@@ -281,32 +281,13 @@ internal fun PlantDetailDialog(
                 )
             }
 
-            // Mutation potion buttons, one per held or stored potion; the server decides whether it applies
-            mutationPotions.forEach { potion ->
-                val entry = remember(potion.toolId) { MgApi.findItem(potion.toolId) }
-                val usable = isMutationPotionUsable(potion)
-                Button(
-                    onClick = { onApplyPotion(potion) },
-                    enabled = usable,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0EA5E9),
-                        disabledContainerColor = Color(0xFF0EA5E9).copy(alpha = 0.2f),
-                        disabledContentColor = Color.White.copy(alpha = 0.4f),
-                    ),
-                    shape = AppTheme.shapes.smallShape,
-                ) {
-                    SpriteImage(url = entry?.sprite, size = 18.dp, contentDescription = potion.toolId)
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(
-                        mutationPotionLabel(potion, entry?.name ?: potion.toolId),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (usable) Color.White else Color.White.copy(alpha = 0.4f),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
+            // One Potion button opening the held and Tool Shack potions; the server decides whether it applies
+            MutationPotionPicker(
+                potions = mutationPotions,
+                onApplyPotion = onApplyPotion,
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 14.sp,
+            )
 
             // Pot button (separate row)
             Button(
