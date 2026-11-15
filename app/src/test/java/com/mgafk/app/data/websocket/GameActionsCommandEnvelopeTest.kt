@@ -319,6 +319,20 @@ class GameActionsCommandEnvelopeTest {
         assertEquals("pet_1", command["itemId"]?.jsonPrimitive?.contentOrNull)
     }
 
+    /** BR-52: a mutation potion comes out of the Tool Shack one unit at a time. */
+    @Test fun `retrieving one unit is a MoveItem with quantity 1`() {
+        actions.retrieveOneFromStorage(itemId = "GoldPotion", storageId = "ToolShack")
+
+        assertWrapped("MoveItem")
+        val command = lastCommand()
+        assertEquals("ToolShack", command["from"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("inventory", command["to"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("GoldPotion", command["itemId"]?.jsonPrimitive?.contentOrNull)
+        assertEquals(1, command["quantity"]?.jsonPrimitive?.intOrNull)
+        assertNull(command["beforeItemId"])
+        assertNull(command["evictionItemId"])
+    }
+
     @Test fun `a move can place the item, split a stack or swap`() {
         actions.moveItem(
             from = "inventory",

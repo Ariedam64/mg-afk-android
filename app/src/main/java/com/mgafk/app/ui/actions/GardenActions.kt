@@ -3,13 +3,20 @@ package com.mgafk.app.ui.actions
 import com.mgafk.app.data.AppLog
 import com.mgafk.app.data.model.CrystalType
 import com.mgafk.app.data.model.GardenTileType
+import com.mgafk.app.data.model.POTION_STORAGE_ID
 import com.mgafk.app.data.model.PlacedCrystal
 import com.mgafk.app.data.repository.Crystals
 import com.mgafk.app.data.repository.GardenTiles
+import com.mgafk.app.data.repository.StorageCapacity
+import com.mgafk.app.data.repository.StorageRetrieval
 import com.mgafk.app.data.websocket.RoomClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+/** How long a mutation potion pulled from the Tool Shack is awaited before giving up on it. */
+private const val MUTATION_POTION_RETRIEVAL_TIMEOUT_MS = 6_000L
 
 /**
  * The garden: crops, eggs, potted plants and crystals.
@@ -103,6 +110,62 @@ class GardenActions(private val ctx: SessionContext) {
             delay(5000)
             ctx.updateSession(sessionId) { s -> s.copy(inventory = previousInventory) }
             pendingPotionJobs.remove(key)
+        }
+    }
+
+    private val pendingPotionRetrievals = mutableMapOf<String, Job>()
+
+    /**
+     * Apply a mutation potion kept in the Tool Shack: take one unit out (MoveItem quantity=1),
+     * wait for the server to show it in the inventory, then go through [applyMutationPotion].
+     * The inventory comes first: a held potion is applied at once. Nothing is sent when the
+     * inventory has no room for it, and nothing is changed on screen before the retrieval, so a
+     * refused or late retrieval leaves the real counts. A retrieved potion stays in the inventory.
+     */
+    fun applyMutationPotionFromStorage(
+        sessionId: String,
+        tileObjectIdx: Int,
+        growSlotIdx: Int,
+        toolId: String,
+        mutation: String,
+    ) {
+        val actions = ctx.actions(sessionId) ?: return
+        val session = ctx.session(sessionId) ?: return
+        if (session.inventory.tools.any { it.toolId == toolId && it.quantity > 0 }) {
+            applyMutationPotion(sessionId, tileObjectIdx, growSlotIdx, toolId, mutation)
+            return
+        }
+        val stored = session.toolShack.firstOrNull { it.toolId == toolId && it.quantity > 0 } ?: return
+        val hasRoom = StorageCapacity.canAddStackable(
+            currentCount = StorageCapacity.bagCount(session.inventory),
+            max = StorageCapacity.INVENTORY_LIMIT,
+            stackExists = false,
+        )
+        if (!hasRoom) {
+            AppLog.d(LOG_TAG, "[MutationPotion] Inventory full, $toolId stays in $POTION_STORAGE_ID for $sessionId")
+            return
+        }
+
+        val key = "$sessionId:potionRetrieve:$tileObjectIdx:$growSlotIdx"
+        if (pendingPotionRetrievals[key]?.isActive == true) return
+        pendingPotionRetrievals[key] = ctx.scope.launch {
+            try {
+                val used = StorageRetrieval.retrieveThenUse(
+                    retrieve = { actions.retrieveOneFromStorage(itemId = stored.storageKey, storageId = POTION_STORAGE_ID) },
+                    arrived = ctx.state.map { state ->
+                        state.sessions.find { it.id == sessionId }?.inventory?.tools.orEmpty()
+                            .any { t -> t.toolId == toolId && t.quantity > 0 }
+                    },
+                    timeoutMs = MUTATION_POTION_RETRIEVAL_TIMEOUT_MS,
+                    use = { applyMutationPotion(sessionId, tileObjectIdx, growSlotIdx, toolId, mutation) },
+                    onError = { e -> AppLog.e(LOG_TAG, "[MutationPotion] Retrieval of $toolId failed for $sessionId", e) },
+                )
+                if (!used) {
+                    AppLog.d(LOG_TAG, "[MutationPotion] Retrieval of $toolId from $POTION_STORAGE_ID not confirmed for $sessionId")
+                }
+            } finally {
+                pendingPotionRetrievals.remove(key)
+            }
         }
     }
 

@@ -546,6 +546,10 @@ class GameActions(
     fun retrieveItemFromStorage(itemId: String, storageId: String) =
         moveItem(from = storageId, to = INVENTORY, itemId = itemId)
 
+    /** Moves a single unit of the [itemId] stack from [storageId] to the end of the inventory. */
+    fun retrieveOneFromStorage(itemId: String, storageId: String) =
+        moveItem(from = storageId, to = INVENTORY, itemId = itemId, quantity = 1)
+
     fun logItems() = game("LogItems")
 
     // =====================

@@ -138,9 +138,9 @@ fun GardenCard(
     wateringCans: Int = 0,
     planterPots: Int = 0,
     cropCleansers: Int = 0,
-    /** Held mutation potions, see [MutationPotions.available]. */
-    mutationPotions: List<MutationPotions.Available> = emptyList(),
-    onApplyPotion: (tileId: Int, slotIndex: Int, potion: MutationPotions.Available) -> Unit = { _, _, _ -> },
+    /** Held and Tool Shack mutation potions, see [MutationPotions.offers]. */
+    mutationPotions: List<MutationPotions.Offer> = emptyList(),
+    onApplyPotion: (tileId: Int, slotIndex: Int, potion: MutationPotions.Offer) -> Unit = { _, _, _ -> },
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var filtersExpanded by rememberSaveable { mutableStateOf(false) }

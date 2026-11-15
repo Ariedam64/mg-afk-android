@@ -34,6 +34,21 @@ import com.mgafk.app.ui.components.sortMutations
 import com.mgafk.app.ui.components.formatTimeRemaining
 import com.mgafk.app.ui.components.formatQuantity
 
+/** A held potion is always usable; a Tool Shack one only when the inventory can take it back. */
+internal fun isMutationPotionUsable(potion: MutationPotions.Offer): Boolean =
+    potion.source == MutationPotions.Source.INVENTORY || potion.canRetrieve
+
+/** "Name xN (+M in Tool Shack)" for a held potion, "Name xM · Tool Shack" for a stored one. */
+internal fun mutationPotionLabel(potion: MutationPotions.Offer, name: String): String = when {
+    potion.source == MutationPotions.Source.INVENTORY && potion.storageQuantity > 0 ->
+        "$name x${formatQuantity(potion.inventoryQuantity)} (+${formatQuantity(potion.storageQuantity)} in Tool Shack)"
+    potion.source == MutationPotions.Source.INVENTORY ->
+        "$name x${formatQuantity(potion.inventoryQuantity)}"
+    !potion.canRetrieve ->
+        "$name x${formatQuantity(potion.storageQuantity)} · Tool Shack — Inventory full — free a slot"
+    else -> "$name x${formatQuantity(potion.storageQuantity)} · Tool Shack"
+}
+
 // ── Single crop detail dialog ──
 
 @Composable
@@ -47,8 +62,8 @@ internal fun PlantDetailDialog(
     onPot: () -> Unit,
     onCleanse: () -> Unit,
     onDismiss: () -> Unit,
-    mutationPotions: List<MutationPotions.Available> = emptyList(),
-    onApplyPotion: (MutationPotions.Available) -> Unit = {},
+    mutationPotions: List<MutationPotions.Offer> = emptyList(),
+    onApplyPotion: (MutationPotions.Offer) -> Unit = {},
 ) {
     val color = rarityColor(plant.rarity)
     val sizePercent = plant.snapshot.size.toDouble()
@@ -266,22 +281,29 @@ internal fun PlantDetailDialog(
                 )
             }
 
-            // Mutation potion buttons, one per held potion; the server decides whether it applies
+            // Mutation potion buttons, one per held or stored potion; the server decides whether it applies
             mutationPotions.forEach { potion ->
                 val entry = remember(potion.toolId) { MgApi.findItem(potion.toolId) }
+                val usable = isMutationPotionUsable(potion)
                 Button(
                     onClick = { onApplyPotion(potion) },
+                    enabled = usable,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0EA5E9),
+                        disabledContainerColor = Color(0xFF0EA5E9).copy(alpha = 0.2f),
+                        disabledContentColor = Color.White.copy(alpha = 0.4f),
+                    ),
                     shape = AppTheme.shapes.smallShape,
                 ) {
                     SpriteImage(url = entry?.sprite, size = 18.dp, contentDescription = potion.toolId)
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
-                        "${entry?.name ?: potion.toolId} x${formatQuantity(potion.quantity)}",
+                        mutationPotionLabel(potion, entry?.name ?: potion.toolId),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = if (usable) Color.White else Color.White.copy(alpha = 0.4f),
+                        textAlign = TextAlign.Center,
                     )
                 }
             }

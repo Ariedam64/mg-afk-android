@@ -59,8 +59,8 @@ internal fun MultiSlotPlantDetailDialog(
     onPot: (slot: Int) -> Unit,
     onCleanse: (slot: Int, slotIndex: Int) -> Unit,
     onDismiss: () -> Unit,
-    mutationPotions: List<MutationPotions.Available> = emptyList(),
-    onApplyPotion: (slot: Int, slotIndex: Int, potion: MutationPotions.Available) -> Unit = { _, _, _ -> },
+    mutationPotions: List<MutationPotions.Offer> = emptyList(),
+    onApplyPotion: (slot: Int, slotIndex: Int, potion: MutationPotions.Offer) -> Unit = { _, _, _ -> },
 ) {
     val color = rarityColor(plant.rarity)
     // Not keyed on the tile - see [MultiSlotPlantTile].
@@ -206,8 +206,8 @@ private fun CropSlotRow(
     onHarvest: () -> Unit,
     onWater: () -> Unit,
     onCleanse: () -> Unit,
-    mutationPotions: List<MutationPotions.Available>,
-    onApplyPotion: (MutationPotions.Available) -> Unit,
+    mutationPotions: List<MutationPotions.Offer>,
+    onApplyPotion: (MutationPotions.Offer) -> Unit,
 ) {
     var potionMenuOpen by remember { mutableStateOf(false) }
     val sizePercent = crop.snapshot.size.toDouble()
@@ -377,9 +377,10 @@ private fun CropSlotRow(
                     mutationPotions.forEach { potion ->
                         val entry = MgApi.findItem(potion.toolId)
                         DropdownMenuItem(
+                            enabled = isMutationPotionUsable(potion),
                             text = {
                                 Text(
-                                    "${entry?.name ?: potion.toolId} x${formatQuantity(potion.quantity)}",
+                                    mutationPotionLabel(potion, entry?.name ?: potion.toolId),
                                     fontSize = 13.sp,
                                 )
                             },
