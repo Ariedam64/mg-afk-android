@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.AlertConfig
 import com.mgafk.app.data.model.AlertMode
 import com.mgafk.app.data.repository.MgApi
+import com.mgafk.app.data.repository.ShopAlertItems
 import com.mgafk.app.ui.components.AppCard
 import com.mgafk.app.data.repository.CoreShops
 import com.mgafk.app.ui.theme.AppTheme
@@ -86,22 +87,13 @@ internal fun ShopAlertsCard(
 
         allCategories.forEachIndexed { index, (label, category) ->
             val items = remember(category, MgApi.isReady) {
-                when (category) {
-                    "seed" -> MgApi.getPlants().values.filter {
-                        it.eligibleShops.isEmpty() || "Seed" in it.eligibleShops
-                    }
-                    "tool" -> MgApi.getItems().values.toList()
-                    "egg" -> MgApi.getEggs().values.filter {
-                        it.eligibleShops.isEmpty() || "Egg" in it.eligibleShops
-                    }
-                    "decor" -> MgApi.getDecors().values.toList()
-                    else -> {
-                        val shopName = category.replaceFirstChar { it.uppercase() }
-                        (MgApi.getPlants().values + MgApi.getEggs().values +
-                            MgApi.getItems().values + MgApi.getDecors().values)
-                            .filter { shopName in it.eligibleShops }
-                    }
-                }
+                ShopAlertItems.forCategory(
+                    category = category,
+                    plants = MgApi.getPlants().values,
+                    eggs = MgApi.getEggs().values,
+                    items = MgApi.getItems().values,
+                    decors = MgApi.getDecors().values,
+                )
             }
             val activeCount = items.count { entry ->
                 alerts.items["shop:$category:${entry.id}"]?.enabled == true

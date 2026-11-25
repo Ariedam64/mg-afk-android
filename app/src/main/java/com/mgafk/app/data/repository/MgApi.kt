@@ -92,6 +92,8 @@ object MgApi {
         val eligibleShops: List<String> = emptyList(),
         // Tool-only: the mutation a mutation potion grants ("Ambershine" for AmberlitPotion).
         val grantedMutation: String? = null,
+        // Tool-only: the mutation groups a cleanser removes (["Hydro", "Lunar"] for CropCleanser).
+        val clearsMutationGroups: List<String> = emptyList(),
     ) {
         val rarityIndex: Int get() = RARITY_ORDER.indexOf(rarity).let { if (it < 0) RARITY_ORDER.size else it }
 
@@ -141,6 +143,15 @@ object MgApi {
         return value.takeIf { it.isNotBlank() }
     }
 
+    /**
+     * Reads a cleanser's `clearsMutationGroups` as non-blank strings, or an empty list when the
+     * field is missing or not an array.
+     */
+    fun parseClearsMutationGroups(obj: JsonObject?): List<String> {
+        val array = obj?.get("clearsMutationGroups") as? JsonArray ?: return emptyList()
+        return array.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { s -> s.isNotBlank() } }
+    }
+
     /** Normalized slot offset from the plant data (x/y in tile units, rotation in degrees). */
     data class SlotOffset(val x: Double, val y: Double, val rotation: Double)
 
@@ -164,6 +175,8 @@ object MgApi {
         val name: String,
         val coinMultiplier: Double,
         val sprite: String? = null,
+        /** The mutation group ("Hydro", "Lunar", "Growth"), null when the API does not expose it. */
+        val group: String? = null,
     )
 
     // ---- Public API ----
@@ -457,7 +470,8 @@ object MgApi {
             val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: id
             val coinMultiplier = obj["coinMultiplier"]?.jsonPrimitive?.doubleOrNull ?: 1.0
             val sprite = obj["sprite"]?.jsonPrimitive?.contentOrNull
-            val entry = MutationEntry(name = name, coinMultiplier = coinMultiplier, sprite = sprite)
+            val group = (obj["group"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+            val entry = MutationEntry(name = name, coinMultiplier = coinMultiplier, sprite = sprite, group = group)
             // Key by both internal id (e.g. "Ambercharged") and display name (e.g. "Amberbound")
             result[id] = entry
             if (name != id) result[name] = entry
@@ -559,6 +573,7 @@ object MgApi {
                     eligibleShops = eligibleShops,
                     coinsToFullyReplenishHunger = obj?.get("coinsToFullyReplenishHunger")?.jsonPrimitive?.intOrNull,
                     grantedMutation = parseGrantedMutation(obj),
+                    clearsMutationGroups = parseClearsMutationGroups(obj),
                 )
             }
         }

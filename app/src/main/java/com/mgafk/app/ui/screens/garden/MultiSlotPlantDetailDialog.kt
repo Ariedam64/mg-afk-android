@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mgafk.app.data.repository.CropCleansers
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
@@ -48,11 +49,11 @@ internal fun MultiSlotPlantDetailDialog(
     plant: GardenEntry.MultiSlotPlant,
     wateringCans: Int,
     planterPots: Int,
-    cropCleansers: Int,
+    cropCleansers: List<CropCleansers.Offer>,
     onHarvest: (slot: Int, slotIndex: Int) -> Unit,
     onWater: (slot: Int) -> Unit,
     onPot: (slot: Int) -> Unit,
-    onCleanse: (slot: Int, slotIndex: Int) -> Unit,
+    onCleanse: (slot: Int, slotIndex: Int, toolId: String) -> Unit,
     onDismiss: () -> Unit,
     mutationPotions: List<MutationPotions.Offer> = emptyList(),
     onApplyPotion: (slot: Int, slotIndex: Int, potion: MutationPotions.Offer) -> Unit = { _, _, _ -> },
@@ -150,7 +151,7 @@ internal fun MultiSlotPlantDetailDialog(
                         now = now,
                         onHarvest = { onHarvest(crop.snapshot.tileId, crop.snapshot.slotIndex) },
                         onWater = { onWater(crop.snapshot.tileId) },
-                        onCleanse = { onCleanse(crop.snapshot.tileId, crop.snapshot.slotIndex) },
+                        onCleanse = { toolId -> onCleanse(crop.snapshot.tileId, crop.snapshot.slotIndex, toolId) },
                         mutationPotions = mutationPotions,
                         onApplyPotion = { potion ->
                             onApplyPotion(crop.snapshot.tileId, crop.snapshot.slotIndex, potion)
@@ -196,18 +197,17 @@ private fun CropSlotRow(
     slotLabel: String,
     color: Color,
     wateringCans: Int,
-    cropCleansers: Int,
+    cropCleansers: List<CropCleansers.Offer>,
     now: Long,
     onHarvest: () -> Unit,
     onWater: () -> Unit,
-    onCleanse: () -> Unit,
+    onCleanse: (toolId: String) -> Unit,
     mutationPotions: List<MutationPotions.Offer>,
     onApplyPotion: (MutationPotions.Offer) -> Unit,
 ) {
     val sizePercent = crop.snapshot.size.toDouble()
     val isMature = crop.snapshot.endTime > 0 && now >= crop.snapshot.endTime
     val canWater = !isMature && wateringCans > 0
-    val canCleanse = cropCleansers > 0 && crop.snapshot.mutations.isNotEmpty()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -318,30 +318,16 @@ private fun CropSlotRow(
                     color = if (isMature) AppTheme.colors.onGood else AppTheme.colors.onGood.copy(alpha = 0.4f),
                 )
             }
-            Button(
-                onClick = onCleanse,
-                enabled = canCleanse,
-                modifier = Modifier.weight(1f).height(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF8B5CF6),
-                    disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
-                    disabledContentColor = Color.White.copy(alpha = 0.4f),
-                ),
-                shape = AppTheme.shapes.smallShape,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-            ) {
-                val label = when {
-                    crop.snapshot.mutations.isEmpty() -> "No muts"
-                    cropCleansers <= 0 -> "No tool"
-                    else -> "Cleanse"
-                }
-                Text(
-                    label,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
-                )
-            }
+            // Cleanser picker for this slot: each held cleanser is enabled for its mutation groups
+            CropCleanserPicker(
+                cleansers = cropCleansers,
+                cropMutations = crop.snapshot.mutations,
+                onCleanse = onCleanse,
+                modifier = Modifier.weight(1f),
+                buttonHeight = 32.dp,
+                fontSize = 12.sp,
+                compact = true,
+            )
             // Mutation potion picker for this slot; the server decides whether it applies
             MutationPotionPicker(
                 potions = mutationPotions,

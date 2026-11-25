@@ -34,20 +34,25 @@ class GardenActions(private val ctx: SessionContext) {
 
     private val pendingCleanseJobs = mutableMapOf<String, Job>()
 
-    /** Cleanse one mutation from a crop slot. Requires a CropCleanser tool. */
-    fun cropCleanse(sessionId: String, tileObjectIdx: Int, growSlotIdx: Int) {
+    /**
+     * Cleanse a crop slot with the cleanser [toolId] (CropCleanser, HydroCleanser, LunarCleanser).
+     * Which mutations it removes is the server's call; a refusal shows as the count coming back.
+     */
+    fun cropCleanse(sessionId: String, tileObjectIdx: Int, growSlotIdx: Int, toolId: String) {
         val actions = ctx.actions(sessionId) ?: return
         val session = ctx.session(sessionId) ?: return
-        val count = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0
+        val count = session.inventory.tools.filter { it.toolId == toolId }.sumOf { it.quantity }
         if (count <= 0) return
 
-        // OPTIMISTIC: decrement CropCleanser quantity
+        // OPTIMISTIC: take one cleanser off the first stack of that tool
         val previousInventory = session.inventory
         ctx.updateSession(sessionId) { s ->
+            var taken = false
             s.copy(
                 inventory = s.inventory.copy(
                     tools = s.inventory.tools.mapNotNull { tool ->
-                        if (tool.toolId == "CropCleanser") {
+                        if (!taken && tool.toolId == toolId && tool.quantity > 0) {
+                            taken = true
                             if (tool.quantity > 1) tool.copy(quantity = tool.quantity - 1) else null
                         } else tool
                     }
@@ -55,7 +60,7 @@ class GardenActions(private val ctx: SessionContext) {
             )
         }
 
-        actions.cropCleanser(tileObjectIdx = tileObjectIdx, growSlotIdx = growSlotIdx)
+        actions.cropCleanser(tileObjectIdx = tileObjectIdx, growSlotIdx = growSlotIdx, toolId = toolId)
 
         // Rollback after 5s if server hasn't confirmed
         val key = "$sessionId:cleanse:$tileObjectIdx:$growSlotIdx"

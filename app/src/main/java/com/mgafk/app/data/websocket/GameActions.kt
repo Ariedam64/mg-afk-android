@@ -256,8 +256,13 @@ class GameActions(
             "mutation" to JsonPrimitive(mutation),
         ))
 
-    fun cropCleanser(tileObjectIdx: Int, growSlotIdx: Int) =
+    /**
+     * Removes a mutation from a crop with the cleanser [toolId] (CropCleanser, HydroCleanser,
+     * LunarCleanser). The message keeps the `CropCleanser` type for every cleanser (game 2198).
+     */
+    fun cropCleanser(tileObjectIdx: Int, growSlotIdx: Int, toolId: String) =
         game("CropCleanser", obj(
+            "toolId" to JsonPrimitive(toolId),
             "tileObjectIdx" to JsonPrimitive(tileObjectIdx),
             "growSlotIdx" to JsonPrimitive(growSlotIdx),
         ))

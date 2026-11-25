@@ -3,6 +3,7 @@ package com.mgafk.app.ui.screens.garden
 import androidx.compose.runtime.Composable
 import com.mgafk.app.data.model.SessionStatus
 import com.mgafk.app.data.model.Tip
+import com.mgafk.app.data.repository.CropCleansers
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.StorageCapacity
@@ -29,10 +30,10 @@ fun GardenScreen(
         onHarvest = { slot, slotIndex -> viewModel.garden.harvestCrop(session.id, slot, slotIndex) },
         onWater = { slot -> viewModel.garden.waterPlant(session.id, slot) },
         onPot = { slot -> viewModel.garden.potPlant(session.id, slot) },
-        onCleanse = { tileId, slotIdx -> viewModel.garden.cropCleanse(session.id, tileId, slotIdx) },
+        onCleanse = { tileId, slotIdx, toolId -> viewModel.garden.cropCleanse(session.id, tileId, slotIdx, toolId) },
         wateringCans = session.inventory.tools.find { it.toolId == "WateringCan" }?.quantity ?: 0,
         planterPots = session.inventory.tools.find { it.toolId == "PlanterPot" }?.quantity ?: 0,
-        cropCleansers = session.inventory.tools.find { it.toolId == "CropCleanser" }?.quantity ?: 0,
+        cropCleansers = CropCleansers.offers(session.inventory.tools, MgApi::findItem),
         mutationPotions = MutationPotions.offers(
             session.inventory.tools,
             session.toolShack,

@@ -7,17 +7,22 @@ import com.mgafk.app.data.model.InventoryToolItem
  *
  * The game sends `MutationPotion {mutation, tileObjectIdx, growSlotIdx}`, where `mutation` is the
  * potion's `grantedMutation`. MG API's catalogue is read first; [KNOWN] is the fallback copied
- * from the game bundle (version 2036) in case the API does not expose the field.
+ * from the game bundle (version 2198) in case the API does not expose the field.
  */
 object MutationPotions {
 
-    /** Potion tool id to granted mutation, in display order. AmberlitPotion grants Ambershine. */
+    /** Potion tool id to granted mutation, in display order. AmberlitPotion grants Ambershine,
+     *  DawnboundPotion Dawncharged and AmberboundPotion Ambercharged. */
     val KNOWN: Map<String, String> = linkedMapOf(
         "WetPotion" to "Wet",
         "ChilledPotion" to "Chilled",
         "FrozenPotion" to "Frozen",
+        "ThunderstruckPotion" to "Thunderstruck",
+        "ThunderchargedPotion" to "Thundercharged",
         "DawnlitPotion" to "Dawnlit",
+        "DawnboundPotion" to "Dawncharged",
         "AmberlitPotion" to "Ambershine",
+        "AmberboundPotion" to "Ambercharged",
         "GoldPotion" to "Gold",
         "RainbowPotion" to "Rainbow",
     )

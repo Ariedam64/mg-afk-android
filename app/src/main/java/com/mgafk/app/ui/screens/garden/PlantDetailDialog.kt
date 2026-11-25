@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mgafk.app.data.repository.CropCleansers
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
@@ -56,11 +57,11 @@ internal fun PlantDetailDialog(
     plant: ResolvedPlant,
     wateringCans: Int,
     planterPots: Int,
-    cropCleansers: Int,
+    cropCleansers: List<CropCleansers.Offer>,
     onHarvest: () -> Unit,
     onWater: () -> Unit,
     onPot: () -> Unit,
-    onCleanse: () -> Unit,
+    onCleanse: (toolId: String) -> Unit,
     onDismiss: () -> Unit,
     mutationPotions: List<MutationPotions.Offer> = emptyList(),
     onApplyPotion: (MutationPotions.Offer) -> Unit = {},
@@ -204,8 +205,6 @@ internal fun PlantDetailDialog(
 
             val canPot = planterPots > 0
             val potSprite = remember { MgApi.findItem("PlanterPot")?.sprite }
-            val canCleanse = cropCleansers > 0 && plant.snapshot.mutations.isNotEmpty()
-            val cleanserSprite = remember { MgApi.findItem("CropCleanser")?.sprite }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -254,32 +253,14 @@ internal fun PlantDetailDialog(
                 }
             }
 
-            // Cleanse button (separate row)
-            Button(
-                onClick = onCleanse,
-                enabled = canCleanse,
+            // Cleanse button (separate row): one entry per held cleanser, enabled for its mutation groups
+            CropCleanserPicker(
+                cleansers = cropCleansers,
+                cropMutations = plant.snapshot.mutations,
+                onCleanse = onCleanse,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF8B5CF6),
-                    disabledContainerColor = Color(0xFF8B5CF6).copy(alpha = 0.2f),
-                    disabledContentColor = Color.White.copy(alpha = 0.4f),
-                ),
-                shape = AppTheme.shapes.smallShape,
-            ) {
-                SpriteImage(url = cleanserSprite, size = 18.dp, contentDescription = "cleanser")
-                Spacer(modifier = Modifier.size(6.dp))
-                val cleanseLabel = when {
-                    plant.snapshot.mutations.isEmpty() -> "No mutations"
-                    cropCleansers <= 0 -> "No cleansers"
-                    else -> "Cleanse x${formatQuantity(cropCleansers)}"
-                }
-                Text(
-                    cleanseLabel,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (canCleanse) Color.White else Color.White.copy(alpha = 0.4f),
-                )
-            }
+                fontSize = 14.sp,
+            )
 
             // One Potion button opening the held and Tool Shack potions; the server decides whether it applies
             MutationPotionPicker(

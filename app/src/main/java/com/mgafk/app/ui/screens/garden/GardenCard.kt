@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mgafk.app.data.model.GardenEggSnapshot
 import com.mgafk.app.data.model.GardenPlantSnapshot
+import com.mgafk.app.data.repository.CropCleansers
 import com.mgafk.app.data.repository.MgApi
 import com.mgafk.app.data.repository.MutationPotions
 import com.mgafk.app.data.repository.PriceCalculator
@@ -134,10 +135,10 @@ fun GardenCard(
     onHarvest: (slot: Int, slotIndex: Int) -> Unit = { _, _ -> },
     onWater: (slot: Int) -> Unit = {},
     onPot: (slot: Int) -> Unit = {},
-    onCleanse: (tileId: Int, slotIndex: Int) -> Unit = { _, _ -> },
+    onCleanse: (tileId: Int, slotIndex: Int, toolId: String) -> Unit = { _, _, _ -> },
     wateringCans: Int = 0,
     planterPots: Int = 0,
-    cropCleansers: Int = 0,
+    cropCleansers: List<CropCleansers.Offer> = emptyList(),
     /** Held and Tool Shack mutation potions, see [MutationPotions.offers]. */
     mutationPotions: List<MutationPotions.Offer> = emptyList(),
     onApplyPotion: (tileId: Int, slotIndex: Int, potion: MutationPotions.Offer) -> Unit = { _, _, _ -> },
@@ -481,7 +482,7 @@ fun GardenCard(
                     onPot(tileId)
                     selectedCropKey = null
                 },
-                onCleanse = { onCleanse(tileId, slotIndex) },
+                onCleanse = { toolId -> onCleanse(tileId, slotIndex, toolId) },
                 mutationPotions = mutationPotions,
                 onApplyPotion = { potion -> onApplyPotion(tileId, slotIndex, potion) },
                 onDismiss = { selectedCropKey = null },
@@ -503,7 +504,7 @@ fun GardenCard(
                 onHarvest = { slot, slotIndex -> onHarvest(slot, slotIndex) },
                 onWater = { slot -> onWater(slot) },
                 onPot = { slot -> onPot(slot) },
-                onCleanse = { slot, slotIndex -> onCleanse(slot, slotIndex) },
+                onCleanse = { slot, slotIndex, toolId -> onCleanse(slot, slotIndex, toolId) },
                 mutationPotions = mutationPotions,
                 onApplyPotion = { slot, slotIndex, potion -> onApplyPotion(slot, slotIndex, potion) },
                 onDismiss = { selectedMultiPlantTileId = null },
